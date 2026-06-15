@@ -1,2 +1,2 @@
 # Dashboard
-Master Dashboard
+God's Master Dashboard
