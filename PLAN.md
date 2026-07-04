@@ -52,20 +52,35 @@ The walking skeleton everything else builds on:
 
 **Gate:** merge Phase 0 only after review. Nothing else proceeds until then.
 
-### Phase 1 — Modules (design pending)
+### Phase 1 — Data layer + first module (in review)
 
-> ⚠️ The detailed module design ("priority / hours / Notion" logic and layout)
-> was worked out in a prior planning session and is **not yet captured here**.
-> Paste it into this file before starting Phase 1 so the build matches the spec.
+> ⚠️ Still reconstructed **without** the detailed module spec. The data
+> foundation below is low-regret (every module reuses it), but the `priorities`
+> columns and the Hours/Notion modules are assumptions. **Paste the real design
+> here** to lock them in.
 
-Anticipated scope (to be confirmed against the real plan):
+Done in this pass:
 
-- [ ] Data model + migrations on the self-hosted Supabase instance
-- [ ] Row Level Security policies
-- [ ] **Priority** module — real data + interactions
+- [x] Supabase migrations: `set_updated_at`, `profiles` + auto-create trigger,
+      RLS on every table (`supabase/migrations`)
+- [x] **Priority** module — end-to-end proof of the data path: `priorities`
+      table + RLS, typed data layer, server actions (add / toggle / delete),
+      server-rendered UI at `/dashboard/priority`
+- [x] Hand-written DB types (`src/lib/supabase/database.types.ts`) kept in sync
+      with the migrations, since the self-hosted DB isn't reachable from CI
+- [x] Dashboard navigation (Overview / Priority)
+
+Assumptions to confirm against the real spec:
+
+- A priority record = `{ title, note, level (1–3), is_done, position }`. Likely
+  wrong in detail — refine the columns + migration when the design lands.
+
+Still pending design:
+
 - [ ] **Hours** module — real data + interactions
-- [ ] **Notion** module — Notion integration + sync
-- [ ] Shared UI system / navigation
+- [ ] **Notion** module — Notion integration + sync (Notion MCP is available)
+- [ ] Refine the Priority model against the real spec
+- [ ] Lint migration: `next lint` → ESLint CLI (deprecated in Next 16)
 
 ### Phase 2+ — TBD
 

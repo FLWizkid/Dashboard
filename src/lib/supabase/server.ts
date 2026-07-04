@@ -4,6 +4,9 @@ import { cookies } from "next/headers";
 /**
  * Server-side Supabase client bound to the request's cookie jar so auth
  * sessions survive across server components, route handlers, and actions.
+ *
+ * Left untyped on purpose — callers type results at the query level
+ * (`.returns<T>()`) using ./database.types. See ./client.ts for why.
  */
 export async function createClient() {
   const cookieStore = await cookies();
