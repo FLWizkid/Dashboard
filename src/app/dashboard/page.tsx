@@ -17,8 +17,9 @@ const MODULES: {
   },
   {
     title: "Hours",
-    description: "Time allocation and capacity at a glance. Design pending.",
-    status: "Planned",
+    description: "Log time and see the total at a glance. First-pass module.",
+    status: "Live (draft)",
+    href: "/dashboard/hours",
   },
   {
     title: "Notion",

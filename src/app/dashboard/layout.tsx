@@ -41,6 +41,12 @@ export default async function DashboardLayout({
         >
           Priority
         </Link>
+        <Link
+          href="/dashboard/hours"
+          className="text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+        >
+          Hours
+        </Link>
       </nav>
       <main className="p-6">{children}</main>
     </div>

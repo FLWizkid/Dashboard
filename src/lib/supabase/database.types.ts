@@ -74,6 +74,39 @@ export interface Database {
         };
         Relationships: [];
       };
+      time_entries: {
+        Row: {
+          id: string;
+          user_id: string;
+          label: string;
+          hours: number;
+          logged_on: string;
+          note: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          label: string;
+          hours: number;
+          logged_on?: string;
+          note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          label?: string;
+          hours?: number;
+          logged_on?: string;
+          note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };

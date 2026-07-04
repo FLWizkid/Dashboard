@@ -68,18 +68,21 @@ Done in this pass:
       server-rendered UI at `/dashboard/priority`
 - [x] Hand-written DB types (`src/lib/supabase/database.types.ts`) kept in sync
       with the migrations, since the self-hosted DB isn't reachable from CI
-- [x] Dashboard navigation (Overview / Priority)
+- [x] **Hours** module — first-pass per-user time log (add / delete + a total)
+      at `/dashboard/hours`
+- [x] Dashboard navigation (Overview / Priority / Hours)
 
 Assumptions to confirm against the real spec:
 
-- A priority record = `{ title, note, level (1–3), is_done, position }`. Likely
-  wrong in detail — refine the columns + migration when the design lands.
+- A priority record = `{ title, note, level (1–3), is_done, position }`.
+- A time entry = `{ label, hours, logged_on, note }`.
+- Both are likely wrong in detail — refine the columns + migrations when the
+  real design lands.
 
 Still pending design:
 
-- [ ] **Hours** module — real data + interactions
 - [ ] **Notion** module — Notion integration + sync (Notion MCP is available)
-- [ ] Refine the Priority model against the real spec
+- [ ] Refine the Priority + Hours models against the real spec
 - [ ] Lint migration: `next lint` → ESLint CLI (deprecated in Next 16)
 
 ### Phase 2+ — TBD
