@@ -70,19 +70,21 @@ Done in this pass:
       with the migrations, since the self-hosted DB isn't reachable from CI
 - [x] **Hours** module — first-pass per-user time log (add / delete + a total)
       at `/dashboard/hours`
-- [x] Dashboard navigation (Overview / Priority / Hours)
+- [x] **Notion** module — read-only feed of recent items from a configured
+      Notion database at `/dashboard/notion` (env-configured; nothing hardcoded)
+- [x] Dashboard navigation (Overview / Priority / Hours / Notion)
 
 Assumptions to confirm against the real spec:
 
 - A priority record = `{ title, note, level (1–3), is_done, position }`.
 - A time entry = `{ label, hours, logged_on, note }`.
-- Both are likely wrong in detail — refine the columns + migrations when the
-  real design lands.
+- Notion = read-only list of one database's pages by title + last-edited; the
+  real module may want specific properties, filters, or two-way sync.
+- These are likely wrong in detail — refine when the real design lands.
 
-Still pending design:
+Still pending the real spec:
 
-- [ ] **Notion** module — Notion integration + sync (Notion MCP is available)
-- [ ] Refine the Priority + Hours models against the real spec
+- [ ] Refine the Priority / Hours / Notion modules against the detailed design
 - [ ] Lint migration: `next lint` → ESLint CLI (deprecated in Next 16)
 
 ### Phase 2+ — TBD

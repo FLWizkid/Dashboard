@@ -47,6 +47,12 @@ export default async function DashboardLayout({
         >
           Hours
         </Link>
+        <Link
+          href="/dashboard/notion"
+          className="text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+        >
+          Notion
+        </Link>
       </nav>
       <main className="p-6">{children}</main>
     </div>

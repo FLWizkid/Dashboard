@@ -51,8 +51,9 @@ src/
     layout.tsx            Root layout
     page.tsx              Redirects based on auth state
     login/page.tsx        Email/password sign-in
-    dashboard/            Protected area (layout guards auth)
+    dashboard/            Protected area (Overview + Priority / Hours / Notion)
   components/             UI (module cards, sign-out)
   lib/supabase/           Browser / server / middleware clients
+  lib/notion.ts           Read-only Notion database feed
   middleware.ts           Session refresh + route protection
 ```

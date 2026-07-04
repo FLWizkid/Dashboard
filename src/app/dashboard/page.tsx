@@ -23,8 +23,10 @@ const MODULES: {
   },
   {
     title: "Notion",
-    description: "Synced notes, docs, and tasks from Notion. Design pending.",
-    status: "Planned",
+    description:
+      "Recent items from a Notion database you connect. First-pass module.",
+    status: "Live (draft)",
+    href: "/dashboard/notion",
   },
 ];
 
