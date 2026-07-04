@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { fetchRecentNotionItems } from "@/lib/notion";
+import { isUndefinedTable } from "@/lib/pg";
 import { ModuleCard } from "@/components/module-card";
 import { StatTile } from "@/components/stat-tile";
 
@@ -33,11 +34,6 @@ const MODULES: {
   },
 ];
 
-function isMissingTable(error: { code?: string } | null): boolean {
-  // 42P01 = undefined_table — migrations not applied yet.
-  return error?.code === "42P01";
-}
-
 export default async function DashboardHome() {
   const supabase = await createClient();
 
@@ -55,13 +51,13 @@ export default async function DashboardHome() {
 
   const priorities = priorityRes.data ?? [];
   const openPriorities = priorities.filter((p) => !p.is_done).length;
-  const priorityHint = isMissingTable(priorityRes.error)
+  const priorityHint = isUndefinedTable(priorityRes.error)
     ? "Run migrations"
     : `${priorities.length} total`;
 
   const hours = hoursRes.data ?? [];
   const totalHours = hours.reduce((sum, entry) => sum + Number(entry.hours), 0);
-  const hoursHint = isMissingTable(hoursRes.error)
+  const hoursHint = isUndefinedTable(hoursRes.error)
     ? "Run migrations"
     : `${hours.length} entries`;
 
