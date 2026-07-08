@@ -1,4 +1,5 @@
 import { Client, isFullPage } from "@notionhq/client";
+import { extractTitle } from "./notion-title";
 
 export type NotionItem = {
   id: string;
@@ -38,21 +39,12 @@ export async function fetchRecentNotionItems(limit = 15): Promise<NotionResult> 
 
     const items: NotionItem[] = response.results
       .filter(isFullPage)
-      .map((page) => {
-        let title = "Untitled";
-        for (const prop of Object.values(page.properties)) {
-          if (prop.type === "title") {
-            title = prop.title.map((t) => t.plain_text).join("") || "Untitled";
-            break;
-          }
-        }
-        return {
-          id: page.id,
-          title,
-          url: page.url,
-          lastEdited: page.last_edited_time,
-        };
-      });
+      .map((page) => ({
+        id: page.id,
+        title: extractTitle(page.properties as Record<string, unknown>),
+        url: page.url,
+        lastEdited: page.last_edited_time,
+      }));
 
     return { status: "ok", items };
   } catch (err) {
