@@ -1,12 +1,18 @@
 "use client";
 
+import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
+import * as React from "react";
+
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 
 export function SignOutButton() {
   const router = useRouter();
+  const [pending, setPending] = React.useState(false);
 
   async function handleSignOut() {
+    setPending(true);
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
@@ -14,11 +20,15 @@ export function SignOutButton() {
   }
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="sm"
       onClick={handleSignOut}
-      className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium transition hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+      disabled={pending}
+      className="w-full justify-start"
     >
-      Sign out
-    </button>
+      <LogOut />
+      {pending ? "Signing out…" : "Sign out"}
+    </Button>
   );
 }

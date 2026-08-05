@@ -2,11 +2,235 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light dark;
+/*
+ * Design tokens — "refined executive / calm".
+ *
+ * Palette: forest green primary, warm charcoal neutrals, brass accent.
+ * Every foreground/background pair below is chosen to clear WCAG-AA (4.5:1 for
+ * body text, 3:1 for large text and UI boundaries) in BOTH themes. If you
+ * change a value, re-check the pair it is used against.
+ *
+ * Colours are stored as space-separated RGB channels so Tailwind can apply
+ * opacity modifiers (`bg-primary/10`) via `rgb(var(--x) / <alpha-value>)`.
+ */
+
+@layer base {
+  :root {
+    /* ── Surfaces ─────────────────────────────────────────────── */
+    --bg: 250 249 247; /* #FAF9F7 warm off-white */
+    --surface: 255 255 255;
+    --surface-muted: 242 240 236; /* #F2F0EC */
+    --surface-raised: 255 255 255;
+
+    /* ── Lines ────────────────────────────────────────────────── */
+    --border: 227 224 217; /* #E3E0D9 */
+    --border-strong: 203 199 189; /* #CBC7BD */
+
+    /* ── Text ─────────────────────────────────────────────────── */
+    --fg: 28 27 25; /* #1C1B19  ~17:1 on --bg */
+    --fg-muted: 92 88 80; /* #5C5850  ~7.3:1 on --bg */
+    --fg-subtle: 122 117 106; /* #7A756A  ~4.8:1 on --bg */
+
+    /* ── Forest green primary ─────────────────────────────────── */
+    --primary: 30 77 59; /* #1E4D3B  ~9.5:1 with white */
+    --primary-hover: 22 58 44; /* #163A2C */
+    --primary-fg: 255 255 255;
+    --primary-soft: 220 232 225; /* #DCE8E1 tint for chips/fills */
+    --primary-soft-fg: 22 58 44;
+
+    /* ── Brass accent ─────────────────────────────────────────── */
+    --accent: 122 95 53; /* #7A5F35  ~6.4:1 on --bg (text-safe) */
+    --accent-bright: 176 141 87; /* #B08D57 decorative / borders only */
+    --accent-soft: 245 238 226; /* #F5EEE2 */
+
+    /* ── Focus ring ───────────────────────────────────────────── */
+    --ring: 58 114 89; /* #3A7259 */
+
+    /* ── Priority scale (text on its own soft background) ─────── */
+    --priority-critical: 163 45 45; /* #A32D2D  5.8:1 on soft */
+    --priority-critical-soft: 247 231 228;
+    --priority-high: 138 90 22; /* #8A5A16  5.1:1 on soft */
+    --priority-high-soft: 247 238 221;
+    --priority-normal: 42 90 69; /* #2A5A45 */
+    --priority-normal-soft: 228 237 231;
+    --priority-low: 92 88 80; /* #5C5850 */
+    --priority-low-soft: 240 238 234;
+
+    /* ── Feedback ─────────────────────────────────────────────── */
+    --danger: 163 45 45;
+    --danger-fg: 255 255 255;
+    --warning: 138 90 22;
+    --success: 30 77 59;
+
+    /* ── Motion ───────────────────────────────────────────────── */
+    --motion-fast: 120ms;
+    --motion-base: 200ms;
+    --motion-slow: 360ms;
+    --motion-celebrate: 620ms;
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+    /* ── Shape ────────────────────────────────────────────────── */
+    --radius: 0.75rem;
+
+    color-scheme: light;
+  }
+
+  /*
+   * Dark theme. `prefers-color-scheme` is the default signal; `data-theme` on
+   * <html> is the explicit override and must win in BOTH directions, so the
+   * dark block is repeated verbatim under `[data-theme="dark"]`.
+   */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: 20 19 17; /* #141311 */
+      --surface: 28 27 25; /* #1C1B19 */
+      --surface-muted: 38 36 33; /* #262421 */
+      --surface-raised: 38 36 33;
+
+      --border: 51 48 44; /* #33302C */
+      --border-strong: 69 66 60; /* #45423C */
+
+      --fg: 242 240 236; /* ~16:1 on --bg */
+      --fg-muted: 161 156 144; /* ~7.6:1 */
+      --fg-subtle: 139 133 122; /* ~5.4:1 */
+
+      --primary: 63 122 96; /* #3F7A60  5.1:1 with white */
+      --primary-hover: 74 143 112;
+      --primary-fg: 255 255 255;
+      --primary-soft: 26 47 38;
+      --primary-soft-fg: 168 208 188;
+
+      --accent: 201 169 110; /* #C9A96E  ~8.3:1 on --bg */
+      --accent-bright: 214 188 140;
+      --accent-soft: 43 37 26;
+
+      --ring: 92 145 121;
+
+      --priority-critical: 240 154 147;
+      --priority-critical-soft: 56 30 28;
+      --priority-high: 224 176 106;
+      --priority-high-soft: 51 39 21;
+      --priority-normal: 141 181 162;
+      --priority-normal-soft: 26 43 35;
+      --priority-low: 161 156 144;
+      --priority-low-soft: 38 36 33;
+
+      --danger: 240 154 147;
+      --danger-fg: 28 27 25;
+      --warning: 224 176 106;
+      --success: 141 181 162;
+
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: 20 19 17;
+    --surface: 28 27 25;
+    --surface-muted: 38 36 33;
+    --surface-raised: 38 36 33;
+
+    --border: 51 48 44;
+    --border-strong: 69 66 60;
+
+    --fg: 242 240 236;
+    --fg-muted: 161 156 144;
+    --fg-subtle: 139 133 122;
+
+    --primary: 63 122 96;
+    --primary-hover: 74 143 112;
+    --primary-fg: 255 255 255;
+    --primary-soft: 26 47 38;
+    --primary-soft-fg: 168 208 188;
+
+    --accent: 201 169 110;
+    --accent-bright: 214 188 140;
+    --accent-soft: 43 37 26;
+
+    --ring: 92 145 121;
+
+    --priority-critical: 240 154 147;
+    --priority-critical-soft: 56 30 28;
+    --priority-high: 224 176 106;
+    --priority-high-soft: 51 39 21;
+    --priority-normal: 141 181 162;
+    --priority-normal-soft: 26 43 35;
+    --priority-low: 161 156 144;
+    --priority-low-soft: 38 36 33;
+
+    --danger: 240 154 147;
+    --danger-fg: 28 27 25;
+    --warning: 224 176 106;
+    --success: 141 181 162;
+
+    color-scheme: dark;
+  }
+
+  * {
+    border-color: rgb(var(--border));
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-bg text-fg antialiased;
+  }
+
+  /*
+   * One focus treatment everywhere. `:focus-visible` keeps it off mouse
+   * clicks, so it never reads as noise.
+   */
+  :focus-visible {
+    outline: 2px solid rgb(var(--ring));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
 
-html,
-body {
-  height: 100%;
+@layer components {
+  /* Screen-reader-only text that becomes visible on focus (skip links). */
+  .focus-reveal:focus-visible {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+}
+
+/*
+ * Reduced motion is a hard requirement, not a nicety. Collapse every duration
+ * to a hair above zero so state still lands but nothing travels. Framer Motion
+ * reads the same preference through `useReducedMotion` (see src/lib/motion.ts).
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 1ms;
+    --motion-base: 1ms;
+    --motion-slow: 1ms;
+    --motion-celebrate: 1ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print: the Reports module (P6) leans on this; harmless everywhere else. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
 }

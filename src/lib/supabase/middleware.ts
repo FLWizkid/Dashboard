@@ -1,6 +1,8 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { isMemoryMode } from "@/lib/data-mode";
+
 /**
  * Refreshes the Supabase auth session on every request and guards the
  * protected area. If Supabase isn't configured yet (fresh clone, no
@@ -8,6 +10,10 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
+
+  // End-to-end tests run without an auth server. This can only be true in a
+  // non-production build — see src/lib/data-mode.ts.
+  if (isMemoryMode()) return supabaseResponse;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

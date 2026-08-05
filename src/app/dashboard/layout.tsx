@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { SignOutButton } from "@/components/sign-out-button";
+
+import { Providers } from "@/components/providers";
+import { AppShell } from "@/components/shell/app-shell";
+import { getSessionUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,51 +11,14 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  // Belt and braces: middleware already redirects, but a layout that renders
+  // private data must not depend on middleware having run.
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
 
   return (
-    <div className="min-h-screen">
-      <header className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
-        <div>
-          <h1 className="text-lg font-semibold">God&apos;s Master Dashboard</h1>
-          <p className="text-xs text-slate-500">{user.email}</p>
-        </div>
-        <SignOutButton />
-      </header>
-      <nav className="flex gap-4 border-b border-slate-200 px-6 py-2 text-sm dark:border-slate-800">
-        <Link
-          href="/dashboard"
-          className="text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-        >
-          Overview
-        </Link>
-        <Link
-          href="/dashboard/priority"
-          className="text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-        >
-          Priority
-        </Link>
-        <Link
-          href="/dashboard/hours"
-          className="text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-        >
-          Hours
-        </Link>
-        <Link
-          href="/dashboard/notion"
-          className="text-slate-600 transition hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-        >
-          Notion
-        </Link>
-      </nav>
-      <main className="p-6">{children}</main>
-    </div>
+    <Providers>
+      <AppShell email={user.email}>{children}</AppShell>
+    </Providers>
   );
 }
