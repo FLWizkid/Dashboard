@@ -1,14 +1,20 @@
 # Testing
 
-Three tiers, all run in CI on every push and pull request.
+Three tiers, all run in CI on every push and pull request, plus a fourth job
+that checks the deployment configuration.
 
-| Command                    | Covers                                                     | Needs               |
-| -------------------------- | ---------------------------------------------------------- | ------------------- |
-| `npm run test`             | Unit — parser, Ready state, sort, timezone maths, taxonomy | nothing             |
-| `npm run test:integration` | Schema and **RLS isolation**, against real Postgres        | `DATABASE_URL`      |
-| `npm run test:e2e`         | The real UI end to end, plus axe accessibility scans       | Playwright Chromium |
+| Command                    | Covers                                                                            | Needs               |
+| -------------------------- | --------------------------------------------------------------------------------- | ------------------- |
+| `npm run test`             | Unit — parser, Ready state, sort, timezone maths, taxonomy, redaction, ops config | nothing             |
+| `npm run test:integration` | Schema, **RLS isolation** and the retirement migration, against real Postgres     | `DATABASE_URL`      |
+| `npm run test:e2e`         | The real UI end to end, plus axe accessibility scans                              | Playwright Chromium |
 
 `npm run test:all` runs all three.
+
+CI's **Deployment configuration** job additionally resolves `docker compose
+config`, validates the Caddyfile, parses the shell and PowerShell scripts, and
+fails if an environment file or certificate is ever tracked. See
+[`ops/README.md`](../ops/README.md).
 
 ---
 
@@ -19,6 +25,19 @@ Plain Vitest, no environment. The parser suite is the largest: every rule in
 instant (Wednesday 5 August 2026, 10:00 America/New_York — daylight time on
 purpose, so a timezone mistake shows up as a one-hour drift rather than
 hiding behind a zero offset).
+
+Two groups sit outside `src/`:
+
+- **`src/lib/observability/`** — the redaction layer. These assert on what
+  must _not_ appear in a log: JWTs, connection-string passwords, `apikey=`
+  parameters, mail bodies. A weakened scrubber fails here.
+- **`ops/lib/`** — the deployment configuration. The secret generator's JWTs
+  are verified rather than assumed, and `compose.test.mts` asserts the
+  exposure invariants: every published port binds to `BIND_ADDRESS` or
+  loopback, the default fails closed, and the service-role key is never a
+  build argument. It also fails if `docker-compose.yml` gains a required
+  variable the generator doesn't write — the quiet failure that would
+  otherwise surface only on the box.
 
 ---
 

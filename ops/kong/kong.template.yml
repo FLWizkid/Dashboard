@@ -1,0 +1,192 @@
+# Kong declarative config — rendered at container start-up.
+#
+# This file is a shell template: `$ANON_KEY` and `$SERVICE_ROLE_KEY` are
+# substituted by the entrypoint in docker-compose.yml before Kong reads it.
+# Kong 2.8 has no variable interpolation of its own.
+#
+# Kong's job here is narrow. It is not the security boundary — Postgres RLS
+# is (see docs/data-model.md and docs/threat-model.md). Kong routes the four
+# Supabase APIs, attaches the anon key when the caller didn't, and keeps the
+# service_role key confined to routes that genuinely need admin rights.
+
+_format_version: "2.1"
+_transform: true
+
+consumers:
+  - username: anon
+    keyauth_credentials:
+      - key: $ANON_KEY
+  - username: service_role
+    keyauth_credentials:
+      - key: $SERVICE_ROLE_KEY
+
+acls:
+  - consumer: anon
+    group: anon
+  - consumer: service_role
+    group: admin
+
+plugins:
+  # Same-origin only: the app and the APIs share one tailnet hostname, so no
+  # cross-origin caller is legitimate.
+  - name: cors
+    config:
+      credentials: true
+      max_age: 3600
+      origins:
+        - https://$TAILNET_HOSTNAME
+      methods:
+        - GET
+        - POST
+        - PATCH
+        - PUT
+        - DELETE
+        - OPTIONS
+        - HEAD
+      headers:
+        - accept
+        - authorization
+        - content-type
+        - content-profile
+        - accept-profile
+        - apikey
+        - prefer
+        - range
+        - x-client-info
+      exposed_headers:
+        - content-range
+        - content-profile
+
+services:
+  # ── Auth ────────────────────────────────────────────────────────────────
+  # The open endpoints are the ones a browser must reach before it holds a
+  # token: sign-in, token refresh, recovery, verification.
+  - name: auth-v1-open
+    url: http://auth:9999/
+    routes:
+      - name: auth-v1-open
+        strip_path: true
+        paths:
+          - /auth/v1/verify
+          - /auth/v1/callback
+          - /auth/v1/authorize
+          - /auth/v1/token
+          - /auth/v1/logout
+          - /auth/v1/recover
+          - /auth/v1/user
+          - /auth/v1/factors
+          - /auth/v1/settings
+
+  # Everything else under /auth/v1 — including the admin API — requires a
+  # key, and the admin routes additionally require the service_role group.
+  - name: auth-v1-admin
+    _comment: "GoTrue admin: /auth/v1/admin/* -> http://auth:9999/admin/*"
+    url: http://auth:9999/admin/
+    routes:
+      - name: auth-v1-admin
+        strip_path: true
+        paths:
+          - /auth/v1/admin
+    plugins:
+      - name: key-auth
+        config:
+          hide_credentials: true
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+
+  - name: auth-v1
+    url: http://auth:9999/
+    routes:
+      - name: auth-v1-all
+        strip_path: true
+        paths:
+          - /auth/v1/
+    plugins:
+      - name: key-auth
+        config:
+          hide_credentials: false
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+            - anon
+
+  # ── REST ────────────────────────────────────────────────────────────────
+  - name: rest-v1
+    url: http://rest:3000/
+    routes:
+      - name: rest-v1-all
+        strip_path: true
+        paths:
+          - /rest/v1/
+    plugins:
+      - name: key-auth
+        config:
+          hide_credentials: true
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+            - anon
+
+  # ── Realtime ────────────────────────────────────────────────────────────
+  - name: realtime-v1-ws
+    url: http://realtime:4000/socket
+    protocol: ws
+    routes:
+      - name: realtime-v1-ws
+        strip_path: true
+        paths:
+          - /realtime/v1/
+    plugins:
+      - name: key-auth
+        config:
+          hide_credentials: false
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+            - anon
+
+  - name: realtime-v1-rest
+    url: http://realtime:4000/api
+    protocol: http
+    routes:
+      - name: realtime-v1-rest
+        strip_path: true
+        paths:
+          - /realtime/v1/api
+    plugins:
+      - name: key-auth
+        config:
+          hide_credentials: false
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+
+  # ── Storage ─────────────────────────────────────────────────────────────
+  - name: storage-v1
+    url: http://storage:5000/
+    routes:
+      - name: storage-v1-all
+        strip_path: true
+        paths:
+          - /storage/v1/
+    plugins:
+      - name: key-auth
+        config:
+          hide_credentials: false
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+            - anon

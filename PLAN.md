@@ -119,20 +119,28 @@ auto-detected from the browser with a settings override · digest email
 
 Each phase stops at a gate for review.
 
-### P0 — Foundation & infra ✅ gate approved
+### P0 — Foundation & infra ✅ complete
 
-Docker compose (Next.js + self-hosted Supabase), Caddy auto-TLS, Tailscale
-notes, base schema + RLS, email/password auth, design system + motion tokens,
-PWA shell, CI, 3-2-1 backup jobs, Sentry-ready hooks, threat model and
-Windows/WSL2 runbook.
+- [x] `docker-compose.yml` — Next.js + self-hosted Supabase (Postgres, GoTrue,
+      PostgREST, Realtime, Storage, Kong), Caddy, backup sidecar. Studio and
+      postgres-meta behind an `admin` profile, off by default
+- [x] Caddy auto-TLS on the tailnet hostname, using Tailscale-issued
+      certificates (ACME cannot run on a host that is not public)
+- [x] **Nothing published beyond the tailnet** — every port binds to
+      `BIND_ADDRESS`, defaulting to loopback so a missing value fails closed
+- [x] Base schema + RLS, email/password auth with signup disabled, MFA-ready
+- [x] Design system + motion tokens, PWA shell _(built during P1)_
+- [x] CI: lint, types, unit, integration, E2E, and a deployment-config job
+- [x] 3-2-1 backup jobs with a **weekly automated restore drill**
+- [x] Sentry-ready error hooks — scrubbed, and inert until a DSN is set
+- [x] [Threat model](docs/threat-model.md)
+- [x] [Windows/WSL2 runbook](docs/runbook-windows.md) and Tailscale notes
 
-> **Carried forward.** The approved P0 predates the specification, so several
-> of its deliverables do not yet exist in the repo: **Docker compose, Caddy
-> config, Tailscale notes, backup jobs, Sentry hooks, threat model and the
-> Windows/WSL2 runbook.** The pieces Phase 1 could not proceed without — the
-> design system, motion tokens, PWA shell and CI — were built as part of
-> Phase 1. The infrastructure items are outstanding and are the first thing to
-> schedule; see [Outstanding from P0](#outstanding-from-p0).
+> **History.** The approved P0 predated the specification, so its
+> infrastructure deliverables did not exist in the repo. Phase 1 built the
+> parts it could not proceed without (design system, motion tokens, PWA
+> shell, CI); the rest landed afterwards, on this branch, and are listed
+> above.
 
 ### P1 — Operational core ✅ this branch
 
@@ -190,17 +198,17 @@ WebXR, teammate-mode foundations.
 
 ---
 
-## Outstanding from P0
+## Setup steps only you can do
 
-Not blockers for P1, but needed before the app actually runs on the box:
+The stack is complete; three things need values that cannot live in a public
+repository. Until the last two are set, every backup log ends with **"NOT yet
+a 3-2-1 backup"**, which is the intended behaviour.
 
-- [ ] `docker-compose.yml` for Next.js + the self-hosted Supabase stack
-- [ ] Caddyfile with auto-TLS for the tailnet hostname
-- [ ] Tailscale setup notes and the Windows/WSL2 runbook
-- [ ] 3-2-1 backup jobs (local + client-side-encrypted offsite) and a tested
-      restore
-- [ ] Sentry-ready hooks
-- [ ] Threat model
+- [ ] BitLocker on the volume holding the Docker data root — this is the
+      encryption-at-rest control ([runbook § 2.3](docs/runbook-windows.md))
+- [ ] `BACKUP_SECONDARY_PATH` pointed at a second physical device
+- [ ] `BACKUP_AGE_RECIPIENT` + `BACKUP_RCLONE_REMOTE` for the encrypted
+      off-site copy ([backups.md](docs/backups.md))
 
 ---
 
@@ -215,14 +223,27 @@ contradict it:
 | `/dashboard/priority`                                          | Superseded by the Tasks module                                                     |
 | `/dashboard/hours`                                             | A guessed time log; the real hours model arrives in P4                             |
 
-The `priorities` and `time_entries` **tables** are intentionally left in place.
-Dropping tables destroys data and should be a separate, explicitly reviewed
-migration — not a side effect of a feature branch. Neither is referenced by
-any code.
+The `priorities` and `time_entries` **tables** are now retired by
+`20260809000001_retire_placeholder_tables.sql`, which **moves** them to an
+`archive` schema rather than dropping them. That removes them from the API
+surface — PostgREST only exposes `public` — while keeping every row
+recoverable. Dropping is irreversible, so it stays a separate, deliberate
+step; the exact statements are at the bottom of that migration.
 
 ---
 
-## Local development
+## Running it
+
+**On the box** — [docs/runbook-windows.md](docs/runbook-windows.md), start to
+finish. Roughly:
+
+```powershell
+node ops/generate-secrets.mjs --hostname dashboard.<tailnet>.ts.net --bind 100.x.y.z
+pwsh ops/windows/Update-TailscaleCert.ps1
+docker compose up -d
+```
+
+**Locally, for development:**
 
 ```bash
 cp .env.example .env.local   # fill in from the box; never commit
@@ -232,13 +253,15 @@ npm run dev                  # http://localhost:3000
 
 | Command                                                | Does                                                 |
 | ------------------------------------------------------ | ---------------------------------------------------- |
-| `npm run test`                                         | Unit tests                                           |
+| `npm run test`                                         | Unit tests (app + ops)                               |
 | `npm run test:integration`                             | Schema + RLS against Postgres (needs `DATABASE_URL`) |
 | `npm run test:e2e`                                     | Playwright + axe                                     |
 | `npm run lint` / `npm run typecheck` / `npm run build` | The CI gates                                         |
 
-Docs: [data model](docs/data-model.md) · [parser rules](docs/parser-rules.md)
-· [tasks module](docs/modules/tasks.md) · [testing](docs/testing.md)
+Docs: [runbook](docs/runbook-windows.md) · [threat model](docs/threat-model.md)
+· [backups](docs/backups.md) · [data model](docs/data-model.md) ·
+[parser rules](docs/parser-rules.md) · [tasks module](docs/modules/tasks.md) ·
+[testing](docs/testing.md) · [ops](ops/README.md)
 
 ---
 
@@ -252,3 +275,9 @@ Docs: [data model](docs/data-model.md) · [parser rules](docs/parser-rules.md)
   the only one.
 - `DASHBOARD_DATA_MODE=memory` is a test-only switch and is inert in a
   production build. Keep it that way.
+- **Nothing is published beyond the tailnet.** Host ports bind to
+  `BIND_ADDRESS`, which defaults to loopback so a missing value fails closed.
+  Docker bypasses the Windows Firewall when it publishes a port, so the bind
+  address is the control — not the firewall.
+- Nothing leaves the box by default. Error reporting is local until a DSN is
+  set; backups are encrypted before they are uploaded.

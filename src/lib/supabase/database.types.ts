@@ -52,42 +52,6 @@ export interface Database {
         };
         Relationships: [];
       };
-      priorities: {
-        Row: {
-          id: string;
-          user_id: string;
-          title: string;
-          note: string | null;
-          level: number;
-          is_done: boolean;
-          position: number;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id?: string;
-          title: string;
-          note?: string | null;
-          level?: number;
-          is_done?: boolean;
-          position?: number;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          title?: string;
-          note?: string | null;
-          level?: number;
-          is_done?: boolean;
-          position?: number;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
       activity_categories: {
         Row: {
           id: string;
@@ -204,39 +168,6 @@ export interface Database {
           target_url?: string | null;
           confirmed_at?: string | null;
           metadata?: Json;
-        };
-        Relationships: [];
-      };
-      time_entries: {
-        Row: {
-          id: string;
-          user_id: string;
-          label: string;
-          hours: number;
-          logged_on: string;
-          note: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id?: string;
-          label: string;
-          hours: number;
-          logged_on?: string;
-          note?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          label?: string;
-          hours?: number;
-          logged_on?: string;
-          note?: string | null;
-          created_at?: string;
-          updated_at?: string;
         };
         Relationships: [];
       };

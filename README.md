@@ -11,13 +11,29 @@ TanStack Query · self-hosted Supabase.
 > 📋 The specification, locked decisions and phase roadmap live in
 > **[`PLAN.md`](./PLAN.md)** — read it first.
 
-**Status:** Phase 1 (operational core). Tasks are live end to end; email,
-calendar, kanban, notes, pomodoro and reports are scaffolded in the shell and
-arrive in later phases.
+**Status:** Phase 1 (operational core) on Phase 0 infrastructure. Tasks are
+live end to end and the stack runs on your box; email, calendar, kanban,
+notes, pomodoro and reports are scaffolded in the shell and arrive in later
+phases.
 
 ---
 
-## Getting started
+## Running it on your box
+
+The whole stack — Next.js, Postgres, GoTrue, PostgREST, Realtime, Storage,
+Kong, Caddy and a backup sidecar — is one compose file.
+
+```powershell
+node ops/generate-secrets.mjs --hostname dashboard.<tailnet>.ts.net --bind 100.x.y.z
+pwsh ops/windows/Update-TailscaleCert.ps1
+docker compose up -d
+```
+
+**[Full runbook →](./docs/runbook-windows.md)** — WSL2, Docker Desktop,
+BitLocker, Tailscale HTTPS, migrations, creating your account, and the check
+that proves it is not reachable from the internet.
+
+## Developing locally
 
 Requires **Node 22** (see `.nvmrc`).
 
@@ -73,14 +89,23 @@ Supabase email/password account, `/dashboard` becomes available.
 
 ## Security
 
-- **Self-hosted Supabase** on a Windows/WSL2 box; **Tailscale-only** access,
-  never public.
+- **Tailscale-only, never public.** Every host port binds to `BIND_ADDRESS`,
+  which defaults to loopback — a missing value makes the stack unreachable
+  rather than exposed. Only Caddy listens at all.
 - **Row Level Security is the access control**, not application code. Every
   table is user-owned and policy-protected, and the integration suite proves
   a second user cannot read, update or delete the first user's rows.
-- Secrets live only on that box as environment variables. **This repository is
-  public**: it contains no real keys, only `.env.example` with names.
-- `.gitignore` excludes every `.env*` file except `.env.example`.
+- **Nothing leaves the box by default.** Error reports are scrubbed and stay
+  local unless a DSN is configured; the off-site backup is `age`-encrypted
+  before upload, to a key whose private half is kept elsewhere.
+- **Backups are tested, not assumed.** A weekly drill restores the newest
+  archive into a throwaway database and checks that the schema, the data and
+  RLS all survived.
+- Secrets live only on that box. **This repository is public**: it contains no
+  real keys, only `.env.example` with names, and CI fails if an environment
+  file or certificate is ever tracked.
+
+[Threat model →](./docs/threat-model.md)
 
 ---
 
@@ -102,21 +127,30 @@ src/
     quick-add/            The parser
     time/                 Timezone-aware arithmetic and formatting
     categories/           The CIO taxonomy defaults
+    observability/        Error reporting and the redaction layer
 supabase/migrations/      SQL — the source of truth for the schema
+ops/                      Everything that makes it run on the box
+  caddy/  kong/  db/      Reverse proxy, gateway, database bootstrap
+  backup/                 Backup, restore, weekly restore drill
+  windows/                Certificate renewal and scheduled tasks
 tests/
   integration/            Schema + RLS against real Postgres
   e2e/                    Playwright specs and axe scans
-docs/                     Data model, parser rules, module notes, testing
+docs/                     Runbook, threat model, backups, data model, testing
 ```
 
 ---
 
 ## Documentation
 
-| Document                                           | Covers                                             |
-| -------------------------------------------------- | -------------------------------------------------- |
-| [`PLAN.md`](./PLAN.md)                             | The specification, locked decisions, phase roadmap |
-| [`docs/data-model.md`](./docs/data-model.md)       | Schema, RLS, and the reasoning behind it           |
-| [`docs/parser-rules.md`](./docs/parser-rules.md)   | Everything quick-add understands                   |
-| [`docs/modules/tasks.md`](./docs/modules/tasks.md) | The tasks module                                   |
-| [`docs/testing.md`](./docs/testing.md)             | How to run and extend the three test tiers         |
+| Document                                               | Covers                                                |
+| ------------------------------------------------------ | ----------------------------------------------------- |
+| [`PLAN.md`](./PLAN.md)                                 | The specification, locked decisions, phase roadmap    |
+| [`docs/runbook-windows.md`](./docs/runbook-windows.md) | Fresh machine → working dashboard, and day-to-day ops |
+| [`docs/threat-model.md`](./docs/threat-model.md)       | Assets, boundaries, mitigations, residual risks       |
+| [`docs/backups.md`](./docs/backups.md)                 | 3-2-1, the restore drill, and how to actually restore |
+| [`docs/data-model.md`](./docs/data-model.md)           | Schema, RLS, and the reasoning behind it              |
+| [`docs/parser-rules.md`](./docs/parser-rules.md)       | Everything quick-add understands                      |
+| [`docs/modules/tasks.md`](./docs/modules/tasks.md)     | The tasks module                                      |
+| [`docs/testing.md`](./docs/testing.md)                 | How to run and extend the three test tiers            |
+| [`ops/README.md`](./ops/README.md)                     | What is in the operations directory and why           |

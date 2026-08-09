@@ -36,6 +36,11 @@ export async function resetSchema(client: Client): Promise<void> {
   await client.query(`
     drop schema if exists public cascade;
     drop schema if exists auth cascade;
+    -- The retirement migration moves the superseded tables here. Without
+    -- dropping it too, a second run would find archive.priorities already
+    -- present and the migration would fail on a schema it had every right to
+    -- expect was empty.
+    drop schema if exists archive cascade;
     create schema public;
   `);
 

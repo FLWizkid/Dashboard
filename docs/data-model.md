@@ -186,15 +186,20 @@ duplicated.
 ## Retired tables
 
 `priorities` and `time_entries` were created by earlier sessions working
-**without** the product spec, and their UI has been removed. The tables are
-left in place rather than dropped — dropping tables is a data-destroying
-operation that should be an explicit, separately reviewed migration, not a
-side effect of a feature branch.
+**without** the product spec, and their UI has been removed.
 
 - `priorities` is superseded by `tasks`.
 - `time_entries` will be superseded by the Phase 4 hours model.
 
-Neither is referenced by any code on this branch.
+`20260809000001_retire_placeholder_tables` **moves** them to an `archive`
+schema and revokes every grant, rather than dropping them. Moving out of
+`public` is what actually retires them — PostgREST exposes only the schemas
+named in `PGRST_DB_SCHEMAS`, so an archived table has no API surface at all —
+while every row stays recoverable and RLS stays switched on.
+
+Dropping is irreversible, so it remains a separate, deliberate step; the
+statements are in a comment at the end of that migration. Neither table is
+referenced by any code.
 
 ---
 

@@ -26,12 +26,13 @@ safe.
 
 ## What they set up
 
-| Migration                   | Adds                                                                                                            |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `20260704000001_init`       | `set_updated_at()`, `profiles`, and the signup trigger                                                          |
-| `20260704000002_priorities` | ⚠️ retired — see below                                                                                          |
-| `20260704000003_hours`      | ⚠️ retired — see below                                                                                          |
-| `20260805000001_tasks_core` | The Phase 1 core: `activity_categories` (8 CIO defaults, seeded per user), `tasks`, `task_links`, and their RLS |
+| Migration                            | Adds                                                                                                            |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `20260704000001_init`                | `set_updated_at()`, `profiles`, and the signup trigger                                                          |
+| `20260704000002_priorities`          | ⚠️ retired — see below                                                                                          |
+| `20260704000003_hours`               | ⚠️ retired — see below                                                                                          |
+| `20260805000001_tasks_core`          | The Phase 1 core: `activity_categories` (8 CIO defaults, seeded per user), `tasks`, `task_links`, and their RLS |
+| `20260809000001_retire_placeholder…` | Moves the two retired tables out of the API-exposed schema                                                      |
 
 **Row Level Security is enabled on every table**, with `user_id` defaulting to
 `auth.uid()` so the client never sends it. Read the reasoning in
@@ -44,9 +45,22 @@ without the product specification. Their UI has been removed; `priorities` is
 superseded by `tasks`, and `time_entries` will be superseded by the Phase 4
 hours model.
 
-The migrations are left in place and the tables are **not** dropped. Dropping
-a table destroys data and belongs in its own reviewed migration, not as a side
-effect of a feature branch. Neither table is referenced by any code.
+`20260809000001_retire_placeholder_tables` **moves** them into an `archive`
+schema and revokes every grant, rather than dropping them:
+
+- PostgREST only exposes the schemas in `PGRST_DB_SCHEMAS` (`public,storage`),
+  so leaving `public` is what actually retires them.
+- Every row is preserved and the move is reversible with one statement.
+- Row Level Security stays enabled on both.
+
+`tests/integration/retirement.test.ts` asserts all of that, including that the
+`authenticated` role gets `42501 insufficient_privilege` if it tries.
+
+**The final drop is a separate, deliberate step** — the exact statements are
+in a comment at the bottom of that migration. Take a backup first.
+
+The two original `20260704` migrations stay in place so the history still
+replays on a fresh database.
 
 ## Verifying the policies
 

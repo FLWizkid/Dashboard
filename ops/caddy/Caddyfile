@@ -1,0 +1,103 @@
+# Caddy — the only thing on this box that listens on the tailnet.
+#
+# One hostname serves both the app and the Supabase APIs. That is not a
+# shortcut: the browser talks to Supabase directly, so app and API sharing an
+# origin means one certificate, no CORS in the normal path, and cookies that
+# behave. Path prefixes decide which upstream answers.
+#
+# ── TLS ───────────────────────────────────────────────────────────────────
+# Certificates come from `tailscale cert`, which gets a genuine Let's Encrypt
+# certificate for the *.ts.net name through Tailscale's DNS — trusted by every
+# device already, with no CA to install and nothing published to the internet.
+# ACME cannot run here: this host is not publicly reachable, by design.
+# ops/windows/Update-TailscaleCert.ps1 issues and renews them.
+{
+	# No public endpoint means no ACME, and no reason for an admin socket.
+	admin off
+	auto_https off
+
+	servers {
+		# Don't leak the reverse proxy's identity.
+		strict_sni_host
+	}
+}
+
+# Plain HTTP exists only to say "use HTTPS".
+http://{$TAILNET_HOSTNAME} {
+	redir https://{$TAILNET_HOSTNAME}{uri} permanent
+}
+
+https://{$TAILNET_HOSTNAME} {
+	tls /etc/caddy/certs/{$TAILNET_HOSTNAME}.crt /etc/caddy/certs/{$TAILNET_HOSTNAME}.key
+
+	encode zstd gzip
+
+	log {
+		output stdout
+		# Request URIs carry search terms — which, from P2, means they can carry
+		# fragments of your mail. Keep the path, drop the query string, and drop
+		# the headers that carry credentials.
+		format filter {
+			wrap json
+			fields {
+				request>uri regexp "\\?.*$" "?REDACTED"
+				request>headers>Authorization delete
+				request>headers>Cookie delete
+				request>headers>apikey delete
+			}
+		}
+	}
+
+	header {
+		# The stack is tailnet-only and always TLS. Two years, and every
+		# sub-name, so a stray http:// link can't downgrade a session.
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "same-origin"
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Resource-Policy "same-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+
+		# Content Security Policy.
+		#
+		# `script-src 'unsafe-inline'` is a known, deliberate gap: Next.js
+		# hydration ships inline scripts, and the nonce plumbing that removes
+		# this belongs with P2, where rendering third-party e-mail HTML makes
+		# XSS a real threat rather than a theoretical one. Recorded as a
+		# residual risk in docs/threat-model.md. Everything else is locked:
+		# no third-party origin can be reached, and nothing may frame this.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'; worker-src 'self'"
+
+		# Caddy and Next.js both announce themselves otherwise.
+		-Server
+		-X-Powered-By
+	}
+
+	# ── Supabase APIs ──────────────────────────────────────────────────────
+	# Kong routes these on the full path, so nothing is stripped here.
+	@supabase path /rest/v1/* /auth/v1/* /realtime/v1/* /storage/v1/* /functions/v1/*
+	handle @supabase {
+		reverse_proxy kong:8000 {
+			header_up X-Forwarded-Proto https
+		}
+	}
+
+	# ── Application ────────────────────────────────────────────────────────
+	handle {
+		reverse_proxy app:3000 {
+			header_up X-Forwarded-Proto https
+
+			# A slow upstream should surface as a 502, not a hung tab.
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 30s
+			}
+		}
+	}
+
+	handle_errors {
+		respond "{err.status_code} {err.status_text}" {err.status_code}
+	}
+}
