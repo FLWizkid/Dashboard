@@ -8,15 +8,19 @@ import { useSettings } from "@/components/settings-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/field";
+import { canMoveTo } from "@/lib/kanban/board";
 import { DURATION, EASE } from "@/lib/motion";
 import type { UpdateTaskPayload } from "@/lib/tasks/schema";
 import { isOverdue } from "@/lib/tasks/sort";
 import {
   LINK_RELATION_LABELS,
   PRIORITY_LABELS,
+  STATUS_LABELS,
   TASK_PRIORITIES,
+  TASK_STATUSES,
   type ActivityCategory,
   type Task,
+  type TaskStatus,
 } from "@/lib/tasks/types";
 import { toDateTimeLocalValue } from "@/lib/time/format";
 import { zonedTimeToUtc } from "@/lib/time/zone";
@@ -55,6 +59,8 @@ export interface TaskRowProps {
   onUpdate: (patch: UpdateTaskPayload) => void;
   onComplete: (completed: boolean) => void;
   onDelete: () => void;
+  /** Called when a status change is refused, with the reason. */
+  onRefuseStatus?: (reason: string) => void;
   /** Roving tabindex: only the focused row is in the tab order. */
   tabIndex: number;
   onFocus: () => void;
@@ -70,6 +76,7 @@ export const TaskRow = React.forwardRef<HTMLLIElement, TaskRowProps>(
       onUpdate,
       onComplete,
       onDelete,
+      onRefuseStatus,
       tabIndex,
       onFocus,
     },
@@ -241,6 +248,36 @@ export const TaskRow = React.forwardRef<HTMLLIElement, TaskRowProps>(
                     {TASK_PRIORITIES.map((priority) => (
                       <option key={priority} value={priority}>
                         {PRIORITY_LABELS[priority]}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor={`${task.id}-status`}>Status</Label>
+                  {/*
+                    The same field the Kanban lane is. Editing it here moves
+                    the card, and moving the card changes it here — because
+                    the board is a view of this column, not a second record.
+                  */}
+                  <Select
+                    id={`${task.id}-status`}
+                    value={task.status}
+                    onChange={(event) => {
+                      const next = event.target.value as TaskStatus;
+                      const verdict = canMoveTo(task, next);
+                      if (!verdict.allowed) {
+                        onRefuseStatus?.(
+                          verdict.missing ?? verdict.reason ?? "Not allowed",
+                        );
+                        return;
+                      }
+                      onUpdate({ status: next });
+                    }}
+                  >
+                    {TASK_STATUSES.map((status) => (
+                      <option key={status} value={status}>
+                        {STATUS_LABELS[status]}
                       </option>
                     ))}
                   </Select>

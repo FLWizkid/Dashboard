@@ -102,6 +102,8 @@ export interface Database {
           owner: string | null;
           /** Generated column — never written by the client. */
           is_ready: boolean;
+          is_draft: boolean;
+          can_activate: boolean;
           completed_at: string | null;
           created_at: string;
           updated_at: string;

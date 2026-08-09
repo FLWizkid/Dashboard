@@ -25,6 +25,8 @@ function task(id: string, overrides: Partial<Task> = {}): Task {
     sourceLink: null,
     owner: null,
     isReady: false,
+    isDraft: false,
+    canActivate: false,
     completedAt: null,
     createdAt: BASE_CREATED,
     updatedAt: BASE_CREATED,

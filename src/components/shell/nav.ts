@@ -35,12 +35,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: CalendarDays,
     phase: "P2",
   },
-  {
-    href: "/dashboard/kanban",
-    label: "Kanban",
-    icon: SquareKanban,
-    phase: "P3",
-  },
+  { href: "/dashboard/kanban", label: "Kanban", icon: SquareKanban },
   { href: "/dashboard/notes", label: "Notes", icon: NotebookPen, phase: "P3" },
   { href: "/dashboard/pomodoro", label: "Pomodoro", icon: Timer, phase: "P4" },
   {

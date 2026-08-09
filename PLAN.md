@@ -194,10 +194,38 @@ Still to build before the P2 gate:
 - [ ] Calendar workspace, and wiring the two dashboard placeholders to real data
 - [ ] E2E: connect a mock mailbox → triage → email → task
 
-### P3 — Kanban + notes
+### P3 — Kanban + notes 🚧 in progress
 
-Lanes and promotion. Decision-log notes. Draft follow-up tasks. Local
-Markdown/Obsidian vault sync.
+Done and tested:
+
+- [x] **Kanban board**, live: five lanes, drag **and** keyboard moves, triage
+      suggestions, one-click promote. The board is a view of `tasks.status`,
+      so a lane move shows on the task list immediately — and the task list
+      now has a Status control that moves the card the other way
+- [x] Inbox → Ready is gated on the Ready minimum, identically whether the
+      card was dragged, keyed or clicked
+- [x] `notes` schema, decision-log-first: **decision and rationale are equal
+      anchors**, and `is_complete_decision` is a generated column saying so
+- [x] `note_links` for wiki-links and cross-module links; unresolved links are
+      a supported state
+- [x] Draft follow-ups: `is_draft` plus a trigger refusing activation without
+      owner, due date and priority — a higher bar than Ready, on purpose
+- [x] Markdown (de)serialization: YAML frontmatter with **unknown keys
+      preserved verbatim**, wiki-links, and Obsidian Tasks checkboxes
+- [x] **Deterministic vault reconciliation** over three values, with a
+      conflict copy rather than a merge and no path that loses an edit
+- [x] Vault filesystem layer: atomic writes, path-escape refusal, managed
+      folders only
+- [x] [The vault guide](docs/vault.md) — layout, sync rules, conflicts, and
+      opening it in Obsidian including mobile
+
+Still to build before the P3 gate:
+
+- [ ] Notes UI: the decision-log editor, wiki-link autocomplete, backlinks pane
+- [ ] Note ↔ task/event linking in the interface
+- [ ] The sync job and its routes — the engine is tested, nothing schedules it
+- [ ] Kanban cards showing their linked notes and events
+- [ ] E2E: note → draft task → activate
 
 ### P4 — Hours + Pomodoro
 

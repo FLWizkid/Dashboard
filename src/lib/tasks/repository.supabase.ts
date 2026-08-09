@@ -18,7 +18,7 @@ type TaskLinkRow = Database["public"]["Tables"]["task_links"]["Row"];
 type CategoryRow = Database["public"]["Tables"]["activity_categories"]["Row"];
 
 const TASK_COLUMNS =
-  "id, title, notes, priority, due_at, category_id, status, pinned, source_link, owner, is_ready, completed_at, created_at, updated_at";
+  "id, title, notes, priority, due_at, category_id, status, pinned, source_link, owner, is_ready, is_draft, can_activate, completed_at, created_at, updated_at";
 
 const LINK_COLUMNS =
   "id, task_id, kind, relation, target_id, target_label, target_url, confirmed_at, created_at";
@@ -36,6 +36,8 @@ function toTask(row: TaskRow, links: TaskLinkRow[]): Task {
     sourceLink: row.source_link,
     owner: row.owner,
     isReady: row.is_ready,
+    isDraft: row.is_draft,
+    canActivate: row.can_activate,
     completedAt: row.completed_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

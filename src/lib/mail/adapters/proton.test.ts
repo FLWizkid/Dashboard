@@ -407,6 +407,7 @@ describe("Proton adapter", () => {
   });
 
   it("sends through SMTP using the shared RFC 822 builder", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const sendMail = vi.fn(async (_message: SmtpMessage) => ({
       messageId: "<new@proton.me>",
     }));

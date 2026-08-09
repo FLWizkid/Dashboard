@@ -287,6 +287,13 @@ export function TasksView() {
                   onUpdate={(patch) => handleUpdate(task.id, patch)}
                   onComplete={(completed) => handleComplete(task, completed)}
                   onDelete={() => handleDelete(task)}
+                  onRefuseStatus={(reason) =>
+                    toast({
+                      title: "Can't change status",
+                      description: reason,
+                      tone: "danger",
+                    })
+                  }
                   tabIndex={0}
                   onFocus={() => undefined}
                 />

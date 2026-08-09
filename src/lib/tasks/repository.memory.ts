@@ -121,6 +121,8 @@ export const memoryTaskRepository: TaskRepository = {
       sourceLink: input.sourceLink,
       owner: input.owner,
       isReady: false,
+      isDraft: false,
+      canActivate: Boolean(input.owner && input.dueAt && input.priority),
       completedAt: completedAtFor(input.status, null, now) ?? null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),

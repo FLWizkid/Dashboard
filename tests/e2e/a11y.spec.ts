@@ -105,6 +105,30 @@ test.describe("accessibility", () => {
     expect(describeViolations(results)).toBe("");
   });
 
+  test("the board has no WCAG A/AA violations", async ({ page }) => {
+    await page.goto("/dashboard/tasks");
+    await quickAdd(page, "Board card !high tomorrow");
+    await quickAdd(page, "Untriaged card");
+
+    await page.goto("/dashboard/kanban");
+    await expect(page.getByTestId("kanban-board")).toBeVisible();
+
+    const results = await scan(page);
+    expect(describeViolations(results)).toBe("");
+  });
+
+  test("a board card announces how to move it", async ({ page }) => {
+    // The instruction lives on the card, not in a shortcuts sheet, so it is
+    // discoverable by keyboard users and announced by screen readers.
+    await page.goto("/dashboard/tasks");
+    await quickAdd(page, "Announce me");
+    await page.goto("/dashboard/kanban");
+
+    await expect(
+      page.getByLabel(/Announce me\. In Inbox\. Use left and right arrow keys/),
+    ).toBeVisible();
+  });
+
   test("the whole capture flow is reachable by keyboard alone", async ({
     page,
   }) => {

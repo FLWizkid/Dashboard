@@ -81,6 +81,16 @@ export interface Task {
   owner: string | null;
   /** Server-computed: title + priority + due date are all present. */
   isReady: boolean;
+  /**
+   * A follow-up captured in a note, not yet committed to.
+   *
+   * Drafts stay off the board, out of the dashboard and out of every count
+   * until they are activated — which needs owner, due date and priority. See
+   * `tasks/draft.ts`.
+   */
+  isDraft: boolean;
+  /** Server-computed: the three fields activation requires are all present. */
+  canActivate: boolean;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
