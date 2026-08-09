@@ -126,17 +126,25 @@ describeDb("retired placeholder tables", () => {
   });
 
   it("leaves the live tables exactly where they were", async () => {
+    // Asserts what this migration is responsible for — the Phase 1 tables
+    // surviving and the retired ones being gone — rather than pinning the
+    // whole schema, which every later phase legitimately grows.
     const { rows } = await client.query<{ table_name: string }>(
       `select table_name from information_schema.tables
-        where table_schema = 'public' and table_type = 'BASE TABLE'
-        order by table_name`,
+        where table_schema = 'public' and table_type = 'BASE TABLE'`,
     );
+    const present = new Set(rows.map((row) => row.table_name));
 
-    expect(rows.map((row) => row.table_name)).toEqual([
+    for (const table of [
       "activity_categories",
       "profiles",
       "task_links",
       "tasks",
-    ]);
+    ]) {
+      expect(present.has(table), `${table} went missing`).toBe(true);
+    }
+    for (const table of RETIRED) {
+      expect(present.has(table), `${table} is still in public`).toBe(false);
+    }
   });
 });

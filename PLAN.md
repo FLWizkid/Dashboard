@@ -37,7 +37,7 @@ Pomodoro · Reports
 | **Network**         | **Tailscale/WireGuard only.** Never public. OAuth redirect URIs use the tailnet HTTPS hostname (browser-side redirect, so tailnet-only is fine)                      |
 | **Auth**            | Supabase email/password, single user, MFA-ready                                                                                                                      |
 | **Clients**         | Responsive PWA (installable, offline time-logging) + flat-in-headset VR view; front-end architected so an immersive WebXR layer can be added later without a rewrite |
-| **Data protection** | Postgres RLS, encryption at rest, field-encrypted email bodies, Postgres FTS, audit logging, configurable retention (default 24 months)                              |
+| **Data protection** | Postgres RLS, encryption at rest, field-encrypted email bodies (AES-256-GCM, AAD-bound), Postgres FTS, audit logging, configurable retention (default 24 months)     |
 | **Backups**         | 3-2-1: local second disk/NAS plus client-side-encrypted offsite, with tested restores                                                                                |
 | **Knowledge layer** | **Local-first Markdown** (Obsidian-compatible vault) with two-way file sync. **No Notion, no cloud knowledge tool.**                                                 |
 | **Repo visibility** | **Public** — so no secret may ever be committed. `.gitignore` + `.env.example` names only; all keys live on the box                                                  |
@@ -159,11 +159,40 @@ Each phase stops at a gate for review.
 - [x] Unit + Postgres RLS integration + Playwright E2E + axe, all in CI
 - [x] Module README, data-model notes, parser rules, testing guide
 
-### P2 — Email + calendar
+### P2 — Email + calendar 🚧 in progress
 
-Gmail, then Microsoft Graph, plus the Proton Bridge adapter. Per-mailbox
-caching policy. Encrypted bodies + FTS. Needs-attention card. Four-level
-sender importance. Email → task. Two-day rollup with due and overdue tasks.
+**Foundation complete and tested; the interface is not yet built.** What is in
+the repo today:
+
+- [x] Field encryption: AES-256-GCM envelope, AAD-bound, additive key rotation
+- [x] Normalized model — Mailbox / Message / Thread / Calendar / Event — with
+      RLS on every table
+- [x] **Per-mailbox caching policy enforced by the database**, not only by
+      code: Off stores nothing, Metadata refuses a body, corporate + Full
+      needs recorded admin consent
+- [x] Encrypted bodies, FTS over a vector built before encryption, and a
+      retention purge honouring each account's window (24 months by default)
+- [x] Adapter contract with a capability descriptor, so constrained providers
+      degrade explicitly rather than throwing
+- [x] Gmail + Google Calendar adapter, OAuth, MSW-tested
+- [x] Microsoft Graph adapter, feature-flagged on the Azure registration
+- [x] Proton Bridge IMAP/SMTP adapter, with its constraints declared
+- [x] Sync service: policy gating on the write path, stale-but-safe
+      degradation, exponential back-off
+- [x] Email → task with the specified precedence and a reason for every
+      suggestion
+- [x] [Provider matrix](docs/providers.md) ·
+      [OAuth setup](docs/oauth-setup.md) ·
+      [Caching policy](docs/caching-policy.md)
+
+Still to build before the P2 gate:
+
+- [ ] OAuth callback routes and the connect-account flow
+- [ ] Mail repository and API routes
+- [ ] Email workspace: unified inbox, thread view, compose and reply
+- [ ] Needs-attention card, and four-level sender importance in the UI
+- [ ] Calendar workspace, and wiring the two dashboard placeholders to real data
+- [ ] E2E: connect a mock mailbox → triage → email → task
 
 ### P3 — Kanban + notes
 
