@@ -5,6 +5,7 @@ import { ChevronDown, Link2, Pin, PinOff, Trash2 } from "lucide-react";
 import * as React from "react";
 
 import { useSettings } from "@/components/settings-provider";
+import { ContextPanel } from "@/components/connectors/context-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/field";
@@ -379,6 +380,13 @@ export const TaskRow = React.forwardRef<HTMLLIElement, TaskRowProps>(
                     </ul>
                   </div>
                 ) : null}
+
+                {/* External context. Rendered only while the row is
+                    expanded, so a long list does not fetch links for every
+                    task on screen. */}
+                <div className="sm:col-span-2">
+                  <ContextPanel taskId={task.id} />
+                </div>
 
                 <div className="sm:col-span-2">
                   <Button

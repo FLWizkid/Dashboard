@@ -3,6 +3,7 @@
 import { Archive, Link2, Trash2, TriangleAlert } from "lucide-react";
 import * as React from "react";
 
+import { ContextPanel } from "@/components/connectors/context-panel";
 import { BacklinksPane } from "@/components/notes/backlinks-pane";
 import { WikiTextarea } from "@/components/notes/wiki-textarea";
 import { Button } from "@/components/ui/button";
@@ -314,6 +315,13 @@ export function NoteEditor({
       </Card>
 
       <OutboundLinks note={note.data} />
+
+      <Card>
+        <CardContent className="p-4">
+          <ContextPanel noteId={noteId} />
+        </CardContent>
+      </Card>
+
       <BacklinksPane noteId={noteId} />
     </div>
   );
