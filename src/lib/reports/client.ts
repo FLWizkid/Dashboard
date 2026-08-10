@@ -4,6 +4,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 
 import type { ActivityCategory } from "@/lib/tasks/types";
 
+import type { ContextChange } from "./context";
 import type { ActivitySplit, ExecutiveSummary, TwoDaySlot } from "./summary";
 import type { GroupedTasks } from "./group";
 
@@ -24,6 +25,8 @@ export interface ReportResponse {
   twoDay: TwoDaySlot[];
   categories: ActivityCategory[];
   filteredOut: number;
+  /** Empty when nothing is connected, which is a valid configuration. */
+  contextChanges: ContextChange[];
 }
 
 export interface ReportFilterInput {

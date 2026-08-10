@@ -169,6 +169,9 @@ async function composeFor(
     twoDay: kind === "daily" ? report.twoDay : undefined,
     groups: kind === "daily" ? trimGroups(report.groups) : undefined,
     splits: kind === "daily" ? undefined : report.splits,
+    // In every kind: a pull request that merged last week is news in the
+    // weekly rollup for exactly the same reason it is news in the morning.
+    contextChanges: report.contextChanges,
     baseUrl,
   });
 }

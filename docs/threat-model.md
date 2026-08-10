@@ -266,7 +266,47 @@ This document is reviewed at each phase gate, not just at the end.
 
 ---
 
+## Connector egress (post-v1)
+
+The GitHub connector is the first thing in the product that contacts a third
+party from the box, so it is worth stating exactly what that does and does not
+change.
+
+**What is new**
+
+- **Outbound HTTPS to `api.github.com`**, from the app container only. A
+  second network destination where previously the only ones were the owner's
+  own mail and calendar providers.
+- **A long-lived access token** (`GITHUB_TOKEN`) becomes an asset on the box.
+
+**What is deliberately _not_ new**
+
+- **No inbound anything.** This is not a webhook integration: no port opens,
+  no URL is published, and the tailnet-only property is untouched.
+- **The browser still talks to nothing but this app.** `connect-src 'self'`
+  forbids a page contacting GitHub, and every connector call is made
+  server-side. That is what keeps the token off the client rather than merely
+  discouraging it — `src/lib/connectors/registry.ts` is `server-only`, so an
+  import from a component fails the build instead of shipping a secret.
+- **Nothing about your work is sent.** No task titles, no notes, no telemetry.
+  The only thing GitHub learns is that this token looked at a particular
+  issue, which it already knew it could.
+- **No provider prose is stored.** Titles, state and author only — never issue
+  or PR bodies. Mirroring a provider's content into a second database would
+  create a much larger thing to keep private.
+
+**Residual risks this adds**
+
+| Id  | Risk                                                                                                    | Position                                                                                                                              |
+| --- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| R12 | The token is as broad as it was issued — a classic `repo` token can read every repository the owner can | Accepted, documented. A fine-grained token scoped to the repositories that matter is the mitigation, and `docs/connectors.md` says so |
+| R13 | Cached titles disclose what the owner is working on to anyone who reads the database                    | Bounded by RLS and by storing titles only. Not field-encrypted: a title is already in the search index and in the digest              |
+| R14 | An egress path exists at all, on a box whose premise is that it is private                              | Off by default. With `GITHUB_TOKEN` unset the connector does not exist and nothing leaves                                             |
+
+---
+
 ## Related
 
-[Data model and RLS](data-model.md) · [Windows runbook](runbook-windows.md) ·
-[Backups](backups.md) · [Testing](testing.md)
+[Data model and RLS](data-model.md) · [Connectors](connectors.md) ·
+[Windows runbook](runbook-windows.md) · [Backups](backups.md) ·
+[Testing](testing.md)

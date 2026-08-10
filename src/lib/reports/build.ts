@@ -6,6 +6,7 @@
  * page you print and the email you receive can be guaranteed to agree.
  */
 
+import { getConnectorRepository } from "@/lib/connectors/repository";
 import { totalsFor, type HoursInterval } from "@/lib/hours/aggregate";
 import { getHoursRepository, toIntervals } from "@/lib/hours/repository";
 import {
@@ -17,6 +18,7 @@ import { getTaskRepository } from "@/lib/tasks/repository";
 import type { ActivityCategory, Task } from "@/lib/tasks/types";
 import { addZonedDays, startOfZonedWeek } from "@/lib/time/zone";
 
+import { contextChanges, type ContextChange } from "./context";
 import {
   applyFilters,
   groupForReport,
@@ -43,11 +45,23 @@ export interface ReportData {
   categories: ActivityCategory[];
   /** How many tasks the filters removed, so the report can say so. */
   filteredOut: number;
+  /**
+   * External context that changed recently.
+   *
+   * Empty when nothing is connected, which is a valid configuration rather
+   * than a failure — the section simply does not appear.
+   */
+  contextChanges: ContextChange[];
 }
 
 export interface BuildOptions {
   timeZone: string;
   now?: Date;
+  /**
+   * How far back "what moved elsewhere" looks. Defaults to a day, which is
+   * the interval the daily brief actually covers.
+   */
+  contextSince?: Date;
   filters?: ReportFilters;
   includeDone?: boolean;
 }
@@ -73,10 +87,11 @@ export async function buildReport(options: BuildOptions): Promise<ReportData> {
     taskRepo.listCategories(),
   ]);
 
-  const [hours, ranked, events] = await Promise.all([
+  const [hours, ranked, events, contextChanges] = await Promise.all([
     loadHours(weekStart, weekEnd),
     loadRanking(tasks, now),
     loadEvents(now, timeZone),
+    loadContextChanges(now, options.contextSince),
   ]);
 
   const filtered = applyFilters(tasks, options.filters);
@@ -111,7 +126,33 @@ export async function buildReport(options: BuildOptions): Promise<ReportData> {
     twoDay: twoDayRollup({ tasks: filtered, events, now, timeZone }),
     categories,
     filteredOut: tasks.length - filtered.length,
+    contextChanges,
   };
+}
+
+/**
+ * External context that moved, or nothing at all.
+ *
+ * Wrapped in a try/catch for the same reason `loadHours` is: a connector
+ * problem must degrade this section, not take the whole report with it. A
+ * dashboard that refuses to render because GitHub is down is worse than one
+ * that renders without the GitHub part.
+ */
+async function loadContextChanges(
+  now: Date,
+  since: Date | undefined,
+): Promise<ContextChange[]> {
+  try {
+    const repo = await getConnectorRepository();
+    // A day back by default: the brief is daily, so "since the last one" is
+    // the question being asked.
+    const from = since ?? new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const links = await repo.changedSince(from, 50);
+
+    return contextChanges({ links, since: from });
+  } catch {
+    return [];
+  }
 }
 
 async function loadHours(from: Date, to: Date) {

@@ -166,3 +166,49 @@ test.describe("attaching context to a note", () => {
     await expect(page.getByTestId("ref-chip")).toContainText("Fixture item 2");
   });
 });
+
+test.describe("linked context in the brief", () => {
+  test("a merged reference appears in the morning brief", async ({ page }) => {
+    // The whole reason to connect anything: not "here is a list of pull
+    // requests you linked", but "the one your task was waiting on merged".
+    await page.goto("/dashboard/tasks");
+    await quickAdd(page, "Waiting on the release");
+    await attachToTask(page, "Waiting on the release", PR_MERGED);
+    await expect(page.getByTestId("ref-chip")).toHaveCount(1);
+
+    await page.goto("/dashboard/inbox");
+    await page.getByRole("button", { name: /Generate today's brief/ }).click();
+    await expect(page.getByTestId("inbox-item")).toHaveCount(1, {
+      timeout: 15_000,
+    });
+
+    await page.getByTestId("inbox-item").first().click();
+
+    const body = page.getByTestId("inbox-body");
+    await expect(body).toContainText("WHAT MOVED ELSEWHERE");
+    await expect(body).toContainText("was merged");
+  });
+
+  test("the report shows the same change the brief does", async ({ page }) => {
+    // One computation, three renderings — the property the reports module was
+    // built around. A connector section that only appeared in email would be
+    // a second source of truth.
+    await page.goto("/dashboard/tasks");
+    await quickAdd(page, "Also waiting");
+    await attachToTask(page, "Also waiting", PR_MERGED);
+
+    await page.goto("/dashboard/reports");
+    await expect(page.getByTestId("report-context")).toContainText(
+      "was merged",
+    );
+  });
+
+  test("says nothing at all when nothing has moved", async ({ page }) => {
+    // No heading, no empty box. Unlike the task groups there is no meaningful
+    // difference between "nothing moved" and "nothing to move", and an empty
+    // section on a box with no connectors reads as a broken integration.
+    await page.goto("/dashboard/reports");
+    await expect(page.getByTestId("report-context")).toHaveCount(0);
+    await expect(page.getByText("What moved elsewhere")).toHaveCount(0);
+  });
+});

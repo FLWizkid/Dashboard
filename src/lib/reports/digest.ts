@@ -24,6 +24,8 @@
 import { formatMinutes } from "@/lib/hours/aggregate";
 import type { Task } from "@/lib/tasks/types";
 
+import type { ContextChange } from "./context";
+import { describeChange } from "./context";
 import type { GroupedTasks } from "./group";
 import type { ActivitySplit, ExecutiveSummary, TwoDaySlot } from "./summary";
 
@@ -48,6 +50,13 @@ export interface DigestInput {
   splits?: ActivitySplit[];
   /** Present in the daily brief: the grouped task list, trimmed. */
   groups?: GroupedTasks[];
+  /**
+   * External context that *changed* since the last brief.
+   *
+   * Not "context that exists" — a list of pull requests you linked is filing.
+   * What earns a place in a morning email is the one that merged overnight.
+   */
+  contextChanges?: ContextChange[];
   /** Where the app lives, for the "open the dashboard" link. */
   baseUrl?: string;
 }
@@ -160,6 +169,15 @@ function renderText(input: DigestInput): string {
     lines.push("TOP PRIORITIES");
     for (const task of summary.topPriorities) {
       lines.push(`  · ${taskLine(task, input.timeZone)}`);
+    }
+    lines.push("");
+  }
+
+  if (input.contextChanges?.length) {
+    lines.push("WHAT MOVED ELSEWHERE");
+    for (const change of input.contextChanges) {
+      lines.push(`  · ${describeChange(change)}`);
+      lines.push(`    ${change.link.ref.url}`);
     }
     lines.push("");
   }
@@ -281,6 +299,24 @@ function renderHtml(input: DigestInput, subject: string): string {
         `<ul style="margin:0;padding-left:18px;color:${INK};font-size:14px;line-height:1.6">
 ${summary.topPriorities
   .map((task) => `<li>${escapeHtml(taskLine(task, input.timeZone))}</li>`)
+  .join("\n")}
+</ul>`,
+      ),
+    );
+  }
+
+  if (input.contextChanges?.length) {
+    sections.push(
+      section(
+        "What moved elsewhere",
+        `<ul style="margin:0;padding-left:18px;color:${INK};font-size:14px;line-height:1.6">
+${input.contextChanges
+  .map(
+    (change) =>
+      `<li><a href="${escapeHtml(change.link.ref.url)}" style="color:${PRIMARY};text-decoration:underline">${escapeHtml(
+        describeChange(change),
+      )}</a></li>`,
+  )
   .join("\n")}
 </ul>`,
       ),

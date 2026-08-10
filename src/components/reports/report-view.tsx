@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input, Label, Select } from "@/components/ui/field";
 import { formatMinutes } from "@/lib/hours/aggregate";
+import { describeChange } from "@/lib/reports/context";
 import { useReport, type ReportResponse } from "@/lib/reports/client";
 import { TASK_PRIORITIES, PRIORITY_LABELS } from "@/lib/tasks/types";
 import type { TaskPriority } from "@/lib/tasks/types";
@@ -121,6 +122,7 @@ export function ReportView() {
 
       <Summary data={data} loading={report.isLoading} />
       <TaskSections data={data} loading={report.isLoading} />
+      <WhatMoved data={data} loading={report.isLoading} />
       <TwoDays data={data} loading={report.isLoading} />
     </div>
   );
@@ -482,6 +484,59 @@ function TwoDays({
           ))}
         </div>
       )}
+    </section>
+  );
+}
+
+/* ── What moved elsewhere ─────────────────────────────────────────────── */
+
+/**
+ * External context that changed, shown between the task list and the
+ * two-day preview.
+ *
+ * Absent entirely when nothing changed — including when nothing is connected.
+ * An empty "What moved elsewhere" heading on a box with no connectors would
+ * read as a broken integration rather than as a quiet week, and unlike the
+ * task groups there is no meaningful difference between "nothing moved" and
+ * "nothing to move".
+ */
+function WhatMoved({
+  data,
+  loading,
+}: {
+  data: ReportResponse | undefined;
+  loading: boolean;
+}) {
+  const changes = data?.contextChanges ?? [];
+  if (loading || changes.length === 0) return null;
+
+  return (
+    <section aria-labelledby="report-context" className="break-inside-avoid">
+      <h2
+        id="report-context"
+        className="mb-3 text-sm font-semibold tracking-tight text-fg"
+      >
+        What moved elsewhere
+      </h2>
+
+      <Card>
+        <CardContent className="p-4">
+          <ul className="space-y-1.5" data-testid="report-context">
+            {changes.map((change) => (
+              <li key={change.link.id} className="text-sm">
+                <a
+                  href={change.link.ref.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-fg underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {describeChange(change)}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
     </section>
   );
 }
