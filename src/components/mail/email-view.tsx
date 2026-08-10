@@ -1,6 +1,13 @@
 "use client";
 
-import { AlertCircle, Mail, Paperclip, Search, Star } from "lucide-react";
+import {
+  AlertCircle,
+  ChevronLeft,
+  Mail,
+  Paperclip,
+  Search,
+  Star,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -137,19 +144,40 @@ export function EmailView() {
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-        <ThreadList
-          threads={list}
-          selected={selected}
-          loading={threads.isPending}
-          onOpen={(summary) => setSelected(summary.id)}
-        />
+      {/* Master–detail on a phone, two panes on a desktop.
 
-        <ThreadPane
-          data={thread.data}
-          loading={thread.isPending && selected !== null}
-          empty={selected === null}
-        />
+          Stacking the list above an empty "choose a thread" card is what a
+          naive responsive grid does, and it wastes the half of a phone screen
+          that matters. Below `lg` exactly one of the two is mounted: the list,
+          or the thread with a way back. */}
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+        <div className={cn("min-h-0", selected !== null && "hidden lg:block")}>
+          <ThreadList
+            threads={list}
+            selected={selected}
+            loading={threads.isPending}
+            onOpen={(summary) => setSelected(summary.id)}
+          />
+        </div>
+
+        <div className={cn("min-h-0", selected === null && "hidden lg:block")}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="mb-2 lg:hidden"
+            onClick={() => setSelected(null)}
+          >
+            <ChevronLeft aria-hidden className="size-4" />
+            All mail
+          </Button>
+
+          <ThreadPane
+            data={thread.data}
+            loading={thread.isPending && selected !== null}
+            empty={selected === null}
+          />
+        </div>
       </div>
     </div>
   );

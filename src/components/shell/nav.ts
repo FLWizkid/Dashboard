@@ -48,11 +48,16 @@ export const NAV_ITEMS: NavItem[] = [
  * derived list would silently keep growing until every label was three
  * truncated characters. Hours earns its place over Notes here because
  * one-tap logging is the thing this product is used for while standing up.
+ *
+ * **Four, not five** — the fifth slot is *More*, because a cap that hides
+ * modules with no way to reach them is not a cap, it is a phone build that is
+ * missing half the product. Everything not in this list lives behind that
+ * sheet, and `MOBILE_OVERFLOW_ITEMS` is derived so a new module can never be
+ * added to the sidebar and silently left unreachable on a phone.
  */
 const MOBILE_HREFS = [
   "/dashboard",
   "/dashboard/tasks",
-  "/dashboard/kanban",
   "/dashboard/pomodoro",
   "/dashboard/hours",
 ];
@@ -60,3 +65,8 @@ const MOBILE_HREFS = [
 export const MOBILE_NAV_ITEMS: NavItem[] = MOBILE_HREFS.map((href) =>
   NAV_ITEMS.find((item) => item.href === href)!,
 ).filter((item) => item && !item.phase);
+
+/** Everything the bottom bar does not have room for. Derived, never listed. */
+export const MOBILE_OVERFLOW_ITEMS: NavItem[] = NAV_ITEMS.filter(
+  (item) => !item.phase && !MOBILE_HREFS.includes(item.href),
+);

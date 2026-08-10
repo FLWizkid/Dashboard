@@ -500,6 +500,9 @@ no interface:
       reconciliation engine, `POST /api/vault/sync` runs it, and the scheduler
       sidecar calls it every fifteen minutes. Set `DASHBOARD_VAULT_PATH`
 - [ ] **Drag-to-place** for manual rank, and cross-module deep links
+- [x] **Every module reachable on a phone** — the bottom bar fits four, and
+      the fifth target is a _More_ sheet whose contents are derived, so a new
+      module can never be added to the sidebar and silently left unreachable
 
 A release that shipped without those would be a release that quietly redefined
 what was asked for.

@@ -221,3 +221,59 @@ test.describe("the WebXR seam", () => {
     expect(topLevel).toBe(true);
   });
 });
+
+test.describe("email and calendar in the headset", () => {
+  test.use({ viewport: { width: 1024, height: 640 } });
+
+  test("no text in the inbox is below the readable minimum", async ({
+    page,
+  }) => {
+    // The densest surface in the product: a list row carries a sender, a
+    // subject, a snippet, a timestamp and an account line. Density is exactly
+    // where a headset build stops being readable at arm's length.
+    await page.goto("/dashboard/email");
+    await expect(page.getByTestId("thread-row").first()).toBeVisible();
+
+    expect(await textBelow(page, MINIMUM_READABLE_PX)).toEqual([]);
+  });
+
+  test("no text in an open thread is below it either", async ({ page }) => {
+    await page.goto("/dashboard/email");
+    await page.getByTestId("thread-row").first().click();
+    await expect(page.getByTestId("thread-pane")).toBeVisible();
+
+    expect(await textBelow(page, MINIMUM_READABLE_PX)).toEqual([]);
+  });
+
+  test("the agenda stays readable", async ({ page }) => {
+    await page.goto("/dashboard/calendar");
+    await expect(page.getByTestId("agenda")).toBeVisible();
+
+    expect(await textBelow(page, MINIMUM_READABLE_PX)).toEqual([]);
+  });
+});
+
+/** Every visible element whose own text renders below `minimum` px. */
+async function textBelow(
+  page: import("@playwright/test").Page,
+  minimum: number,
+): Promise<string[]> {
+  return page.evaluate((floor) => {
+    const offenders: string[] = [];
+
+    for (const element of document.querySelectorAll<HTMLElement>("main *")) {
+      const ownText = [...element.childNodes]
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent?.trim() ?? "")
+        .join("");
+
+      if (!ownText) continue;
+      if (element.offsetParent === null) continue;
+
+      const size = Number.parseFloat(getComputedStyle(element).fontSize);
+      if (size < floor) offenders.push(`${size}px — "${ownText.slice(0, 40)}"`);
+    }
+
+    return offenders;
+  }, minimum);
+}

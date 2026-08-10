@@ -136,6 +136,23 @@ decision is not re-litigated from scratch:
 
 ---
 
+## Density, which is what actually breaks
+
+The failure in a headset browser is not that a page looks wrong — it is that a
+dense page stops being readable at arm's length while still looking fine on the
+desktop it was designed on.
+
+So the check is mechanical rather than a judgement: every visible element that
+renders its own text must be at least **12px**, and every interactive target at
+least **24px**. Both are asserted at 1024x640, over the surfaces that carry the
+most per row — the task list, the unified inbox, an open mail thread and the
+agenda. A `text-[0.6875rem]` label added to any of them fails the suite rather
+than being noticed six months later by someone wearing the headset.
+
+The mobile _More_ sheet holds a higher floor, 44px, because it is used
+one-handed on a phone and by a raycast in the headset, and the stricter of the
+two is the one worth keeping.
+
 ## Related
 
 - [`docs/testing.md`](testing.md) — how the three test tiers run

@@ -1,5 +1,6 @@
 "use client";
 
+import { Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
@@ -8,7 +9,12 @@ import { FocusIndicator } from "@/components/pomodoro/focus-indicator";
 import { SignOutButton } from "@/components/sign-out-button";
 import { cn } from "@/lib/utils";
 
-import { MOBILE_NAV_ITEMS, NAV_ITEMS, type NavItem } from "./nav";
+import {
+  MOBILE_NAV_ITEMS,
+  MOBILE_OVERFLOW_ITEMS,
+  NAV_ITEMS,
+  type NavItem,
+} from "./nav";
 
 /**
  * The application shell.
@@ -147,6 +153,17 @@ function SidebarLink({ item }: { item: NavItem }) {
 
 function MobileNav() {
   const pathname = usePathname();
+  const [moreOpen, setMoreOpen] = React.useState(false);
+
+  // Any navigation closes the sheet. Without this, tapping a module leaves it
+  // covering the page you just asked for.
+  React.useEffect(() => {
+    setMoreOpen(false);
+  }, [pathname]);
+
+  const inOverflow = MOBILE_OVERFLOW_ITEMS.some((item) =>
+    pathname.startsWith(item.href),
+  );
 
   return (
     <nav
@@ -180,7 +197,55 @@ function MobileNav() {
             </li>
           );
         })}
+
+        <li className="flex-1">
+          <button
+            type="button"
+            onClick={() => setMoreOpen((open) => !open)}
+            aria-expanded={moreOpen}
+            aria-controls="mobile-more"
+            className={cn(
+              "flex w-full flex-col items-center gap-1 py-2.5 text-[0.6875rem] font-medium transition-colors duration-fast",
+              moreOpen || inOverflow ? "text-primary" : "text-fg-subtle",
+            )}
+          >
+            <Menu aria-hidden="true" className="size-5" />
+            More
+          </button>
+        </li>
       </ul>
+
+      {moreOpen && (
+        <ul
+          id="mobile-more"
+          className="absolute bottom-full left-0 right-0 mb-px grid grid-cols-2 gap-1 border-t border-line bg-surface p-2 shadow-lg"
+        >
+          {MOBILE_OVERFLOW_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const active = pathname.startsWith(item.href);
+
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    // 44px minimum: this sheet is used one-handed, and the
+                    // headset checklist holds the same floor for a raycast.
+                    "flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium",
+                    active
+                      ? "bg-primary-soft text-primary-soft-fg"
+                      : "text-fg hover:bg-surface-muted",
+                  )}
+                >
+                  <Icon aria-hidden="true" className="size-4" />
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </nav>
   );
 }
