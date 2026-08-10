@@ -5,7 +5,6 @@ import {
   type ExternalAccount,
   type ExternalLink,
   type ExternalLinkRelation,
-  type ExternalProvider,
   type ExternalRef,
   type LinkedRef,
 } from "./model";

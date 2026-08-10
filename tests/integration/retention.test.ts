@@ -303,6 +303,11 @@ describeDb("retention", () => {
       expect(rows.map((row) => row.proname)).toEqual([
         "purge_expired_messages",
         "purge_old_digests",
+        // Deliberate, and the conversation this test exists to force: it
+        // removes *cached references nothing links to* — never a link, which
+        // is the owner's judgement, and never a task, note or hour. See
+        // docs/connectors.md § Retention.
+        "purge_orphaned_refs",
       ]);
     });
   });
