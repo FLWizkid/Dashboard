@@ -4,6 +4,7 @@ import { DEFAULT_CATEGORIES } from "@/lib/categories/defaults";
 
 import {
   completedAtFor,
+  DuplicateTaskError,
   TaskNotFoundError,
   type TaskRepository,
 } from "./repository";
@@ -29,6 +30,20 @@ import type { ActivityCategory, Task, TaskLink } from "./types";
 interface MemoryStore {
   categories: ActivityCategory[];
   tasks: Task[];
+  /**
+   * `clientKey` → task id, standing in for the partial unique index on
+   * `tasks (user_id, client_key)`.
+   *
+   * Kept beside the tasks rather than on them because a client key is a
+   * transport detail — the device's way of making a retry safe — and not
+   * something the product knows or shows about a task.
+   *
+   * It is here at all because **an end-to-end suite that passes against a
+   * permissive fake is a statement about nothing.** If this fake accepted a
+   * replayed capture and created a second task, the offline tests would go
+   * green while the real database was the only thing preventing duplicates.
+   */
+  clientKeys: Map<string, string>;
 }
 
 const STORE_KEY = Symbol.for("dashboard.memoryTaskStore");
@@ -52,6 +67,7 @@ function getStore(): MemoryStore {
         isArchived: false,
       })),
       tasks: [],
+      clientKeys: new Map(),
     };
   }
 
@@ -60,7 +76,11 @@ function getStore(): MemoryStore {
 
 /** Test-only reset hook, exposed through the E2E route handler. */
 export function resetMemoryStore(): void {
-  getStore().tasks = [];
+  const store = getStore();
+  store.tasks = [];
+  // Leaving these behind would make a reset test fail its *second* run only,
+  // with a duplicate error about a task that no longer exists.
+  store.clientKeys.clear();
 }
 
 function withDerived(task: Task): Task {
@@ -96,6 +116,18 @@ export const memoryTaskRepository: TaskRepository = {
     const store = getStore();
     const now = new Date();
     const id = randomUUID();
+
+    // The unique index, enforced here too. A replayed flush is the *normal*
+    // outcome of a connection that died after the write, so answering it with
+    // the row that already exists is the whole mechanism — not an edge case.
+    if (input.clientKey) {
+      const existingId = store.clientKeys.get(input.clientKey);
+      const existing = existingId
+        ? store.tasks.find((task) => task.id === existingId)
+        : undefined;
+
+      if (existing) throw new DuplicateTaskError(existing);
+    }
 
     const links: TaskLink[] = input.links.map((link) => ({
       id: randomUUID(),
@@ -133,6 +165,8 @@ export const memoryTaskRepository: TaskRepository = {
     });
 
     store.tasks.push(task);
+    if (input.clientKey) store.clientKeys.set(input.clientKey, id);
+
     return task;
   },
 
@@ -183,5 +217,12 @@ export const memoryTaskRepository: TaskRepository = {
   async deleteTask(id: string) {
     const store = getStore();
     store.tasks = store.tasks.filter((task) => task.id !== id);
+
+    // Free the key, exactly as the row going away does in Postgres. Holding
+    // it would make a re-capture with the same key report a duplicate and
+    // hand back a task that has been deleted.
+    for (const [key, taskId] of store.clientKeys) {
+      if (taskId === id) store.clientKeys.delete(key);
+    }
   },
 };

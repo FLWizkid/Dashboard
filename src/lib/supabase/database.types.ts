@@ -107,6 +107,8 @@ export interface Database {
           /** Phase 5: the manual override. Nothing automatic writes it. */
           manual_rank: number | null;
           manual_rank_set_at: string | null;
+          /** Phase 7: idempotency key for a capture made offline. */
+          client_key: string | null;
           completed_at: string | null;
           created_at: string;
           updated_at: string;
@@ -124,6 +126,7 @@ export interface Database {
           source_link?: string | null;
           owner?: string | null;
           manual_rank?: number | null;
+          client_key?: string | null;
           completed_at?: string | null;
         };
         Update: {

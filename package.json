@@ -2,7 +2,7 @@
   "name": "dashboard",
   "version": "0.1.0",
   "private": true,
-  "description": "CIO Executive Dashboard — a private, self-hosted executive command center",
+  "description": "CIO Executive Dashboard \u2014 a private, self-hosted executive command center",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -19,7 +19,8 @@
     "format:check": "prettier --check .",
     "postbuild": "node ops/prune-runtime.mjs",
     "check:csp": "node ops/check-csp.mjs",
-    "check:bundle": "node ops/check-bundle.mjs"
+    "check:bundle": "node ops/check-bundle.mjs",
+    "check:pwa": "node ops/check-pwa.mjs"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.11",

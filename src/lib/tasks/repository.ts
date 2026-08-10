@@ -25,6 +25,24 @@ export interface TaskRepository {
 }
 
 /** Thrown when a row exists but doesn't belong to the caller, or is absent. */
+/**
+ * Thrown when a capture's `clientKey` has already been used.
+ *
+ * A **success**, not a failure: the task is already recorded. It carries the
+ * existing row so the route can answer 200 with the task the caller wanted,
+ * rather than an error the queue would treat as something to retry forever.
+ *
+ * The same shape as `DuplicateClientKeyError` in the hours module, on purpose
+ * — two idempotency mechanisms that behave differently is one more thing for
+ * a flush to get subtly wrong.
+ */
+export class DuplicateTaskError extends Error {
+  constructor(public readonly existing: Task) {
+    super(`A task with that client key already exists`);
+    this.name = "DuplicateTaskError";
+  }
+}
+
 export class TaskNotFoundError extends Error {
   constructor(id: string) {
     super(`Task ${id} was not found`);

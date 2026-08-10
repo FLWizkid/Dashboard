@@ -15,10 +15,12 @@ import {
   useUpdateTask,
 } from "@/lib/tasks/client";
 import type { CreateTaskPayload, UpdateTaskPayload } from "@/lib/tasks/schema";
+import { useCaptureQueue } from "@/lib/tasks/use-capture-queue";
 import { sortTasks } from "@/lib/tasks/sort";
 import type { ActivityCategory, Task, TaskStatus } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
 
+import { PendingCaptures } from "./pending-captures";
 import { QuickAdd } from "./quick-add";
 import { ShortcutsDialog } from "./shortcuts-dialog";
 import { TaskRow } from "./task-row";
@@ -49,6 +51,7 @@ export function TasksView() {
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
   const { toast, triggerShortcut } = useToast();
+  const captureQueue = useCaptureQueue();
 
   const [filter, setFilter] = React.useState<Filter>("open");
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
@@ -73,16 +76,36 @@ export function TasksView() {
 
   const handleCreate = React.useCallback(
     (payload: CreateTaskPayload) => {
-      createTask.mutate(payload, {
-        onError: (error) =>
+      // Offline is known in advance, so skip a request that cannot succeed
+      // and go straight to the queue.
+      if (!captureQueue.online) {
+        void captureQueue.enqueue(payload).then(() =>
           toast({
-            title: "Couldn't add that task",
-            description: error.message,
-            tone: "danger",
+            title: "Saved on this device",
+            description:
+              "You're offline. It will be added as soon as you reconnect.",
+            tone: "neutral",
           }),
+        );
+        return;
+      }
+
+      createTask.mutate(payload, {
+        onError: (error) => {
+          // The request failed, so the thought is currently nowhere. Queue it
+          // rather than show an error and drop it — a capture box that loses
+          // what you typed is worse than one that is slow.
+          void captureQueue.enqueue(payload).then(() =>
+            toast({
+              title: "Saved on this device",
+              description: `Couldn't reach the server (${error.message}). It will be added when the connection is back.`,
+              tone: "neutral",
+            }),
+          );
+        },
       });
     },
-    [createTask, toast],
+    [captureQueue, createTask, toast],
   );
 
   const handleUpdate = React.useCallback(
@@ -213,6 +236,8 @@ export function TasksView() {
         onCreate={handleCreate}
         pending={createTask.isPending}
       />
+
+      <PendingCaptures />
 
       <div className="flex flex-wrap items-center gap-2">
         <div

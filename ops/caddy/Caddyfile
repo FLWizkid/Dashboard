@@ -58,7 +58,17 @@ https://{$TAILNET_HOSTNAME} {
 		Referrer-Policy "same-origin"
 		Cross-Origin-Opener-Policy "same-origin"
 		Cross-Origin-Resource-Policy "same-origin"
-		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+		# Everything the product does not use is denied outright.
+		#
+		# `xr-spatial-tracking=(self)` is the exception, and it is listed
+		# rather than left to the default on purpose. The specification asks
+		# for a future immersive layer to be an addition rather than a
+		# rewrite, and a Permissions-Policy that denied it would make
+		# `navigator.xr` unavailable no matter what was built on top —
+		# a failure that would only surface in a headset, months later, with
+		# nothing in the code to point at. Granting it to `self` costs nothing
+		# today: the flat view never asks for a session. See docs/vr.md.
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=(), xr-spatial-tracking=(self)"
 
 		# NOTE: Content-Security-Policy is deliberately NOT set here.
 		#

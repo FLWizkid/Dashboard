@@ -1,7 +1,14 @@
 import type { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { connect, hasDatabase, resetSchema } from "./db";
+import {
+  asUser,
+  connect,
+  createUser,
+  errorCode,
+  hasDatabase,
+  resetSchema,
+} from "./db";
 
 /**
  * Schema-wide invariants.
@@ -197,5 +204,138 @@ describeDb("functions that run as their definer", () => {
     );
 
     expect(Number(rows[0].count)).toBeGreaterThan(0);
+  });
+});
+
+/* ── Offline capture ──────────────────────────────────────────────────── */
+
+describeDb("the capture idempotency key", () => {
+  let client: Client;
+  let alice: string;
+  let bob: string;
+
+  beforeAll(async () => {
+    client = await connect();
+    alice = await createUser(client, "capture-alice@example.invalid");
+    bob = await createUser(client, "capture-bob@example.invalid");
+  }, 60_000);
+
+  afterAll(async () => {
+    await client?.end();
+  });
+
+  it("refuses a second task with the same key", async () => {
+    // The whole mechanism. A flush replayed after a connection died must not
+    // create a second task.
+    await asUser(
+      client,
+      alice,
+      (c) =>
+        c.query(
+          `insert into public.tasks (title, client_key)
+           values ('Captured on a train', 'device-key-0001')`,
+        ),
+      { commit: true },
+    );
+
+    await expect(
+      asUser(client, alice, (c) =>
+        c.query(
+          `insert into public.tasks (title, client_key)
+           values ('Captured on a train', 'device-key-0001')`,
+        ),
+      ),
+    ).rejects.toSatisfy((error) => errorCode(error) === "23505");
+  });
+
+  it("does not let one owner's key block another's", async () => {
+    // Two devices belonging to two people can generate anything they like.
+    await expect(
+      asUser(client, bob, (c) =>
+        c.query(
+          `insert into public.tasks (title, client_key)
+           values ('Different owner', 'device-key-0001')`,
+        ),
+      ),
+    ).resolves.toBeDefined();
+  });
+
+  it("allows any number of tasks with no key at all", async () => {
+    // The index is partial. Ordinary online captures never carry a key, and
+    // a plain unique index would be a trap the first time two of them landed.
+    await asUser(
+      client,
+      alice,
+      (c) =>
+        c.query(
+          `insert into public.tasks (title) values ('No key one'), ('No key two')`,
+        ),
+      { commit: true },
+    );
+
+    const { rows } = await asUser(client, alice, (c) =>
+      c.query(`select count(*)::int as count from public.tasks
+                where client_key is null`),
+    );
+
+    expect(rows[0].count).toBeGreaterThanOrEqual(2);
+  });
+
+  it("refuses to reassign a key to a different task", async () => {
+    // A key identifies one capture. Moving it would turn the idempotency
+    // guarantee into a way of silently overwriting someone's work.
+    const { rows } = await asUser(
+      client,
+      alice,
+      (c) =>
+        c.query<{ id: string }>(
+          `insert into public.tasks (title, client_key)
+           values ('Owns a key', 'device-key-0002') returning id`,
+        ),
+      { commit: true },
+    );
+
+    await expect(
+      asUser(client, alice, (c) =>
+        c.query(`update public.tasks set client_key = $1 where id = $2`, [
+          "device-key-0003",
+          rows[0].id,
+        ]),
+      ),
+    ).rejects.toSatisfy((error) => errorCode(error) === "23514");
+  });
+
+  it("allows the key to be cleared, which frees the namespace", async () => {
+    await expect(
+      asUser(
+        client,
+        alice,
+        (c) =>
+          c.query(
+            `update public.tasks set client_key = null
+              where client_key = 'device-key-0002'`,
+          ),
+        { commit: true },
+      ),
+    ).resolves.toBeDefined();
+
+    await expect(
+      asUser(client, alice, (c) =>
+        c.query(
+          `insert into public.tasks (title, client_key)
+           values ('Reuses the freed key', 'device-key-0002')`,
+        ),
+      ),
+    ).resolves.toBeDefined();
+  });
+
+  it("rejects a key too short to be unguessable", async () => {
+    await expect(
+      asUser(client, alice, (c) =>
+        c.query(
+          `insert into public.tasks (title, client_key) values ('Short', 'abc')`,
+        ),
+      ),
+    ).rejects.toSatisfy((error) => errorCode(error) === "23514");
   });
 });

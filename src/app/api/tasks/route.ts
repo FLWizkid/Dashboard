@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getSessionUser } from "@/lib/auth";
-import { getTaskRepository } from "@/lib/tasks/repository";
+import { DuplicateTaskError, getTaskRepository } from "@/lib/tasks/repository";
 import { createTaskSchema, listTasksQuerySchema } from "@/lib/tasks/schema";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +62,15 @@ export async function POST(request: NextRequest) {
     const task = await repository.createTask(parsed.data);
     return NextResponse.json({ task }, { status: 201 });
   } catch (error) {
+    // A capture whose key is already used is not an error — it is the queue
+    // replaying a request whose response was lost. Answering 200 with the row
+    // that exists is what lets the device settle its outbox; a 409 or a 500
+    // would be retried forever, and a 201 would be a lie about having created
+    // something.
+    if (error instanceof DuplicateTaskError) {
+      return NextResponse.json({ task: error.existing }, { status: 200 });
+    }
+
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 },

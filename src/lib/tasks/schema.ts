@@ -46,6 +46,16 @@ export const createTaskSchema = z.object({
   sourceLink: z.string().url().max(2000).nullable().default(null),
   owner: z.string().trim().max(120).nullable().default(null),
   links: z.array(taskLinkInputSchema).max(20).default([]),
+  /**
+   * Idempotency key for a capture made while offline.
+   *
+   * Generated on the device *before* the first attempt, so a request that
+   * dies after the row was written but before the response arrived can be
+   * safely replayed — the unique index answers the retry with the row that
+   * already exists instead of a second task. Absent for the ordinary online
+   * path, which has nothing to replay.
+   */
+  clientKey: z.string().min(8).max(128).nullable().default(null),
 });
 
 export const updateTaskSchema = z

@@ -58,6 +58,11 @@ jobs:
       - name: Content Security Policy
         run: npm run check:csp
 
+      # The service worker only registers in production, so the E2E suite —
+      # which runs `next dev` — cannot reach any of this.
+      - name: PWA installability and offline
+        run: npm run check:pwa
+
   ops:
     name: Deployment configuration
     runs-on: ubuntu-latest

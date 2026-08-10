@@ -26,6 +26,12 @@
  * be tested without a browser: `reconcileOutbox` is pure.
  */
 
+import {
+  offlineStorageAvailable,
+  STORES,
+  transact,
+} from "@/lib/offline/database";
+
 export interface OutboxEntry {
   /** Generated on the device. The server's idempotency key. */
   clientKey: string;
@@ -200,49 +206,14 @@ export function pendingMinutes(queue: OutboxEntry[]): number {
 
 /* ── Storage ──────────────────────────────────────────────────────────── */
 
-const DB_NAME = "cio-dashboard-outbox";
-const STORE = "time-entries";
-const DB_VERSION = 1;
-
-/** The storage surface, so the pure logic can be driven by a fake in tests. */
+/**
+ * The storage surface, so the pure logic can be driven by a fake in tests.
+ */
 export interface OutboxStore {
   all(): Promise<OutboxEntry[]>;
   put(entry: OutboxEntry): Promise<void>;
   remove(clientKey: string): Promise<void>;
   clear(): Promise<void>;
-}
-
-function openDatabase(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE, { keyPath: "clientKey" });
-      }
-    };
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function transact<T>(
-  mode: IDBTransactionMode,
-  body: (store: IDBObjectStore) => IDBRequest<T>,
-): Promise<T> {
-  return openDatabase().then(
-    (db) =>
-      new Promise<T>((resolve, reject) => {
-        const transaction = db.transaction(STORE, mode);
-        const request = body(transaction.objectStore(STORE));
-
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-        transaction.oncomplete = () => db.close();
-      }),
-  );
 }
 
 /**
@@ -252,23 +223,33 @@ function transact<T>(
  * is transactional, and it does not block the main thread — which matters when
  * the write is between the owner pressing stop and believing their time is
  * safe.
+ *
+ * The database itself is opened by `@/lib/offline/database`, which owns the
+ * version. It has to: the capture queue shares this database, and a version
+ * bumped in one caller and not the other fails every open with a
+ * `VersionError` — silently breaking offline logging from a change to an
+ * unrelated module.
  */
 export const indexedDbOutbox: OutboxStore = {
   async all() {
-    return transact<OutboxEntry[]>("readonly", (store) => store.getAll());
+    return transact<OutboxEntry[]>(STORES.hours, "readonly", (store) =>
+      store.getAll(),
+    );
   },
   async put(entry) {
-    await transact("readwrite", (store) => store.put(entry));
+    await transact(STORES.hours, "readwrite", (store) => store.put(entry));
   },
   async remove(clientKey) {
-    await transact("readwrite", (store) => store.delete(clientKey));
+    await transact(STORES.hours, "readwrite", (store) =>
+      store.delete(clientKey),
+    );
   },
   async clear() {
-    await transact("readwrite", (store) => store.clear());
+    await transact(STORES.hours, "readwrite", (store) => store.clear());
   },
 };
 
 /** True when this environment can store an outbox at all. */
 export function outboxAvailable(): boolean {
-  return typeof indexedDB !== "undefined";
+  return offlineStorageAvailable();
 }

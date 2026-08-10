@@ -3,6 +3,7 @@ import type { Database } from "@/lib/supabase/database.types";
 
 import {
   completedAtFor,
+  DuplicateTaskError,
   TaskNotFoundError,
   type TaskRepository,
 } from "./repository";
@@ -19,6 +20,9 @@ type CategoryRow = Database["public"]["Tables"]["activity_categories"]["Row"];
 
 const TASK_COLUMNS =
   "id, title, notes, priority, due_at, category_id, status, pinned, source_link, owner, is_ready, is_draft, can_activate, manual_rank, manual_rank_set_at, completed_at, created_at, updated_at";
+
+/** Postgres's unique-violation SQLSTATE. */
+const UNIQUE_VIOLATION = "23505";
 
 const LINK_COLUMNS =
   "id, task_id, kind, relation, target_id, target_label, target_url, confirmed_at, created_at";
@@ -180,12 +184,23 @@ export function createSupabaseTaskRepository(): TaskRepository {
           pinned: input.pinned,
           source_link: input.sourceLink,
           owner: input.owner,
+          client_key: input.clientKey,
           completed_at: completedAtFor(input.status, null, now) ?? null,
         })
         .select(TASK_COLUMNS)
         .single<TaskRow>();
 
-      if (error) throw new Error(error.message);
+      if (error) {
+        // A unique violation on `client_key` means a previous attempt got
+        // through and its response did not. That is a success: hand back the
+        // row that exists rather than an error the queue would retry forever.
+        if (error.code === UNIQUE_VIOLATION && input.clientKey) {
+          const existing = await findByClientKey(supabase, input.clientKey);
+          if (existing) throw new DuplicateTaskError(existing);
+        }
+
+        throw new Error(error.message);
+      }
 
       let linkRows: TaskLinkRow[] = [];
       if (input.links.length > 0) {
@@ -273,4 +288,32 @@ export function createSupabaseTaskRepository(): TaskRepository {
       if (error) throw new Error(error.message);
     },
   };
+}
+
+/**
+ * The task a replayed capture already created.
+ *
+ * Looked up rather than returned by the failed insert, because Postgres tells
+ * you a constraint was violated, not which row won. Returns null if it has
+ * since been deleted — in which case the original error is the honest answer.
+ */
+async function findByClientKey(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clientKey: string,
+): Promise<Task | null> {
+  const { data } = await supabase
+    .from("tasks")
+    .select(TASK_COLUMNS)
+    .eq("client_key", clientKey)
+    .maybeSingle<TaskRow>();
+
+  if (!data) return null;
+
+  const { data: linkRows } = await supabase
+    .from("task_links")
+    .select(LINK_COLUMNS)
+    .eq("task_id", data.id)
+    .returns<TaskLinkRow[]>();
+
+  return toTask(data, linkRows ?? []);
 }

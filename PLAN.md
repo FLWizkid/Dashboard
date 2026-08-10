@@ -423,11 +423,76 @@ Known gaps, both inherited rather than introduced:
       the extension. `docs/reports.md § 5.4` covers driving the endpoint from
       an external scheduler instead
 
-### P7 — Hardening + v1
+### P7 — Hardening 🚧
 
-Accessibility pass, performance budget, security review, retention/purge,
-restore drill, PWA offline depth, flat-VR verification, docs and runbooks.
-**v1 ships.**
+Done and verified:
+
+- [x] **The CSP gap is closed.** Per-request nonce from middleware,
+      `strict-dynamic`, no `unsafe-inline` for script; Caddy no longer sets the
+      header at all because its directive _replaces_ and would discard the
+      nonce. `ops/check-csp.mjs` drives Chromium at a production build and
+      fails on one violation — then types into the sign-in form to prove React
+      actually mounted
+- [x] **Two real bugs that only a browser could find**: the sign-in redirect
+      pointed at the container's bind address (`localhost:3000`, a dead
+      address on your laptop — every first sign-in would have dead-ended), and
+      `upgrade-insecure-requests` blocked same-origin prefetches on any
+      non-TLS hop
+- [x] **RLS is a property of the schema, not of who remembered a test.** All
+      22 tables have it on, all have policies, every policy names the current
+      user, and every `security definer` function pins a `search_path`
+- [x] **The three npm advisories are resolved, not waved at.** `sharp` is
+      deleted from the runtime output by `postbuild` and the bundle check
+      fails if it returns; `postcss` is build-time only over our own CSS. Both
+      assessed in [the review](docs/security-review.md)
+- [x] **A performance budget that fails the build** — measured from the build
+      manifest, not scraped from a log. `LazyMotion` took 77 kB off every
+      dashboard route, and the Supabase client is now imported on demand,
+      taking `/login` from 618 kB to 377 kB
+- [x] **Accessibility across every module**, not whichever surfaces each phase
+      added: 44 scans including a reduced-motion pass per route, the 404 and
+      offline pages, keyboard reachability of every module, and keyboard
+      operation of the board and the timer
+- [x] **Offline task capture.** Same mechanism as the hours outbox — write to
+      IndexedDB first, carry a device key, settle only on confirmation — with
+      a partial unique index and an immutability trigger behind it, and E2E
+      specs that take the network away for real
+- [x] **PWA depth verified against production**, because the service worker
+      only registers there and the E2E suite runs `next dev`.
+      `ops/check-pwa.mjs` checks installability, registration, control, and
+      the offline page with the network off
+- [x] **A real backup and restore drill**, including — for the first time —
+      the encrypted off-site copy. It found two bugs.
+      [Transcript](docs/restore-drill-evidence.md)
+- [x] **Retention proved per module**, including what must _never_ be purged:
+      tasks, notes and hours have no purge function, because the app is the
+      system of record and there is no upstream to re-sync from
+- [x] **Flat-in-headset verified at headset viewports** — three window shapes,
+      a 12px type floor, a 24px target floor, no-hover reachability — plus the
+      WebXR seam and an honest [manual checklist](docs/vr.md) for the things
+      no machine can check
+- [x] Docs: [security review](docs/security-review.md),
+      [performance](docs/performance.md), [headset](docs/vr.md),
+      [restore evidence](docs/restore-drill-evidence.md)
+
+**The v1 gate is not claimed.** Everything on the P7 list is done, and the
+product is materially harder to break than it was — but "production-ready v1"
+means the thing the specification describes, and two of its eight modules have
+no interface:
+
+- [ ] **Email workspace** — unified inbox, thread view, compose and reply.
+      The schema, encryption, adapters and sync service all exist; nothing
+      renders them
+- [ ] **Calendar workspace**, and the sync that feeds it. Its absence is also
+      why the two-day report preview shows tasks only, and why the priority
+      engine runs on three of its five factors
+- [ ] **The vault sync job.** Reconciliation is tested against a real
+      filesystem; nothing schedules it, so notes live in Postgres and not on
+      disk
+- [ ] **Drag-to-place** for manual rank, and cross-module deep links
+
+A release that shipped without those would be a release that quietly redefined
+what was asked for.
 
 ### Post-v1
 

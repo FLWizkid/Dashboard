@@ -11,10 +11,10 @@ TanStack Query · self-hosted Supabase.
 > 📋 The specification, locked decisions and phase roadmap live in
 > **[`PLAN.md`](./PLAN.md)** — read it first.
 
-**Status:** Phase 1 (operational core) on Phase 0 infrastructure. Tasks are
-live end to end and the stack runs on your box; email, calendar, kanban,
-notes, pomodoro and reports are scaffolded in the shell and arrive in later
-phases.
+**Status:** Phases 0–7 built. Six of the eight modules are live end to end —
+dashboard, tasks, kanban, notes, pomodoro/hours and reports. **Email and
+calendar have their whole foundation but no interface yet**, so this is not a
+finished v1; see [`PLAN.md`](./PLAN.md) for exactly what is missing.
 
 ---
 
@@ -61,11 +61,17 @@ Supabase email/password account, `/dashboard` becomes available.
 - **Ready state.** Title + priority + due date. Anything short of it is badged
   with exactly what it needs.
 - **One tap to complete, with undo** — mouse, touch or <kbd>X</kbd>.
-- **Manual priority and pins.** Automatic weighted ranking lands in Phase 5.
-- **Live dashboard.** Top priorities is real; the meeting, two-day and hours
-  cards hold their place and say which phase fills them.
+- **Weighted, explainable ranking**, with a manual override that always wins.
+  [The formula →](./docs/priority.md)
+- **A board, notes with wiki-links, a Pomodoro timer and an hours ledger** —
+  each with its own module doc.
+- **Reports that print.** The same page you read is the page that prints; no
+  server PDF. [Definitions →](./docs/reports.md)
+- **Scheduled digests** to an in-app inbox and, optionally, email.
+- **Offline capture.** A task typed with no connection is kept on the device
+  and sent when the network returns — exactly once.
 - **Installable PWA** with an offline page, on a shell that becomes a bottom
-  bar on a phone.
+  bar on a phone and holds up in a headset browser. [Headset notes →](./docs/vr.md)
 
 ---
 
@@ -80,6 +86,9 @@ Supabase email/password account, `/dashboard` becomes available.
 | `npm run test:integration`           | Schema + RLS against Postgres (needs `DATABASE_URL`) |
 | `npm run test:e2e`                   | Playwright end-to-end + axe accessibility            |
 | `npm run test:all`                   | All three tiers                                      |
+| `npm run check:csp`                  | CSP against a real browser and a production build    |
+| `npm run check:bundle`               | The performance budget                               |
+| `npm run check:pwa`                  | Installability, service worker, offline page         |
 | `npm run format`                     | Prettier                                             |
 | `npm run icons`                      | Regenerate the PWA raster icons                      |
 
@@ -98,9 +107,13 @@ Supabase email/password account, `/dashboard` becomes available.
 - **Nothing leaves the box by default.** Error reports are scrubbed and stay
   local unless a DSN is configured; the off-site backup is `age`-encrypted
   before upload, to a key whose private half is kept elsewhere.
-- **Backups are tested, not assumed.** A weekly drill restores the newest
-  archive into a throwaway database and checks that the schema, the data and
-  RLS all survived.
+- **A strict Content Security Policy**, with a per-request nonce and no
+  `unsafe-inline` for script. Verified by driving a real browser at a
+  production build and failing on a single violation.
+- **Backups are tested, not assumed.** A drill restores the newest archive —
+  including the encrypted off-site copy — into a throwaway database and checks
+  that the schema, the data and RLS all survived.
+  [Transcript →](./docs/restore-drill-evidence.md)
 - Secrets live only on that box. **This repository is public**: it contains no
   real keys, only `.env.example` with names, and CI fails if an environment
   file or certificate is ever tracked.
@@ -143,20 +156,24 @@ docs/                     Runbook, threat model, backups, data model, testing
 
 ## Documentation
 
-| Document                                               | Covers                                                |
-| ------------------------------------------------------ | ----------------------------------------------------- |
-| [`PLAN.md`](./PLAN.md)                                 | The specification, locked decisions, phase roadmap    |
-| [`docs/runbook-windows.md`](./docs/runbook-windows.md) | Fresh machine → working dashboard, and day-to-day ops |
-| [`docs/threat-model.md`](./docs/threat-model.md)       | Assets, boundaries, mitigations, residual risks       |
-| [`docs/backups.md`](./docs/backups.md)                 | 3-2-1, the restore drill, and how to actually restore |
-| [`docs/data-model.md`](./docs/data-model.md)           | Schema, RLS, and the reasoning behind it              |
-| [`docs/parser-rules.md`](./docs/parser-rules.md)       | Everything quick-add understands                      |
-| [`docs/priority.md`](./docs/priority.md)               | The scoring formula, worked examples, overrides       |
-| [`docs/hours.md`](./docs/hours.md)                     | The hours model, Pomodoro, offline logging            |
-| [`docs/reports.md`](./docs/reports.md)                 | Report definitions, digest schedule, email setup      |
-| [`docs/vault.md`](./docs/vault.md)                     | The Obsidian vault, sync rules, conflicts             |
-| [`docs/providers.md`](./docs/providers.md)             | Mail and calendar adapters, capabilities              |
-| [`docs/caching-policy.md`](./docs/caching-policy.md)   | What is cached, and what refuses to be                |
-| [`docs/modules/tasks.md`](./docs/modules/tasks.md)     | The tasks module                                      |
-| [`docs/testing.md`](./docs/testing.md)                 | How to run and extend the three test tiers            |
-| [`ops/README.md`](./ops/README.md)                     | What is in the operations directory and why           |
+| Document                                                             | Covers                                                |
+| -------------------------------------------------------------------- | ----------------------------------------------------- |
+| [`PLAN.md`](./PLAN.md)                                               | The specification, locked decisions, phase roadmap    |
+| [`docs/runbook-windows.md`](./docs/runbook-windows.md)               | Fresh machine → working dashboard, and day-to-day ops |
+| [`docs/threat-model.md`](./docs/threat-model.md)                     | Assets, boundaries, mitigations, residual risks       |
+| [`docs/backups.md`](./docs/backups.md)                               | 3-2-1, the restore drill, and how to actually restore |
+| [`docs/data-model.md`](./docs/data-model.md)                         | Schema, RLS, and the reasoning behind it              |
+| [`docs/parser-rules.md`](./docs/parser-rules.md)                     | Everything quick-add understands                      |
+| [`docs/priority.md`](./docs/priority.md)                             | The scoring formula, worked examples, overrides       |
+| [`docs/hours.md`](./docs/hours.md)                                   | The hours model, Pomodoro, offline logging            |
+| [`docs/reports.md`](./docs/reports.md)                               | Report definitions, digest schedule, email setup      |
+| [`docs/security-review.md`](./docs/security-review.md)               | The Phase 7 review: findings, fixes, what is open     |
+| [`docs/performance.md`](./docs/performance.md)                       | The budget, what it measures and what it does not     |
+| [`docs/vr.md`](./docs/vr.md)                                         | The headset view and the manual checklist             |
+| [`docs/restore-drill-evidence.md`](./docs/restore-drill-evidence.md) | A real backup and restore, transcript                 |
+| [`docs/vault.md`](./docs/vault.md)                                   | The Obsidian vault, sync rules, conflicts             |
+| [`docs/providers.md`](./docs/providers.md)                           | Mail and calendar adapters, capabilities              |
+| [`docs/caching-policy.md`](./docs/caching-policy.md)                 | What is cached, and what refuses to be                |
+| [`docs/modules/tasks.md`](./docs/modules/tasks.md)                   | The tasks module                                      |
+| [`docs/testing.md`](./docs/testing.md)                               | How to run and extend the three test tiers            |
+| [`ops/README.md`](./ops/README.md)                                   | What is in the operations directory and why           |

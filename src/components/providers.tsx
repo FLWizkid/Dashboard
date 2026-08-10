@@ -5,6 +5,7 @@ import { LazyMotion, domAnimation } from "framer-motion";
 import * as React from "react";
 
 import { OutboxProvider } from "@/lib/hours/use-outbox";
+import { CaptureQueueProvider } from "@/lib/tasks/use-capture-queue";
 import { PomodoroProvider } from "@/lib/hours/use-pomodoro";
 
 import { SettingsProvider } from "./settings-provider";
@@ -58,7 +59,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 when a flush lands — and mounted once, so the whole tab shares
                 one queue. */}
             <OutboxProvider>
-              <PomodoroProvider>{children}</PomodoroProvider>
+              <CaptureQueueProvider>
+                <PomodoroProvider>{children}</PomodoroProvider>
+              </CaptureQueueProvider>
             </OutboxProvider>
           </ToastProvider>
         </LazyMotion>

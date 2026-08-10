@@ -6,8 +6,13 @@
 # throwaway database, checks that what came back is actually the product's
 # schema and data, and then deletes it. It never touches the live database.
 #
-#   restore-drill.sh              # newest backup
+#   restore-drill.sh                        # newest local backup
 #   restore-drill.sh --file <path>
+#   BACKUP_IDENTITY=key.txt \
+#     restore-drill.sh --file <path>.age    # the off-site copy
+#
+# A `.age` file is decrypted first, which is the drill that actually rehearses
+# losing the box — the local dumps live on the same disk as the database.
 #
 # Exit status is the result, so cron mail or a monitor can act on it.
 
@@ -50,12 +55,65 @@ else
 	pass "newest backup is ${age_hours}h old"
 fi
 
-cleanup() {
+DECRYPTED=""
+
+# Two separate jobs, deliberately not one function.
+#
+# `drop_drill_db` also runs *before* the restore, to clear a database left
+# behind by an interrupted run. `cleanup` runs on the way out and additionally
+# deletes the decrypted archive — folding the two together meant the pre-run
+# reset removed the plaintext dump it was about to restore, and the drill
+# reported "pg_restore could not restore this archive" about a file it had
+# just deleted itself.
+drop_drill_db() {
 	psql -q -d postgres -c "drop database if exists \"$DRILL_DB\"" >/dev/null 2>&1 || true
+}
+
+cleanup() {
+	drop_drill_db
+	# Never leave a plaintext copy of an off-site archive lying about.
+	[ -n "$DECRYPTED" ] && rm -f "$DECRYPTED"
+	return 0
 }
 trap cleanup EXIT INT TERM
 
-cleanup
+# ── The off-site copy ─────────────────────────────────────────────────────
+#
+# This is the leg that matters and the one nothing exercised: the local dumps
+# are on the same machine as the database, so the only copy that survives the
+# box is the encrypted one. It is also the easiest to break silently — rotate
+# the age key, forget to update the recipient, and every upload from then on
+# is a file nobody alive can open. Nothing about the backup log would say so.
+#
+#   restore-drill.sh --file /mnt/offsite/cio-dashboard-….dump.age
+#
+# with BACKUP_IDENTITY pointing at the private key. Run it from a *different*
+# machine than the box, because that is the situation being rehearsed.
+case "$FILE" in
+	*.age)
+		if [ -z "${BACKUP_IDENTITY:-}" ]; then
+			log "DRILL FAILED: $(basename "$FILE") is encrypted; set BACKUP_IDENTITY"
+			exit 1
+		fi
+
+		if [ ! -f "$BACKUP_IDENTITY" ]; then
+			log "DRILL FAILED: BACKUP_IDENTITY ($BACKUP_IDENTITY) is not a file"
+			exit 1
+		fi
+
+		DECRYPTED="$(mktemp -t restore-drill.XXXXXX.dump)"
+
+		if ! age --decrypt --identity "$BACKUP_IDENTITY" --output "$DECRYPTED" "$FILE"; then
+			log "DRILL FAILED: cannot decrypt — wrong key, or the key has rotated"
+			exit 1
+		fi
+
+		pass "off-site archive decrypted with the recovery key"
+		FILE="$DECRYPTED"
+		;;
+esac
+
+drop_drill_db
 psql -q -d postgres -c "create database \"$DRILL_DB\"" >/dev/null
 
 if ! pg_restore --dbname="$DRILL_DB" --no-owner --no-privileges --exit-on-error "$FILE" >/dev/null 2>&1; then

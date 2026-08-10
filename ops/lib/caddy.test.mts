@@ -101,3 +101,24 @@ describe("exposure", () => {
     expect(CADDYFILE).toMatch(/request>headers>Cookie delete/);
   });
 });
+
+describe("the immersive seam", () => {
+  it("grants xr-spatial-tracking to this origin", () => {
+    // Denied — or simply omitted and later tightened — `navigator.xr` is
+    // unavailable however good the code on top of it is, and the failure only
+    // ever shows up in a headset. Listing it makes the intent explicit.
+    expect(CADDYFILE).toMatch(/xr-spatial-tracking=\(self\)/);
+  });
+
+  it("still denies everything the product does not use", () => {
+    for (const feature of [
+      "camera",
+      "microphone",
+      "geolocation",
+      "payment",
+      "usb",
+    ]) {
+      expect(CADDYFILE).toMatch(new RegExp(`${feature}=\\(\\)`));
+    }
+  });
+});

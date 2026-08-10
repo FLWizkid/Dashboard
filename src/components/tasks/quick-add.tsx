@@ -234,6 +234,9 @@ export function QuickAdd({
       pinned: false,
       sourceLink: null,
       owner: draft.owner,
+      // Set by the capture queue if this ever has to be held on the device;
+      // an online capture has nothing to replay and so needs no key.
+      clientKey: null,
       links:
         draft.eventRef && draft.eventConfirmed
           ? [
