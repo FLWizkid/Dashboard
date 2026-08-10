@@ -37,7 +37,7 @@ export const NAV_ITEMS: NavItem[] = [
     phase: "P2",
   },
   { href: "/dashboard/kanban", label: "Kanban", icon: SquareKanban },
-  { href: "/dashboard/notes", label: "Notes", icon: NotebookPen, phase: "P3" },
+  { href: "/dashboard/notes", label: "Notes", icon: NotebookPen },
   { href: "/dashboard/pomodoro", label: "Pomodoro", icon: Timer },
   { href: "/dashboard/hours", label: "Hours", icon: Hourglass },
   {
@@ -48,7 +48,23 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-/** The subset that fits a phone's bottom bar. */
-export const MOBILE_NAV_ITEMS: NavItem[] = NAV_ITEMS.filter(
-  (item) => !item.phase,
-);
+/**
+ * The subset that fits a phone's bottom bar.
+ *
+ * Named explicitly rather than derived from "everything that is built": five
+ * targets is what fits legibly across a phone, and as more modules land the
+ * derived list would silently keep growing until every label was three
+ * truncated characters. Hours earns its place over Notes here because
+ * one-tap logging is the thing this product is used for while standing up.
+ */
+const MOBILE_HREFS = [
+  "/dashboard",
+  "/dashboard/tasks",
+  "/dashboard/kanban",
+  "/dashboard/pomodoro",
+  "/dashboard/hours",
+];
+
+export const MOBILE_NAV_ITEMS: NavItem[] = MOBILE_HREFS.map((href) =>
+  NAV_ITEMS.find((item) => item.href === href)!,
+).filter((item) => item && !item.phase);

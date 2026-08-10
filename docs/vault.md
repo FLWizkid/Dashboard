@@ -261,3 +261,49 @@ the folder.
 
 [Notes and Kanban](modules/notes.md) · [Backups](backups.md) ·
 [Data model](data-model.md) · [Threat model](threat-model.md)
+
+---
+
+## The notes interface
+
+`/dashboard/notes` — a list beside an editor, with capture in a single field
+at the top. Everything else about a note is added afterwards, which is the
+same capture-first shape the task inbox uses and for the same reason: the
+moment you need to write something down is never the moment you have time to
+classify it.
+
+### Decision and reasoning are sibling fields
+
+Two boxes of the same size, side by side, with equal labels. The product now
+says this in three places — the generated `is_complete_decision` column, the
+two `##` headings in the Markdown, and the editor itself.
+
+**A decision saves without its reasoning.** You capture the decision in the
+meeting and write down why afterwards; refusing the save would mean losing the
+decision entirely. Incomplete is a marked state — a banner in the editor
+naming what is missing, and a warning glyph in the list so the gaps are
+findable without opening every note.
+
+### Links resolve when the page arrives
+
+Typing `[[` opens a menu of the notes that exist. It never refuses a title
+that doesn't: linking a page before writing it is how Obsidian works and how
+thinking works, and the unresolved link is itself information — a note you
+have decided you owe yourself. Writing that page resolves every link that was
+waiting for it.
+
+Links are **rebuilt from the note's prose on every save** rather than tracked
+incrementally. The text is what round-trips to the vault and what a person
+edits in Obsidian; an index that can drift from it is worse than no index.
+
+Deleting a note leaves inbound links **unresolved rather than removing them**,
+because the prose still says `[[Whatever]]` and an index that disagrees with
+the file is the one state worth avoiding.
+
+### What is still missing
+
+The notes live in Postgres. **The sync job that writes them to the vault is
+not built yet** — the reconciliation engine in `src/lib/vault/` is tested
+against a real filesystem, but nothing schedules it. Until that lands, this
+page is a decision log with a vault-shaped path recorded against each note,
+not files on disk.

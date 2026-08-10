@@ -171,6 +171,56 @@ test.describe("accessibility", () => {
     expect(describeViolations(await scan(page))).toBe("");
   });
 
+  test("the notes editor has no WCAG A/AA violations", async ({ page }) => {
+    await page.goto("/dashboard/notes");
+
+    const capture = page.getByTestId("note-capture");
+    await capture.fill("Vendor renewal decision");
+    await capture.press("Enter");
+    await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+      "Vendor renewal decision",
+    );
+
+    // As a decision, so the incomplete banner and both anchors are rendered.
+    await page.getByLabel("Kind", { exact: true }).selectOption("decision");
+    await page
+      .getByLabel("Decision", { exact: true })
+      .fill("Renew for one year, not three.");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+
+    const results = await scan(page);
+    expect(describeViolations(results)).toBe("");
+  });
+
+  test("the wiki-link menu is announced and reachable by keyboard", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/notes");
+
+    const capture = page.getByTestId("note-capture");
+    await capture.fill("Security review");
+    await capture.press("Enter");
+    await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+      "Security review",
+    );
+
+    const body = page.getByLabel("Notes", { exact: true });
+    await body.click();
+    await body.pressSequentially("See [[Sec");
+
+    // A completion menu that a screen reader cannot see is a mouse-only
+    // feature wearing a keyboard's clothes.
+    const menu = page.getByRole("listbox", { name: "Link to a note" });
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole("option").first()).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    const results = await scan(page);
+    expect(describeViolations(results)).toBe("");
+  });
+
   test("the whole capture flow is reachable by keyboard alone", async ({
     page,
   }) => {

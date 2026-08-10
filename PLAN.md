@@ -219,13 +219,44 @@ Done and tested:
 - [x] [The vault guide](docs/vault.md) — layout, sync rules, conflicts, and
       opening it in Obsidian including mobile
 
+Interface, also done:
+
+- [x] Notes page: capture in one field, a list beside an editor, full-text
+      search and a kind filter
+- [x] **Decision and reasoning as sibling fields** — same size, same weight,
+      side by side. The third place the product says they are equals, after
+      the generated column and the two `##` headings in the Markdown
+- [x] **Incomplete is a state, not an error.** A decision saves without its
+      reasoning; the editor says what is missing and the list marks it, so the
+      gaps are findable without opening every note
+- [x] Wiki-link autocomplete on `[[`, keyboard-driven, and a link to a page
+      that doesn't exist yet is **accepted** — it resolves by itself the
+      moment that page is written
+- [x] Backlinks pane showing the line each link appears on
+- [x] Links rebuilt from the prose on every save, because the text is the
+      truth and an index that can drift from it is worse than none
+- [x] E2E for both deliberate-looking-wrong behaviours, plus two axe scans
+
 Still to build before the P3 gate:
 
-- [ ] Notes UI: the decision-log editor, wiki-link autocomplete, backlinks pane
-- [ ] Note ↔ task/event linking in the interface
-- [ ] The sync job and its routes — the engine is tested, nothing schedules it
+- [ ] The vault sync **job** and its routes — the reconciliation engine is
+      tested against a real filesystem, but nothing schedules it, so notes
+      live in Postgres and not yet on disk
+- [ ] Note ↔ task/event linking in the interface (the schema and the link
+      kinds exist; only wiki-links are wired to the editor)
 - [ ] Kanban cards showing their linked notes and events
 - [ ] E2E: note → draft task → activate
+
+Two things the interface work surfaced:
+
+- Changing the kind filter **closed the note being edited**, because the
+  selection was cleared whenever the list stopped containing it. A filter
+  narrows the list; the editor is not part of the list.
+- The `[[` menu carried `aria-expanded` / `aria-controls` /
+  `aria-autocomplete` on a bare textarea, which is a combobox's vocabulary and
+  invalid without the role. Taking the role would make a screen reader
+  announce a long-form note body as a combo box, so the attributes went and
+  the live region now names the highlighted option instead.
 
 ### P4 — Hours + Pomodoro ✅
 
