@@ -221,6 +221,73 @@ test.describe("accessibility", () => {
     expect(describeViolations(results)).toBe("");
   });
 
+  test("the ranking explanation has no WCAG A/AA violations", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/tasks");
+    await quickAdd(page, "Overdue and important !high yesterday");
+
+    await page.goto("/dashboard");
+    const list = page.getByTestId("top-priorities-list");
+    await expect(list).toBeVisible();
+
+    // Open the panel: collapsed, it exercises almost none of the markup.
+    await list.getByTestId("why-toggle").first().click();
+    await expect(page.getByTestId("why-panel").first()).toBeVisible();
+
+    const results = await scan(page);
+    expect(describeViolations(results)).toBe("");
+  });
+
+  test("a suggestion prompt has no violations", async ({ page }) => {
+    const reset = await page.request.post("/api/e2e/reset", {
+      data: {
+        calendar: [
+          {
+            id: "44444444-4444-4444-8444-444444444444",
+            title: "Helios board decision",
+            startsAt: new Date(Date.now() + 20 * 3_600_000).toISOString(),
+            endsAt: new Date(Date.now() + 21 * 3_600_000).toISOString(),
+            attendeeCount: 9,
+            isExternal: true,
+            isCancelled: false,
+            organizerAddress: null,
+            isOwnerOrganiser: false,
+          },
+        ],
+      },
+    });
+    expect(reset.ok()).toBe(true);
+
+    await page.goto("/dashboard/tasks");
+    await quickAdd(page, "Helios board pack");
+
+    await page.goto("/dashboard");
+    await expect(page.getByTestId("suggestion-prompt").first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const results = await scan(page);
+    expect(describeViolations(results)).toBe("");
+  });
+
+  test("the why-panel toggle announces its state", async ({ page }) => {
+    // The panel is the whole "explainable" claim; a screen reader has to be
+    // able to tell it is there and whether it is open.
+    await page.goto("/dashboard/tasks");
+    await quickAdd(page, "Announce my reasoning !high tomorrow");
+
+    await page.goto("/dashboard");
+    const toggle = page
+      .getByTestId("top-priorities-list")
+      .getByTestId("why-toggle")
+      .first();
+
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  });
+
   test("the whole capture flow is reachable by keyboard alone", async ({
     page,
   }) => {

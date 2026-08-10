@@ -91,6 +91,17 @@ export interface Task {
   isDraft: boolean;
   /** Server-computed: the three fields activation requires are all present. */
   canActivate: boolean;
+  /**
+   * The owner's manual placement, lower first. `null` means "let the priority
+   * engine decide".
+   *
+   * Nothing automatic ever writes this, which is what makes it sticky: a
+   * rescore cannot clear it, and neither can a meeting appearing on the
+   * calendar. See `src/lib/priority/score.ts`.
+   */
+  manualRank: number | null;
+  /** When it was last placed by hand. */
+  manualRankSetAt: string | null;
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;

@@ -24,6 +24,8 @@ function task(overrides: Partial<Task> = {}): Task {
     isReady: true,
     isDraft: false,
     canActivate: false,
+    manualRank: null,
+    manualRankSetAt: null,
     completedAt: null,
     createdAt: "2026-08-05T14:00:00.000Z",
     updatedAt: "2026-08-05T14:00:00.000Z",

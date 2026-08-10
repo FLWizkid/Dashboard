@@ -315,10 +315,53 @@ Three bugs the interface work surfaced, all fixed:
   it, so a click landing in that window did nothing. The restore now refuses
   to clobber a state that has moved, and controls stay disabled until it runs.
 
-### P5 — Priority engine + connected views
+### P5 — Priority engine + connected views 🚧
 
-Full weighted ranking. Calendar-derived importance. Confirm-before-link
-prep/follow-up flows. Cross-module linkage polish.
+Done and tested:
+
+- [x] **Weighted scoring** — importance 35 / overdue 25 / due-proximity 20 /
+      calendar-proximity 15 / manual 5, each factor normalised to 0–1 so a
+      weight change alters that factor and nothing else
+- [x] **Deterministic**: same inputs and same `now` give the same score, and
+      the comparator is a total order, so the list never shuffles itself
+- [x] Overdue **saturates at a fortnight** — one task forgotten in March must
+      not own the list forever
+- [x] Due-proximity and overdue never both fire, so lateness isn't counted
+      at 45% of the total
+- [x] **Prep and follow-up run in opposite directions** around the meeting: a
+      follow-up ranked highly the day before is the engine telling you to do
+      something you cannot yet do
+- [x] Importance inference from meetings — imminence, external party,
+      decision words, leadership, organiser — every signal checkable by
+      looking at the meeting
+- [x] Linked work inherits **part** of the meeting's importance (prep 70%,
+      follow-up 50%), and several meetings take the strongest, not the sum
+- [x] **Manual rank wins outright and is sticky** — nothing automatic writes
+      the column, a trigger stamps when it was set, and an ordinary edit
+      leaves it alone
+- [x] **Confirm before link**: suggestions live in their own table, detection
+      requires shared significant words (never timing alone), the offered
+      note is a separate yes, and declining means never asking again
+- [x] A database trigger refuses a backdated already-confirmed event link —
+      "never auto-link silently" survives the next import script
+- [x] **Explainable**: a one-line reason on every row and a panel naming each
+      contributing factor, with the number shown last and quietly
+- [x] The score is **never stored** — it is a function of the clock, and a
+      stored copy goes stale at midnight with no visible symptom
+- [x] [The scoring guide](docs/priority.md), with worked examples asserted in
+      the test suite so the two cannot drift
+
+Still to build before the P5 gate:
+
+- [ ] Drag-to-place in the interface — manual rank is settable through the
+      API and honoured everywhere, but the only way to set it today is a
+      PATCH, not a gesture
+- [ ] Connected-views polish: the linkage surface is consistent for
+      task ↔ event ↔ note, but email ↔ task and kanban ↔ note are not yet
+      shown, and there are no deep links between modules
+- [ ] The calendar half has **no live feed** until P2's sync lands, so
+      proximity, inference and detection are exercised against seeded and
+      stored events rather than a real calendar
 
 ### P6 — Reports + scheduled digests
 

@@ -2,6 +2,7 @@ import { CalendarClock, CalendarDays } from "lucide-react";
 import type { Metadata } from "next";
 
 import { HoursThisWeek } from "@/components/dashboard/hours-this-week";
+import { SuggestionPrompts } from "@/components/priority/suggestion-prompt";
 import { PlaceholderCard } from "@/components/dashboard/placeholder-card";
 import { TopPriorities } from "@/components/dashboard/top-priorities";
 
@@ -27,6 +28,11 @@ export default function DashboardHome() {
           Your meetings, your next two days, and what needs doing.
         </p>
       </header>
+
+      {/* Questions first. A prompt buried under three cards is a prompt that
+          never gets answered, and an unanswered suggestion does nothing at
+          all — no link, no effect on the ranking. */}
+      <SuggestionPrompts />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <PlaceholderCard

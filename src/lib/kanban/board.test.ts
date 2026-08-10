@@ -34,6 +34,8 @@ const task = (over: Partial<Task> = {}): Task => ({
   isReady: true,
   isDraft: false,
   canActivate: false,
+  manualRank: null,
+  manualRankSetAt: null,
   completedAt: null,
   createdAt: "2026-08-11T09:00:00.000Z",
   updatedAt: "2026-08-11T09:00:00.000Z",

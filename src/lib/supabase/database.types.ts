@@ -104,6 +104,9 @@ export interface Database {
           is_ready: boolean;
           is_draft: boolean;
           can_activate: boolean;
+          /** Phase 5: the manual override. Nothing automatic writes it. */
+          manual_rank: number | null;
+          manual_rank_set_at: string | null;
           completed_at: string | null;
           created_at: string;
           updated_at: string;
@@ -120,6 +123,7 @@ export interface Database {
           pinned?: boolean;
           source_link?: string | null;
           owner?: string | null;
+          manual_rank?: number | null;
           completed_at?: string | null;
         };
         Update: {
@@ -132,6 +136,7 @@ export interface Database {
           pinned?: boolean;
           source_link?: string | null;
           owner?: string | null;
+          manual_rank?: number | null;
           completed_at?: string | null;
         };
         Relationships: [];

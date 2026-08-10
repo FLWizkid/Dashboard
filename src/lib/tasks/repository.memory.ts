@@ -123,6 +123,9 @@ export const memoryTaskRepository: TaskRepository = {
       isReady: false,
       isDraft: false,
       canActivate: Boolean(input.owner && input.dueAt && input.priority),
+      // A new task is never manually placed — only an explicit act sets this.
+      manualRank: null,
+      manualRankSetAt: null,
       completedAt: completedAtFor(input.status, null, now) ?? null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
@@ -160,6 +163,15 @@ export const memoryTaskRepository: TaskRepository = {
         ? { sourceLink: patch.sourceLink }
         : {}),
       ...(patch.owner !== undefined ? { owner: patch.owner } : {}),
+      ...(patch.manualRank !== undefined
+        ? {
+            manualRank: patch.manualRank,
+            // The database stamps this with a trigger; the fake does it here
+            // so an E2E run sees the same shape a deployment would.
+            manualRankSetAt:
+              patch.manualRank === null ? null : new Date().toISOString(),
+          }
+        : {}),
       ...(completedAt !== undefined ? { completedAt } : {}),
       updatedAt: new Date().toISOString(),
     });

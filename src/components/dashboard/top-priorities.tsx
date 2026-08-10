@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { riseIn, staggerList } from "@/lib/motion";
+import { useRanking } from "@/lib/priority/client";
+import { WhyLine, WhyPanel } from "@/components/priority/why-panel";
 import { useTasks, useUpdateTask } from "@/lib/tasks/client";
 import { isOverdue, topPriorities } from "@/lib/tasks/sort";
 import type { Task } from "@/lib/tasks/types";
@@ -31,6 +33,12 @@ import type { Task } from "@/lib/tasks/types";
  *
  * Completion works here too — the whole point of the top section is that the
  * owner can run their day from it without navigating anywhere.
+ *
+ * Ordered by the **priority engine** when it has answered, and by the Phase 1
+ * manual comparator until then. Falling back rather than blocking is
+ * deliberate: a card that shows nothing while a score is computed is worse
+ * than one that shows a slightly different order for half a second, and the
+ * two orderings agree about the obvious cases anyway.
  */
 export function TopPriorities({ limit = 5 }: { limit?: number }) {
   const reduced = useReducedMotion();
@@ -38,10 +46,29 @@ export function TopPriorities({ limit = 5 }: { limit?: number }) {
   const updateTask = useUpdateTask();
   const { toast } = useToast();
 
-  const tasks = React.useMemo(
-    () => topPriorities(tasksQuery.data ?? [], limit),
-    [limit, tasksQuery.data],
+  const ranking = useRanking();
+
+  const byTaskId = React.useMemo(
+    () => new Map((ranking.data?.ranked ?? []).map((row) => [row.taskId, row])),
+    [ranking.data],
   );
+
+  const tasks = React.useMemo(() => {
+    const open = (tasksQuery.data ?? []).filter((t) => t.status !== "done");
+    const ranked = ranking.data?.ranked;
+
+    if (!ranked || ranked.length === 0) {
+      return topPriorities(tasksQuery.data ?? [], limit);
+    }
+
+    // The engine has already decided the order; this just projects it back
+    // onto the task objects the card renders.
+    const position = new Map(ranked.map((row, index) => [row.taskId, index]));
+    return open
+      .filter((task) => position.has(task.id))
+      .sort((a, b) => position.get(a.id)! - position.get(b.id)!)
+      .slice(0, limit);
+  }, [limit, tasksQuery.data, ranking.data]);
 
   const openCount = (tasksQuery.data ?? []).length;
 
@@ -139,7 +166,13 @@ export function TopPriorities({ limit = 5 }: { limit?: number }) {
                         <DueDate dueAt={task.dueAt} overdue={isOverdue(task)} />
                       ) : null}
                       <ReadyBadge task={task} />
+                      {byTaskId.get(task.id) && (
+                        <WhyLine row={byTaskId.get(task.id)!} />
+                      )}
                     </div>
+                    {byTaskId.get(task.id) && (
+                      <WhyPanel row={byTaskId.get(task.id)!} />
+                    )}
                   </div>
                 </motion.li>
               ))}

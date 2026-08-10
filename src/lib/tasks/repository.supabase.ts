@@ -18,7 +18,7 @@ type TaskLinkRow = Database["public"]["Tables"]["task_links"]["Row"];
 type CategoryRow = Database["public"]["Tables"]["activity_categories"]["Row"];
 
 const TASK_COLUMNS =
-  "id, title, notes, priority, due_at, category_id, status, pinned, source_link, owner, is_ready, is_draft, can_activate, completed_at, created_at, updated_at";
+  "id, title, notes, priority, due_at, category_id, status, pinned, source_link, owner, is_ready, is_draft, can_activate, manual_rank, manual_rank_set_at, completed_at, created_at, updated_at";
 
 const LINK_COLUMNS =
   "id, task_id, kind, relation, target_id, target_label, target_url, confirmed_at, created_at";
@@ -38,6 +38,8 @@ function toTask(row: TaskRow, links: TaskLinkRow[]): Task {
     isReady: row.is_ready,
     isDraft: row.is_draft,
     canActivate: row.can_activate,
+    manualRank: row.manual_rank,
+    manualRankSetAt: row.manual_rank_set_at,
     completedAt: row.completed_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -241,6 +243,9 @@ export function createSupabaseTaskRepository(): TaskRepository {
       if (patch.pinned !== undefined) update.pinned = patch.pinned;
       if (patch.sourceLink !== undefined) update.source_link = patch.sourceLink;
       if (patch.owner !== undefined) update.owner = patch.owner;
+      // The only write path to the manual override. The trigger stamps
+      // `manual_rank_set_at`, so nothing here has to remember to.
+      if (patch.manualRank !== undefined) update.manual_rank = patch.manualRank;
       if (completedAt !== undefined) update.completed_at = completedAt;
 
       const { data, error } = await supabase

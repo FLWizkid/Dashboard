@@ -58,6 +58,8 @@ export const updateTaskSchema = z
     status: z.enum(TASK_STATUSES),
     pinned: z.boolean(),
     sourceLink: z.string().url().max(2000).nullable(),
+    /** `null` releases the task back to the priority engine. */
+    manualRank: z.number().int().min(0).max(9999).nullable(),
     owner: z.string().trim().max(120).nullable(),
   })
   .partial()

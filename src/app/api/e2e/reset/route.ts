@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { isMemoryMode } from "@/lib/data-mode";
 import type { MemoryEvent } from "@/lib/hours/repository.memory";
+import type { EventContext } from "@/lib/priority/importance";
 
 export const dynamic = "force-dynamic";
 
@@ -25,17 +26,27 @@ export async function POST(request: NextRequest) {
     await import("@/lib/hours/repository.memory");
   const { resetMemoryNoteStore } =
     await import("@/lib/notes/repository.memory");
+  const { resetMemoryPriorityStore, seedPriorityEvents } =
+    await import("@/lib/priority/repository.memory");
 
   resetMemoryStore();
   resetMemoryHoursStore();
   resetMemoryNoteStore();
+  resetMemoryPriorityStore();
 
   const body = (await request.json().catch(() => null)) as {
     events?: MemoryEvent[];
+    calendar?: EventContext[];
   } | null;
 
   if (body?.events) {
     seedMemoryEvents(body.events);
+  }
+
+  // The priority engine reads meetings too. Phase 2's sync has no live feed
+  // yet, so seeding is how the calendar half of the ranking gets exercised.
+  if (body?.calendar) {
+    seedPriorityEvents(body.calendar);
   }
 
   return NextResponse.json({ ok: true });
