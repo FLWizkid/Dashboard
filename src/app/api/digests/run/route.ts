@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
-import { getSessionUser } from "@/lib/auth";
 import { emailChannelFromEnv } from "@/lib/reports/delivery";
 import { DIGEST_KINDS } from "@/lib/reports/digest";
 import { getReportRepository } from "@/lib/reports/repository";
 import { runDigests } from "@/lib/reports/run";
+import { scopeForRequest, schedulerFailure } from "@/lib/scheduler/request";
 
 export const dynamic = "force-dynamic";
 
@@ -17,31 +17,27 @@ const bodySchema = z
   .default({});
 
 /**
- * The endpoint pg_cron calls, hourly.
+ * The endpoint the scheduler calls, hourly.
  *
  * Hourly rather than daily so one schedule can serve any timezone, and so a
  * missed hour is recoverable — the period claim is what decides whether
  * anything actually happens, not the firing.
  *
- * ── Authentication ───────────────────────────────────────────────────────
- * Two ways in, and they are not equivalent:
+ * ── Authentication and identity are two questions ────────────────────────
+ * A signed-in person answers both at once. The scheduler's token answers only
+ * the first: it proves the caller is the scheduler and says nothing about
+ * whose brief to build.
  *
- *   **A signed-in session** — a person pressing "preview" or "send now".
- *   **A bearer token** matching `DIGEST_CRON_TOKEN` — the scheduler.
- *
- * The token path exists because pg_cron has no session. It is compared with a
- * length-safe comparison, and an unset token means the token path is closed
- * entirely rather than open to everyone — the failure mode of "no token
- * configured means no auth required" is not one to leave lying around, even
- * on a private tailnet.
+ * That distinction is not academic. This endpoint previously took the token
+ * and then built a repository from the request's cookies — of which a
+ * scheduler has none — so `auth.uid()` was null, every read matched nothing
+ * and every write violated NOT NULL. The job reported success and delivered
+ * silence. `scopeForRequest` is what closes that: see
+ * `src/lib/scheduler/request.ts`.
  */
 export async function POST(request: NextRequest) {
-  const user = await getSessionUser();
-  const authorised = user !== null || hasValidCronToken(request);
-
-  if (!authorised) {
-    return NextResponse.json({ error: "Not authorised" }, { status: 401 });
-  }
+  const scope = await scopeForRequest(request);
+  if (!scope.ok) return schedulerFailure(scope);
 
   let raw: unknown = {};
   try {
@@ -58,13 +54,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // A preview is a read; anything that delivers needs a person or the token.
-  if (parsed.data.force && !user && !hasValidCronToken(request)) {
-    return NextResponse.json({ error: "Not authorised" }, { status: 401 });
-  }
-
   try {
-    const repository = await getReportRepository();
+    const repository = await getReportRepository(scope.scope);
 
     const result = await runDigests({
       repository,
@@ -81,6 +72,9 @@ export async function POST(request: NextRequest) {
       // The digests themselves come back only for a preview; a scheduled run
       // has already delivered them and the response goes nowhere useful.
       digests: parsed.data.preview ? result.digests : undefined,
+      // Which identity the run used. The single most useful thing in a
+      // scheduler log when a brief does not arrive.
+      actor: scope.actor,
     });
   } catch (error) {
     return NextResponse.json(
@@ -88,25 +82,4 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
-}
-
-/**
- * Constant-time-ish bearer check.
- *
- * `timingSafeEqual` needs equal lengths, so the length is compared first and
- * a mismatch short-circuits — which leaks the token's length and nothing else.
- */
-function hasValidCronToken(request: NextRequest): boolean {
-  const expected = process.env.DIGEST_CRON_TOKEN;
-  if (!expected) return false;
-
-  const header = request.headers.get("authorization") ?? "";
-  const presented = header.startsWith("Bearer ") ? header.slice(7) : "";
-  if (presented.length !== expected.length) return false;
-
-  let mismatch = 0;
-  for (let i = 0; i < expected.length; i += 1) {
-    mismatch |= presented.charCodeAt(i) ^ expected.charCodeAt(i);
-  }
-  return mismatch === 0;
 }

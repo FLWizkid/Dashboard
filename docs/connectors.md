@@ -208,12 +208,28 @@ select public.purge_orphaned_refs(interval '7 days');
 
 Runs as the caller, so RLS applies and it can only ever purge your own rows.
 
+## 8a. Staying current
+
+A reference is re-fetched every fifteen minutes by the scheduler, but only when
+it is worth it:
+
+- **Settled references are never re-fetched.** Merged, closed and archived are
+  terminal, and the set of them only grows.
+- **Unlinked references are skipped**, because refreshing one would keep
+  resetting the clock that decides when it is purged.
+- **A failing reference is retried after a day**, not immediately — hammering a
+  provider that just answered 403 does not make it answer 200.
+- **One broken reference does not stop the rest.** Its failure is written
+  against its own row and shown as "out of date", with the reason.
+
+Without this the whole feature is a snapshot: a merged pull request would show
+as open indefinitely, and **What moved elsewhere** in the brief would be
+permanently empty, because nothing would ever observe a change.
+
+See [`docs/scheduler.md`](scheduler.md).
+
 ## 9. What is not built
 
-- **No background refresh job.** References are fetched when attached and are
-  not yet re-fetched on a schedule, so states go stale until something touches
-  them. `staleRefs()` and `dueForRefresh()` exist and are tested; nothing
-  calls them on a timer. This is the next thing to build.
 - **No suggestion engine.** Nothing detects that a task mentions `#482`. The
   unconfirmed-link path exists and is enforced, waiting for something to
   produce one.

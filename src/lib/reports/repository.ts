@@ -1,4 +1,5 @@
 import { isMemoryMode } from "@/lib/data-mode";
+import type { DataScope } from "@/lib/db/scope";
 
 import type { DigestKind } from "./digest";
 import type { DeliveryStore, InboxWrite } from "./delivery";
@@ -66,14 +67,22 @@ export class InboxMessageNotFoundError extends Error {
   }
 }
 
-export async function getReportRepository(): Promise<ReportRepository> {
+/**
+ * @param scope Whose rows to work with. Omitted means the signed-in session,
+ *   which is every browser request. A scheduled job has no session and must
+ *   pass one — see `src/lib/db/scope.ts`.
+ */
+export async function getReportRepository(
+  scope?: DataScope,
+): Promise<ReportRepository> {
   if (isMemoryMode()) {
     const { memoryReportRepository } = await import("./repository.memory");
     return memoryReportRepository;
   }
   const { createSupabaseReportRepository } =
     await import("./repository.supabase");
-  return createSupabaseReportRepository();
+  const { sessionScope } = await import("@/lib/db/scope");
+  return createSupabaseReportRepository(scope ?? sessionScope());
 }
 
 export type { InboxWrite };

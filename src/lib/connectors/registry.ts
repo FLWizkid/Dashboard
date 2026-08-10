@@ -169,7 +169,12 @@ function createFixtureConnector(provider: ExternalProvider): Connector {
       state: isPr || parsed.kind === "issue" ? state : "none",
       stateDetail: null,
       author: "fixture-user",
-      remoteUpdatedAt: "2026-08-09T10:00:00.000Z",
+      // Relative, not absolute. A fixed date here is a time bomb: it was
+      // inside the brief's "what changed since yesterday" window on the
+      // afternoon it was written, passed CI, and started failing the next day
+      // — a suite that expires is worse than one that never passed, because
+      // you learn to distrust it exactly when it is right.
+      remoteUpdatedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
       snapshot: {},
     };
   }

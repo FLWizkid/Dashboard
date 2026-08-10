@@ -172,6 +172,7 @@ docs/                     Runbook, threat model, backups, data model, testing
 | [`docs/vr.md`](./docs/vr.md)                                         | The headset view and the manual checklist             |
 | [`docs/restore-drill-evidence.md`](./docs/restore-drill-evidence.md) | A real backup and restore, transcript                 |
 | [`docs/vault.md`](./docs/vault.md)                                   | The Obsidian vault, sync rules, conflicts             |
+| [`docs/scheduler.md`](./docs/scheduler.md)                           | The three scheduled jobs and the identity they run as |
 | [`docs/providers.md`](./docs/providers.md)                           | Mail and calendar adapters, capabilities              |
 | [`docs/caching-policy.md`](./docs/caching-policy.md)                 | What is cached, and what refuses to be                |
 | [`docs/modules/tasks.md`](./docs/modules/tasks.md)                   | The tasks module                                      |

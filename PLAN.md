@@ -239,9 +239,8 @@ Interface, also done:
 
 Still to build before the P3 gate:
 
-- [ ] The vault sync **job** and its routes — the reconciliation engine is
-      tested against a real filesystem, but nothing schedules it, so notes
-      live in Postgres and not yet on disk
+- [x] The vault sync **job** and its routes — `src/lib/vault/sync.ts`,
+      `POST /api/vault/sync`, driven by the scheduler sidecar every 15 min
 - [ ] Note ↔ task/event linking in the interface (the schema and the link
       kinds exist; only wiki-links are wired to the editor)
 - [ ] Kanban cards showing their linked notes and events
@@ -417,11 +416,13 @@ Known gaps, both inherited rather than introduced:
 
 - [ ] The two-day preview's **calendar half reads an empty table** until P2's
       calendar sync lands. Tasks show; events say "nothing scheduled"
-- [ ] **pg_cron is not on a stock Postgres**, so the migration's schedule
-      block raises a notice and skips in the test environment. The tables,
-      policies and purge function all install; the box's Supabase image ships
-      the extension. `docs/reports.md § 5.4` covers driving the endpoint from
-      an external scheduler instead
+- [x] **The scheduler sidecar** now fires the digest, so the pg_cron
+      dependency is gone — and it supplies the identity a session-less job
+      needs, which was the deeper problem: the token path authenticated the
+      caller and then read the request's cookies, of which a scheduler has
+      none, so every scheduled run read nothing and reported success. See
+      docs/scheduler.md. pg_cron still installs its schedule where the
+      extension exists; the period claim makes running both harmless
 
 ### P7 — Hardening 🚧
 
@@ -486,9 +487,9 @@ no interface:
 - [ ] **Calendar workspace**, and the sync that feeds it. Its absence is also
       why the two-day report preview shows tasks only, and why the priority
       engine runs on three of its five factors
-- [ ] **The vault sync job.** Reconciliation is tested against a real
-      filesystem; nothing schedules it, so notes live in Postgres and not on
-      disk
+- [x] **The vault sync job.** `src/lib/vault/sync.ts` applies the tested
+      reconciliation engine, `POST /api/vault/sync` runs it, and the scheduler
+      sidecar calls it every fifteen minutes. Set `DASHBOARD_VAULT_PATH`
 - [ ] **Drag-to-place** for manual rank, and cross-module deep links
 
 A release that shipped without those would be a release that quietly redefined

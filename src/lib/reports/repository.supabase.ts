@@ -1,4 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
+import {
+  owned,
+  ownerFilter,
+  sessionScope,
+  type DataScope,
+} from "@/lib/db/scope";
 
 import type { DigestKind } from "./digest";
 import type { InboxWrite } from "./delivery";
@@ -79,21 +84,25 @@ function toSettings(row: SettingsRow): DigestSettings {
   };
 }
 
-export function createSupabaseReportRepository(): ReportRepository {
+export function createSupabaseReportRepository(
+  scope: DataScope = sessionScope(),
+): ReportRepository {
   return {
     async writeInbox(message: InboxWrite) {
-      const supabase = await createClient();
+      const supabase = await scope.client();
 
       const { data, error } = await supabase
         .from("inbox_messages")
-        .insert({
-          kind: message.kind,
-          subject: message.subject,
-          preview: message.preview,
-          body: message.body,
-          html: message.html,
-          generated_at: message.generatedAt,
-        })
+        .insert(
+          owned(scope, {
+            kind: message.kind,
+            subject: message.subject,
+            preview: message.preview,
+            body: message.body,
+            html: message.html,
+            generated_at: message.generatedAt,
+          }),
+        )
         .select("id")
         .single<{ id: string }>();
 
@@ -102,7 +111,7 @@ export function createSupabaseReportRepository(): ReportRepository {
     },
 
     async recordRun(run) {
-      const supabase = await createClient();
+      const supabase = await scope.client();
 
       // The row already exists — `claimPeriod` created it. This fills in what
       // happened to the email.
@@ -115,18 +124,19 @@ export function createSupabaseReportRepository(): ReportRepository {
           email_error: run.emailError,
           channel: run.channel,
         })
-        .eq("kind", run.kind)
+        .match({ ...ownerFilter(scope), kind: run.kind })
         .is("inbox_message_id", null);
 
       if (error) throw new Error(error.message);
     },
 
     async listInbox(options = {}) {
-      const supabase = await createClient();
+      const supabase = await scope.client();
 
       const { data, error } = await supabase
         .from("inbox_messages")
         .select(INBOX_COLUMNS)
+        .match(ownerFilter(scope))
         .order("generated_at", { ascending: false })
         .limit(options.limit ?? 50)
         .returns<InboxRow[]>();
@@ -136,12 +146,12 @@ export function createSupabaseReportRepository(): ReportRepository {
     },
 
     async markRead(id: string, read: boolean) {
-      const supabase = await createClient();
+      const supabase = await scope.client();
 
       const { data, error } = await supabase
         .from("inbox_messages")
         .update({ read_at: read ? new Date().toISOString() : null })
-        .eq("id", id)
+        .match({ ...ownerFilter(scope), id })
         .select(INBOX_COLUMNS)
         .maybeSingle<InboxRow>();
 
@@ -151,11 +161,12 @@ export function createSupabaseReportRepository(): ReportRepository {
     },
 
     async unreadCount() {
-      const supabase = await createClient();
+      const supabase = await scope.client();
 
       const { count, error } = await supabase
         .from("inbox_messages")
         .select("id", { count: "exact", head: true })
+        .match(ownerFilter(scope))
         .is("read_at", null);
 
       if (error) throw new Error(error.message);
@@ -163,11 +174,12 @@ export function createSupabaseReportRepository(): ReportRepository {
     },
 
     async getSettings() {
-      const supabase = await createClient();
+      const supabase = await scope.client();
 
       const { data, error } = await supabase
         .from("digest_settings")
         .select(SETTINGS_COLUMNS)
+        .match(ownerFilter(scope))
         .maybeSingle<SettingsRow>();
 
       if (error) throw new Error(error.message);
@@ -176,14 +188,14 @@ export function createSupabaseReportRepository(): ReportRepository {
     },
 
     async saveSettings(patch) {
-      const supabase = await createClient();
+      const supabase = await scope.client();
       const current = await this.getSettings();
       const merged = { ...current, ...patch };
 
       const { data, error } = await supabase
         .from("digest_settings")
         .upsert(
-          {
+          owned(scope, {
             daily_enabled: merged.dailyEnabled,
             weekly_enabled: merged.weeklyEnabled,
             monthly_enabled: merged.monthlyEnabled,
@@ -191,7 +203,7 @@ export function createSupabaseReportRepository(): ReportRepository {
             weekly_dow: merged.weeklyDow,
             time_zone: merged.timeZone,
             email_to: merged.emailTo,
-          },
+          }),
           { onConflict: "user_id" },
         )
         .select(SETTINGS_COLUMNS)
@@ -202,12 +214,12 @@ export function createSupabaseReportRepository(): ReportRepository {
     },
 
     async alreadySent(kind: DigestKind, periodDate: string) {
-      const supabase = await createClient();
+      const supabase = await scope.client();
 
       const { data, error } = await supabase
         .from("digest_runs")
         .select("id")
-        .eq("kind", kind)
+        .match({ ...ownerFilter(scope), kind })
         .eq("period_date", periodDate)
         .maybeSingle<{ id: string }>();
 
@@ -216,13 +228,13 @@ export function createSupabaseReportRepository(): ReportRepository {
     },
 
     async claimPeriod(kind: DigestKind, periodDate: string) {
-      const supabase = await createClient();
+      const supabase = await scope.client();
 
       // Insert first and let the unique index arbitrate. Checking then
       // inserting would leave a window two concurrent runs can both pass.
       const { error } = await supabase
         .from("digest_runs")
-        .insert({ kind, period_date: periodDate });
+        .insert(owned(scope, { kind, period_date: periodDate }));
 
       if (!error) return true;
       if (error.code === UNIQUE_VIOLATION) return false;

@@ -300,10 +300,29 @@ Deleting a note leaves inbound links **unresolved rather than removing them**,
 because the prose still says `[[Whatever]]` and an index that disagrees with
 the file is the one state worth avoiding.
 
-### What is still missing
+### Turning it on
 
-The notes live in Postgres. **The sync job that writes them to the vault is
-not built yet** — the reconciliation engine in `src/lib/vault/` is tested
-against a real filesystem, but nothing schedules it. Until that lands, this
-page is a decision log with a vault-shaped path recorded against each note,
-not files on disk.
+Point `DASHBOARD_VAULT_PATH` at the folder you open in Obsidian and restart:
+
+```dotenv
+DASHBOARD_VAULT_PATH=/mnt/c/Users/doug/Vault
+```
+
+The scheduler reconciles it every fifteen minutes; `POST /api/vault/sync` does
+it now. **Unset is a supported configuration** — notes live in Postgres, the
+job answers `configured: false`, and nothing touches the disk.
+
+### Renaming a note
+
+A note's filename comes from its title, so renaming one moves its file. A move
+is a delete and a create, and doing them in the wrong order against a file
+that has been edited in Obsidian would throw the edit away. So the move is
+only performed when the old path has nothing outstanding: if the file has
+unread changes, they are taken first and the rename waits for the next pass.
+One extra pass is a much better cost than one lost edit.
+
+### Two notes with the same title
+
+"Weekly sync" is not a unique name, and the database's unique index on
+`vault_path` would reject the second. The second file is suffixed — `Weekly
+sync 2.md` — which is what Obsidian itself does.

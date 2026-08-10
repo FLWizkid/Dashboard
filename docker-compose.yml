@@ -72,11 +72,34 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_SUPABASE_URL: https://${TAILNET_HOSTNAME}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY}
-      # Server-side only. Bypasses RLS; never exposed to the browser.
+      # Server-side only. Bypasses RLS; never exposed to the browser. Used by
+      # the scheduled jobs, which have no session and therefore no auth.uid().
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?run ops/generate-secrets.mjs}
+      # The gateway on this network. A scheduled job should not depend on
+      # tailnet DNS and a TLS handshake to reach a database two containers away.
+      SUPABASE_INTERNAL_URL: http://kong:8000
+      # Proves a tokenless caller is the scheduler. Unset closes that path.
+      DASHBOARD_CRON_TOKEN: ${DASHBOARD_CRON_TOKEN:-}
+      DIGEST_CRON_TOKEN: ${DIGEST_CRON_TOKEN:-}
+      # Which account scheduled jobs act for. Only needed once more than one
+      # exists — until then the single account is unambiguous.
+      DASHBOARD_OWNER_USER_ID: ${DASHBOARD_OWNER_USER_ID:-}
+      # Where the Obsidian vault lives inside the container. Unset means notes
+      # stay in Postgres and the sync reports itself as not configured.
+      DASHBOARD_VAULT_PATH: ${DASHBOARD_VAULT_PATH:+/vault}
+      # External context. Unset means no egress at all.
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_API_URL: ${GITHUB_API_URL:-}
       # Error reporting stays local unless you deliberately set a DSN.
       SENTRY_DSN: ${SENTRY_DSN:-}
       DASHBOARD_ENVIRONMENT: ${DASHBOARD_ENVIRONMENT:-production}
+      TZ: ${TZ:-UTC}
+    volumes:
+      # The vault, as a folder on the host you also open in Obsidian. Bound
+      # only when DASHBOARD_VAULT_PATH is set; the fallback keeps compose
+      # valid when it is not, and the app ignores it because the environment
+      # variable is empty.
+      - ${DASHBOARD_VAULT_PATH:-./ops/vault-placeholder}:/vault
     expose:
       - "3000"
 
@@ -318,6 +341,29 @@ services:
       - ${BACKUP_SECONDARY_PATH:-./ops/backups-secondary}:/backups-secondary
       # rclone remote for copy 3, off-site. Encrypted before it leaves.
       - ${RCLONE_CONFIG_PATH:-./ops/backup/rclone}:/config/rclone:ro
+
+  # ── The clock ───────────────────────────────────────────────────────────
+  # Drives the digest, the vault sync and the external-context refresh. See
+  # docs/scheduler.md; ops/scheduler/entrypoint.sh explains why this is a
+  # container rather than pg_cron.
+  #
+  # It talks to the app over the internal Docker network, so nothing is
+  # published and no traffic leaves the box to make a scheduled job happen.
+  scheduler:
+    build:
+      context: ./ops/scheduler
+    <<: [*restart, *logging]
+    depends_on:
+      app:
+        condition: service_started
+    environment:
+      DASHBOARD_URL: http://app:3000
+      DASHBOARD_CRON_TOKEN: ${DASHBOARD_CRON_TOKEN:-}
+      DIGEST_CRON_TOKEN: ${DIGEST_CRON_TOKEN:-}
+      DIGEST_CRON_SCHEDULE: ${DIGEST_CRON_SCHEDULE:-5 * * * *}
+      VAULT_CRON_SCHEDULE: ${VAULT_CRON_SCHEDULE:-*/15 * * * *}
+      REFRESH_CRON_SCHEDULE: ${REFRESH_CRON_SCHEDULE:-*/15 * * * *}
+      TZ: ${TZ:-UTC}
 
   # ── Operator tools (profile: admin) ─────────────────────────────────────
   # Off by default. Studio is a broad, powerful surface; run it when you need

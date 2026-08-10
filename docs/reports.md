@@ -314,7 +314,7 @@ and carries on.
 
 ### 5.3 The cron token
 
-pg_cron has no session, so the endpoint takes a bearer token:
+The scheduler has no session, so the endpoint takes a bearer token:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
@@ -338,28 +338,23 @@ The other way in is a signed-in session — the **Generate today's brief** butto
 on the inbox page, which runs the identical code path. A preview that renders
 differently from the real thing is not a preview.
 
-### 5.4 If pg_cron is not available
+### 5.4 What actually fires it
 
-The migration checks `pg_available_extensions` first. If pg_cron is not there
-it raises a notice and moves on — the tables, the RLS policies and the purge
-function all install fine, and nothing schedules itself.
+**The scheduler sidecar**, not pg_cron. `docker compose up -d scheduler` and
+it calls this endpoint hourly. See [`docs/scheduler.md`](scheduler.md) for why,
+and for the identity a session-less job runs as — which is the part that was
+genuinely broken before it existed.
+
+The migration still installs a pg_cron schedule when the extension is present,
+and running both is harmless: the period claim makes a second firing a no-op.
+On a stock Postgres — including the integration-test container — it raises a
+notice and moves on:
 
 ```
 NOTICE:  pg_cron is not available; digest schedule not installed.
 ```
 
-This is the state on a stock Postgres, including the integration-test
-container. The self-hosted Supabase image ships pg_cron, so the box gets the
-schedule. On a Postgres without it, either add `pg_cron` to
-`shared_preload_libraries` and restart, or drive the endpoint from an external
-scheduler:
-
-```bash
-curl -fsS -X POST https://dashboard.your-tailnet.ts.net/api/digests/run \
-  -H "authorization: Bearer $DIGEST_CRON_TOKEN"
-```
-
-Hourly. The period claim makes over-firing harmless.
+The tables, the RLS policies and the purge function all install regardless.
 
 ---
 
