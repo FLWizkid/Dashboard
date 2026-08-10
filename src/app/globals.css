@@ -228,9 +228,97 @@
   }
 }
 
-/* Print: the Reports module (P6) leans on this; harmless everywhere else. */
+/* ── Print ─────────────────────────────────────────────────────────────
+   The reports module prints the same markup it displays. There is no second
+   route and no second component tree: a print-only implementation is a second
+   thing to keep correct, and the one that goes stale is always the one nobody
+   looks at until they need a PDF at 23:00.
+
+   What changes on paper:
+     · controls, navigation and anything interactive disappear
+     · the palette flattens to black on white — a printer has no dark mode,
+       and the forest/brass tokens turn to mud in greyscale
+     · sections get page breaks, and cards refuse to split across pages
+     · link URLs are printed after the text, because a hyperlink on paper is
+       otherwise a dead end
+   ─────────────────────────────────────────────────────────────────────── */
 @media print {
   .no-print {
     display: none !important;
+  }
+
+  /* The app shell's chrome. Belt and braces with `.no-print`, so a component
+     that forgets the class still doesn't print its navigation. */
+  aside,
+  nav,
+  button,
+  [role="tablist"] {
+    display: none !important;
+  }
+
+  :root {
+    /* Flatten to ink on paper. Greyscale conversion of the screen palette
+       loses the distinction between muted and subtle entirely. */
+    --bg: 255 255 255;
+    --surface: 255 255 255;
+    --surface-muted: 255 255 255;
+    --surface-raised: 255 255 255;
+    --fg: 0 0 0;
+    --fg-muted: 60 60 60;
+    --fg-subtle: 90 90 90;
+    --border: 180 180 180;
+    --border-strong: 140 140 140;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    /* Points, not pixels: a printer's idea of a pixel is not the screen's. */
+    font-size: 10pt;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  /* Cards become plain framed blocks — shadows print as grey smudges. */
+  [class*="shadow"] {
+    box-shadow: none !important;
+  }
+
+  section {
+    break-inside: auto;
+  }
+
+  .break-before-page {
+    break-before: page;
+  }
+
+  .break-inside-avoid {
+    break-inside: avoid;
+  }
+
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+
+  /* A table row split across a page boundary is unreadable. */
+  li,
+  tr {
+    break-inside: avoid;
+  }
+
+  /* A hyperlink on paper is a dead end unless it says where it goes. */
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 8pt;
+    color: #555;
+  }
+
+  @page {
+    margin: 15mm;
   }
 }

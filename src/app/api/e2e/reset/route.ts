@@ -28,11 +28,14 @@ export async function POST(request: NextRequest) {
     await import("@/lib/notes/repository.memory");
   const { resetMemoryPriorityStore, seedPriorityEvents } =
     await import("@/lib/priority/repository.memory");
+  const { resetMemoryReportStore } =
+    await import("@/lib/reports/repository.memory");
 
   resetMemoryStore();
   resetMemoryHoursStore();
   resetMemoryNoteStore();
   resetMemoryPriorityStore();
+  resetMemoryReportStore();
 
   const body = (await request.json().catch(() => null)) as {
     events?: MemoryEvent[];

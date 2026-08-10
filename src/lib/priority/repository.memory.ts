@@ -5,7 +5,6 @@ import { memoryTaskRepository } from "@/lib/tasks/repository.memory";
 import type { EventContext } from "./importance";
 import {
   SuggestionNotFoundError,
-  type AcceptResult,
   type AcceptSuggestionInput,
   type PriorityRepository,
   type StoredSuggestion,

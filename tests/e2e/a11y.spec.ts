@@ -288,6 +288,95 @@ test.describe("accessibility", () => {
     await expect(toggle).toHaveAttribute("aria-expanded", "true");
   });
 
+  test("the report workspace has no WCAG A/AA violations", async ({ page }) => {
+    await page.goto("/dashboard/tasks");
+    await quickAdd(page, "Overdue report row !high yesterday");
+    await quickAdd(page, "Upcoming report row !normal next monday");
+
+    await page.goto("/dashboard/reports");
+    await expect(page.getByTestId("report-groups")).toBeVisible();
+    // With a filter applied, so the "hidden by these filters" status line and
+    // the empty-group copy are both in the tree being scanned.
+    await page.getByLabel("Search").fill("Overdue report row");
+    await expect(page.getByText(/hidden by these filters/)).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const results = await scan(page);
+    expect(describeViolations(results)).toBe("");
+  });
+
+  test("the printed report has no WCAG A/AA violations", async ({ page }) => {
+    // Print is a separate rendering of the same markup: the palette flattens
+    // to ink on white and whole regions are removed. Contrast that passes on
+    // screen says nothing about contrast on paper, and a heading whose only
+    // label was a control that print hides would leave an unlabelled region.
+    await page.goto("/dashboard/tasks");
+    await quickAdd(page, "Printed a11y row !high yesterday");
+
+    await page.goto("/dashboard/reports");
+    await expect(page.getByTestId("report-groups")).toBeVisible();
+
+    await page.emulateMedia({ media: "print" });
+    await expect(page.getByText(/^Generated /)).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const results = await scan(page);
+    expect(describeViolations(results)).toBe("");
+  });
+
+  test("the printed report keeps one first-level heading", async ({ page }) => {
+    // On screen the page is titled by the shell's "Reports" heading. Print
+    // removes the shell, so the report has to carry its own — otherwise the
+    // PDF opens with a level-2 heading and no document title at all.
+    await page.goto("/dashboard/reports");
+    await page.emulateMedia({ media: "print" });
+
+    const h1 = page.getByRole("heading", { level: 1 });
+    await expect(h1).toHaveCount(1);
+    await expect(h1).toHaveText("Executive report");
+  });
+
+  test("the inbox has no WCAG A/AA violations, empty and populated", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/inbox");
+    await expect(page.getByText("Nothing delivered yet.")).toBeVisible();
+    expect(describeViolations(await scan(page))).toBe("");
+
+    await page.getByRole("button", { name: /Generate today's brief/ }).click();
+    await expect(page.getByTestId("inbox-item")).toHaveCount(1, {
+      timeout: 15_000,
+    });
+
+    // And with a brief open, which is where the <pre> body renders.
+    await page.getByTestId("inbox-item").first().click();
+    await expect(page.getByTestId("inbox-body")).toBeVisible();
+
+    expect(describeViolations(await scan(page))).toBe("");
+  });
+
+  test("an unread brief is announced, not just coloured", async ({ page }) => {
+    // Unread state is a dot. A dot is invisible to a screen reader and to
+    // anyone who cannot distinguish it from the row background.
+    await page.goto("/dashboard/inbox");
+    await page.getByRole("button", { name: /Generate today's brief/ }).click();
+    await expect(page.getByTestId("inbox-item")).toHaveCount(1, {
+      timeout: 15_000,
+    });
+
+    await expect(page.getByText("(unread)")).toBeAttached();
+
+    await page.getByTestId("inbox-item").first().click();
+    await expect(page.getByRole("button", { name: "Mark unread" })).toBeVisible(
+      {
+        timeout: 10_000,
+      },
+    );
+    await expect(page.getByText("(unread)")).toHaveCount(0);
+  });
+
   test("the whole capture flow is reachable by keyboard alone", async ({
     page,
   }) => {

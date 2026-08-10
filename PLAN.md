@@ -363,10 +363,65 @@ Still to build before the P5 gate:
       proximity, inference and detection are exercised against seeded and
       stored events rather than a real calendar
 
-### P6 — Reports + scheduled digests
+### P6 — Reports + scheduled digests 🚧
 
-Interactive report and print mode. Grouping. Cron digests to the in-app inbox
-and email.
+Done and tested:
+
+- [x] **Interactive report workspace** — search, priority, category and
+      incomplete-only filters, over the four-way grouping
+- [x] **Overdue / Due soon / Current / Upcoming**, with the mapping from the
+      task module's five due-buckets stated rather than inferred. **Current
+      holds the undated work** — a fifth "no due date" section at the bottom
+      is where undated work goes to be forgotten
+- [x] Every group renders, **including the empty ones**: an absent "Overdue"
+      heading and an empty one say opposite things
+- [x] Due-date ordering within each group, tie-broken to a total order so the
+      printed page and the emailed brief list things identically
+- [x] **Filters narrow the list and never the summary** — a headline figure
+      that moves when you change a dropdown is one nobody can quote. The
+      panel says how many rows are hidden
+- [x] An empty filter means **everything**, never nothing
+- [x] **A number that cannot be computed is `null`, never `0`** — unread mail
+      with no account connected renders "—" with its reason, not a confident
+      zero
+- [x] Activity splits per category with shares; the two-day rollup puts
+      **overdue work on today's slot**, because that is what today absorbs
+- [x] **Print is the same markup**, not a second route — `@media print` hides
+      the controls, flattens the palette to ink on white, sets page breaks,
+      prints link URLs, and adds an `<h1>` that only exists on paper
+- [x] Printed structure is the specification's: summary → prioritised tasks →
+      next two days. Section 3 is `break-before-page`, so the standalone
+      two-day report is "print pages 3-on" rather than a second codepath
+- [x] **Digests**: daily brief, weekly and monthly rollups, composed from the
+      same `buildReport()` the screen uses so the two cannot disagree
+- [x] HTML written by hand — tables and inline styles, the subset email
+      clients actually honour — with a text alternative written to be read,
+      which is what the in-app inbox renders
+- [x] **The cron fires hourly, not daily**, and asks "is it 07:00 in _their_
+      zone yet?". One schedule serves any timezone and a missed hour is
+      recoverable instead of lost until tomorrow
+- [x] **Claim the period before composing.** A unique index on
+      `(user_id, kind, period_date)` is the guard; weekly collapses to its
+      Monday and monthly to the first, so a retry lands on the same key
+- [x] **The in-app inbox is written first, unconditionally** — an SMTP outage
+      records `email_ok = false` with the reason and never costs the brief
+- [x] Email behind an adapter; **no relay configured is a valid setting**, not
+      a failure, and the endpoint's bearer token path is _closed_ when the
+      token is unset rather than open to everyone
+- [x] Retention: `purge_old_digests()` on the same 24-month window
+- [x] 80 unit tests, 13 integration tests through real Postgres, 13 E2E specs,
+      and axe scans of the workspace, the inbox and **the printed rendering**
+- [x] [The reports guide](docs/reports.md) — definitions, schedule, email setup
+
+Known gaps, both inherited rather than introduced:
+
+- [ ] The two-day preview's **calendar half reads an empty table** until P2's
+      calendar sync lands. Tasks show; events say "nothing scheduled"
+- [ ] **pg_cron is not on a stock Postgres**, so the migration's schedule
+      block raises a notice and skips in the test environment. The tables,
+      policies and purge function all install; the box's Supabase image ships
+      the extension. `docs/reports.md § 5.4` covers driving the endpoint from
+      an external scheduler instead
 
 ### P7 — Hardening + v1
 

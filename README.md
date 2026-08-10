@@ -153,6 +153,7 @@ docs/                     Runbook, threat model, backups, data model, testing
 | [`docs/parser-rules.md`](./docs/parser-rules.md)       | Everything quick-add understands                      |
 | [`docs/priority.md`](./docs/priority.md)               | The scoring formula, worked examples, overrides       |
 | [`docs/hours.md`](./docs/hours.md)                     | The hours model, Pomodoro, offline logging            |
+| [`docs/reports.md`](./docs/reports.md)                 | Report definitions, digest schedule, email setup      |
 | [`docs/vault.md`](./docs/vault.md)                     | The Obsidian vault, sync rules, conflicts             |
 | [`docs/providers.md`](./docs/providers.md)             | Mail and calendar adapters, capabilities              |
 | [`docs/caching-policy.md`](./docs/caching-policy.md)   | What is cached, and what refuses to be                |
