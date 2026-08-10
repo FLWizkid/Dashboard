@@ -225,6 +225,55 @@ timesheet.
 
 ---
 
+## The interface
+
+Two pages and one card.
+
+**`/dashboard/pomodoro`** — the dial, the controls, and the recent sessions.
+Space starts and pauses, `s` stops, `n` skips. The whole page is the timer
+rather than a widget in a corner, because during a focus interval this is the
+screen that should be open.
+
+**`/dashboard/hours`** — the three sources, the combined total with its
+overlap stated, a daily breakdown, the manual entry form, the scheduled blocks
+with their reasons and overrides, and the rule editor. Quick-log sits above the
+totals on a phone and below them on a desktop: on a phone the page is usually
+open _to log something_, on a desktop _to look at something_.
+
+**The dashboard card** reads the same `/api/hours` endpoint the hours view
+does, so the two cannot drift apart.
+
+### One machine, one queue
+
+Both the Pomodoro state and the outbox queue live in a provider mounted once,
+and their hooks throw if used outside it.
+
+This is not tidiness. An earlier version let every component call the hook
+directly, and both failure modes showed up immediately:
+
+- Two copies of the **Pomodoro machine** — one on the page, one in the shell's
+  focus indicator — both wrote the same `localStorage` key. The idle one
+  overwrote the running one, and a reload lost the session in progress.
+- Three copies of the **outbox** shared IndexedDB but not the state derived
+  from it, so quick-log queued an entry into its own React state and the
+  banner, holding a different copy, showed nothing at all.
+
+Both are invisible until the exact moment they matter. Hence the throw.
+
+### Why the controls are disabled for a moment on load
+
+The stored timer state is read in an effect, and React may flush that effect
+_after_ paint — so there is a brief window where the Start button is on screen
+but the restore has not run. A click in that window would be silently
+overwritten.
+
+Two guards, because either alone leaves a hole: the restore refuses to
+overwrite a state that has already moved, and the controls stay disabled until
+it has run. A button that accepts a click it is going to discard is worse than
+one that waits.
+
+---
+
 ## Related
 
 [Data model](data-model.md) · [Providers](providers.md) ·

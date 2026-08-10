@@ -1,6 +1,7 @@
-import { CalendarClock, CalendarDays, Timer } from "lucide-react";
+import { CalendarClock, CalendarDays } from "lucide-react";
 import type { Metadata } from "next";
 
+import { HoursThisWeek } from "@/components/dashboard/hours-this-week";
 import { PlaceholderCard } from "@/components/dashboard/placeholder-card";
 import { TopPriorities } from "@/components/dashboard/top-priorities";
 
@@ -13,9 +14,9 @@ export const metadata: Metadata = {
 /**
  * The balanced snapshot.
  *
- * Phase 1 wires the task half for real; the meeting, two-day and hours cards
- * hold their place until Phases 2 and 4 fill them. The layout is final — those
- * cards drop in without moving anything else.
+ * Tasks and hours are live. The two calendar cards hold their place until
+ * Phase 2's interface lands — the layout was built for them, so they drop in
+ * without moving anything else.
  */
 export default function DashboardHome() {
   return (
@@ -40,13 +41,7 @@ export default function DashboardHome() {
           phase="P2"
           icon={<CalendarClock />}
         />
-        <PlaceholderCard
-          title="Hours this week"
-          description="Focused Pomodoro time plus scheduled work blocks."
-          phase="P4"
-          icon={<Timer />}
-          className="md:col-span-2 xl:col-span-1"
-        />
+        <HoursThisWeek className="md:col-span-2 xl:col-span-1" />
       </div>
 
       <TopPriorities />

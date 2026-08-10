@@ -35,7 +35,7 @@
     "framer-motion": "^12.43.0",
     "imapflow": "^1.6.6",
     "lucide-react": "^1.28.0",
-    "next": "^15.5.20",
+    "next": "^15.5.23",
     "nodemailer": "^9.0.5",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

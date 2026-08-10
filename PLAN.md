@@ -227,7 +227,7 @@ Still to build before the P3 gate:
 - [ ] Kanban cards showing their linked notes and events
 - [ ] E2E: note → draft task → activate
 
-### P4 — Hours + Pomodoro 🚧 in progress
+### P4 — Hours + Pomodoro ✅
 
 Done and tested:
 
@@ -253,15 +253,36 @@ Done and tested:
       crossing spans split across both days
 - [x] [The hours guide](docs/hours.md)
 
-Still to build before the P4 gate:
+Interface, also done:
 
-- [ ] Pomodoro UI: the timer, the persistent "currently focusing" indicator,
-      session history
-- [ ] Hours view: the three sources split and combined, running weekly total
-- [ ] One-tap mobile logging and the manual-entry form, on the outbox
-- [ ] Classification UI: the rule editor and per-event override controls
-- [ ] Wiring the dashboard "hours this week" card to real data
-- [ ] E2E: log offline → reconnect → sync
+- [x] Pomodoro page: the dial, keyboard-first controls (space / `s` / `n`),
+      optional task linkage, session history
+- [x] The persistent "currently focusing" indicator, in the shell so it
+      follows you into every module
+- [x] Hours view: three sources split, combined with the overlap **stated**,
+      daily breakdown, week stepping
+- [x] One-tap quick-log and the manual entry form, both on the outbox — the
+      network is never between pressing the button and the time being safe
+- [x] Rule editor with reorderable, first-match-wins rules; per-event
+      override with the tri-state toggle and the reason on every block
+- [x] Dashboard "hours this week" card, reading the same endpoint the hours
+      view does so the two cannot disagree
+- [x] E2E: log offline → reconnect → sync, plus a queued entry surviving a
+      reload and a retried flush that does not double-count
+- [x] Axe scans on the hours view, the rule editor and the timer
+
+Three bugs the interface work surfaced, all fixed:
+
+- Every component calling `useOutbox` got **its own queue**. They shared
+  IndexedDB but not the state derived from it, so quick-log queued into one
+  copy and the banner rendered another. Now one provider, and the hook throws
+  outside it.
+- Two copies of the Pomodoro machine — the page and the shell indicator —
+  both wrote the same `localStorage` key, and the idle one **reset the running
+  one** on reload. Same fix.
+- The restore effect could overwrite a session started before React flushed
+  it, so a click landing in that window did nothing. The restore now refuses
+  to clobber a state that has moved, and controls stay disabled until it runs.
 
 ### P5 — Priority engine + connected views
 

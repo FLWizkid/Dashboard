@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
+import { FocusIndicator } from "@/components/pomodoro/focus-indicator";
 import { SignOutButton } from "@/components/sign-out-button";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +45,10 @@ export function AppShell({
           {children}
         </main>
       </div>
+
+      {/* Rendered at the shell level so the running timer follows you into
+          every module — a timer you can't see is a timer you forget to stop. */}
+      <FocusIndicator />
 
       <MobileNav />
     </div>

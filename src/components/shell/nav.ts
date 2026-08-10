@@ -3,6 +3,7 @@ import {
   CalendarDays,
   ClipboardList,
   FileBarChart,
+  Hourglass,
   LayoutDashboard,
   Mail,
   NotebookPen,
@@ -37,7 +38,8 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { href: "/dashboard/kanban", label: "Kanban", icon: SquareKanban },
   { href: "/dashboard/notes", label: "Notes", icon: NotebookPen, phase: "P3" },
-  { href: "/dashboard/pomodoro", label: "Pomodoro", icon: Timer, phase: "P4" },
+  { href: "/dashboard/pomodoro", label: "Pomodoro", icon: Timer },
+  { href: "/dashboard/hours", label: "Hours", icon: Hourglass },
   {
     href: "/dashboard/reports",
     label: "Reports",

@@ -129,6 +129,48 @@ test.describe("accessibility", () => {
     ).toBeVisible();
   });
 
+  test("the hours view has no WCAG A/AA violations", async ({ page }) => {
+    await page.goto("/dashboard/hours");
+    await expect(page.getByRole("heading", { name: "Hours" })).toBeVisible();
+
+    // Log something first: the empty view exercises far less of the markup
+    // than the one with a populated ledger and an outbox banner.
+    await page
+      .getByTestId("quick-log")
+      .getByRole("button", { name: "30m", exact: true })
+      .first()
+      .click();
+    await expect(page.getByTestId("hours-manual")).toHaveText("30m", {
+      timeout: 10_000,
+    });
+
+    const results = await scan(page);
+    expect(describeViolations(results)).toBe("");
+  });
+
+  test("the rule editor has no violations", async ({ page }) => {
+    await page.goto("/dashboard/hours");
+
+    await page.getByLabel("Field to match").selectOption("title");
+    await page.getByLabel("When the").fill("board");
+    await page.getByRole("button", { name: "Add rule" }).click();
+    await expect(page.getByTestId("rule-list")).toContainText("board");
+
+    const results = await scan(page);
+    expect(describeViolations(results)).toBe("");
+  });
+
+  test("the Pomodoro timer has no violations, running or idle", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/pomodoro");
+    expect(describeViolations(await scan(page))).toBe("");
+
+    await page.getByRole("button", { name: /Start focus/ }).click();
+    await expect(page.getByTestId("pomodoro-status")).toContainText("Running");
+    expect(describeViolations(await scan(page))).toBe("");
+  });
+
   test("the whole capture flow is reachable by keyboard alone", async ({
     page,
   }) => {
