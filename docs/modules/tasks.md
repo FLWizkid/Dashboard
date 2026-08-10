@@ -122,6 +122,48 @@ the checkmark is what makes a list feel slow.
 
 ---
 
+## Capturing without a connection
+
+A task typed with no network is **kept on the device and sent when the network
+returns.** This is the one place in the product where losing data would be
+unforgivable: an hour of untracked time can be reconstructed, but the thought
+you had in a lift cannot.
+
+The mechanism is the hours outbox's, deliberately not a second design:
+
+1. **Written to IndexedDB before any request is attempted.** The network is
+   never between pressing Enter and the capture being safe.
+2. **Each capture carries a key generated on the device.** `tasks` has a
+   partial unique index on `(user_id, client_key)`, so a replayed flush — the
+   normal outcome of a connection that dies after the write but before the
+   response — cannot create a second task. A duplicate answers `200` with the
+   task that already exists.
+3. **Nothing leaves the queue until the server confirms it.** A failed flush
+   keeps the capture, counts the attempt, and backs off to a five-minute
+   ceiling. The cap matters more than the curve: a queue that has backed off to
+   an hour looks broken when the network returns and you are watching it.
+
+Two decisions worth knowing:
+
+**The online path is untouched.** Captures are queued only when the browser is
+already offline or the request actually fails. Routing everything through the
+queue would make the common case inherit the failure modes of the rare one.
+
+**A refused capture is shown, never dropped.** A `4xx` will not succeed on a
+retry, so it leaves the queue — but it appears as an alert with the text you
+typed and a Dismiss button. Auto-hiding it would delete the last copy of what
+you wrote, which is the exact failure this whole mechanism exists to prevent.
+
+The queue is visible whenever anything is in it: the count, the titles, and
+whether it is waiting, sending, or refused. An invisible queue asks you to
+trust that the task is somewhere — and the moment you doubt it you type it
+again, which produces a duplicate no idempotency key can prevent, because it is
+genuinely a second capture.
+
+Related: [`docs/hours.md`](../hours.md) for the same mechanism applied to time.
+
+---
+
 ## Not in this phase
 
 | Deferred to | What                                                         |
@@ -131,7 +173,7 @@ the checkmark is what makes a list feel slow.
 | P4          | Hours contributed by Pomodoro and calendar blocks            |
 | P5          | Weighted auto-ranking; resolving suggested event links       |
 | P6          | Grouped and printable reports                                |
-| P7          | Retention and purge                                          |
+| P7          | Offline capture — **done**; see above                        |
 
 The `status` enum, `task_links` table and `is_ready` column are already shaped
 for all of it, so those land as features rather than migrations.
