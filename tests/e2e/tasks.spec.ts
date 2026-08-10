@@ -233,18 +233,24 @@ test.describe("the dashboard reflects the task list", () => {
     await expect(list).not.toContainText("Brief the CEO");
   });
 
-  test("placeholder cards say what they are waiting for", async ({ page }) => {
+  test("every card on the home page is live", async ({ page }) => {
+    // These three were placeholders through P2 — the frame was real and the
+    // data was not. They are now fed by the mail, calendar and hours modules,
+    // and the assertion changed with them rather than being deleted.
     await page.goto("/dashboard");
-    // No invented meetings or fake hours — the frame is real, the data isn't
-    // there yet, and the card admits it.
+
     await expect(
-      page.getByRole("heading", { name: "Today's meetings" }),
+      // A regex, because the heading uses a typographic apostrophe.
+      page.getByRole("heading", { name: /Today.s meetings/ }),
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Next two days" }),
+      page.getByRole("heading", { name: "Needs attention" }),
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Hours this week" }),
     ).toBeVisible();
+
+    // Nothing on this page should still be admitting it is unbuilt.
+    await expect(page.getByText(/arrives in phase/i)).toHaveCount(0);
   });
 });

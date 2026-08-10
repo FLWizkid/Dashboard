@@ -11,10 +11,10 @@ TanStack Query · self-hosted Supabase.
 > 📋 The specification, locked decisions and phase roadmap live in
 > **[`PLAN.md`](./PLAN.md)** — read it first.
 
-**Status:** Phases 0–7 built. Six of the eight modules are live end to end —
-dashboard, tasks, kanban, notes, pomodoro/hours and reports. **Email and
-calendar have their whole foundation but no interface yet**, so this is not a
-finished v1; see [`PLAN.md`](./PLAN.md) for exactly what is missing.
+**Status:** Phases 0–7 built, plus post-v1 increments. **All eight modules are
+live end to end** — dashboard, email, tasks, kanban, calendar, notes,
+pomodoro/hours and reports. Email reads but does not yet compose; see
+[`PLAN.md`](./PLAN.md) for exactly what is missing.
 
 ---
 
@@ -53,6 +53,10 @@ Supabase email/password account, `/dashboard` becomes available.
 
 ## What works today
 
+- **One inbox for every account**, sorted by senders you rated important
+  rather than purely by time — and a caching policy the database enforces, so
+  "metadata only" means no bodies rather than a checkbox.
+  [Full notes →](./docs/modules/email.md)
 - **Quick capture.** One line in, task out: due date, priority, category,
   owner and event references are parsed and shown as editable chips.
   [Full grammar →](./docs/parser-rules.md)
@@ -176,5 +180,6 @@ docs/                     Runbook, threat model, backups, data model, testing
 | [`docs/providers.md`](./docs/providers.md)                           | Mail and calendar adapters, capabilities              |
 | [`docs/caching-policy.md`](./docs/caching-policy.md)                 | What is cached, and what refuses to be                |
 | [`docs/modules/tasks.md`](./docs/modules/tasks.md)                   | The tasks module                                      |
+| [`docs/modules/email.md`](./docs/modules/email.md)                   | Email and calendar: the unified inbox, policies       |
 | [`docs/testing.md`](./docs/testing.md)                               | How to run and extend the three test tiers            |
 | [`ops/README.md`](./ops/README.md)                                   | What is in the operations directory and why           |

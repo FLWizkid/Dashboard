@@ -159,10 +159,10 @@ Each phase stops at a gate for review.
 - [x] Unit + Postgres RLS integration + Playwright E2E + axe, all in CI
 - [x] Module README, data-model notes, parser rules, testing guide
 
-### P2 — Email + calendar 🚧 in progress
+### P2 — Email + calendar 🚧 mostly built
 
-**Foundation complete and tested; the interface is not yet built.** What is in
-the repo today:
+**The interface is live.** Six of the eight modules were end to end; email and
+calendar now make it eight. What is in the repo today:
 
 - [x] Field encryption: AES-256-GCM envelope, AAD-bound, additive key rotation
 - [x] Normalized model — Mailbox / Message / Thread / Calendar / Event — with
@@ -187,12 +187,20 @@ the repo today:
 
 Still to build before the P2 gate:
 
-- [ ] OAuth callback routes and the connect-account flow
-- [ ] Mail repository and API routes
-- [ ] Email workspace: unified inbox, thread view, compose and reply
-- [ ] Needs-attention card, and four-level sender importance in the UI
-- [ ] Calendar workspace, and wiring the two dashboard placeholders to real data
-- [ ] E2E: connect a mock mailbox → triage → email → task
+- [x] Mail repository, API routes and the in-memory twin that enforces the
+      caching policy rather than only its shape
+- [x] Email workspace: unified inbox across every account, thread view,
+      sender rating that applies to mail already received
+- [x] Needs-attention card and the calendar workspace; the two dashboard
+      placeholders are now live
+- [x] E2E: unified inbox, the Metadata refusal, rating a sender, the agenda,
+      plus three axe scans
+- [ ] **Compose and reply** — the adapters can send; there is no composer yet
+- [x] **The OAuth connect flow** — signed, provider-bound, expiring `state`
+      returned in both the URL and an httpOnly cookie, verified before the code
+      is exchanged
+- [ ] **A connect screen for Proton Bridge** — it needs a username and a
+      Bridge password rather than OAuth, and that form is not built
 
 ### P3 — Kanban + notes 🚧 in progress
 
@@ -481,12 +489,13 @@ product is materially harder to break than it was — but "production-ready v1"
 means the thing the specification describes, and two of its eight modules have
 no interface:
 
-- [ ] **Email workspace** — unified inbox, thread view, compose and reply.
+- [x] **Email workspace** — unified inbox, thread view, sender rating.
+      Compose and reply are still missing.
       The schema, encryption, adapters and sync service all exist; nothing
       renders them
-- [ ] **Calendar workspace**, and the sync that feeds it. Its absence is also
-      why the two-day report preview shows tasks only, and why the priority
-      engine runs on three of its five factors
+- [x] **Calendar workspace** and the agenda. The _sync_ that feeds it still
+      needs the OAuth connect flow, so on a fresh box it renders an empty day
+      until an account is connected
 - [x] **The vault sync job.** `src/lib/vault/sync.ts` applies the tested
       reconciliation engine, `POST /api/vault/sync` runs it, and the scheduler
       sidecar calls it every fifteen minutes. Set `DASHBOARD_VAULT_PATH`

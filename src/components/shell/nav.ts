@@ -30,13 +30,8 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/tasks", label: "Tasks", icon: ClipboardList },
-  { href: "/dashboard/email", label: "Email", icon: Mail, phase: "P2" },
-  {
-    href: "/dashboard/calendar",
-    label: "Calendar",
-    icon: CalendarDays,
-    phase: "P2",
-  },
+  { href: "/dashboard/email", label: "Email", icon: Mail },
+  { href: "/dashboard/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/dashboard/kanban", label: "Kanban", icon: SquareKanban },
   { href: "/dashboard/notes", label: "Notes", icon: NotebookPen },
   { href: "/dashboard/pomodoro", label: "Pomodoro", icon: Timer },

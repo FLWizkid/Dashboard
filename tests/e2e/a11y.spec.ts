@@ -563,3 +563,29 @@ test.describe("accessibility, every module", () => {
     expect(describeViolations(await scan(page))).toBe("");
   });
 });
+
+test.describe("email and calendar", () => {
+  test("the unified inbox has no WCAG A/AA violations", async ({ page }) => {
+    await page.goto("/dashboard/email");
+    await expect(page.getByTestId("thread-row").first()).toBeVisible();
+
+    expect(describeViolations(await scan(page))).toBe("");
+  });
+
+  test("an open thread has none either", async ({ page }) => {
+    // The pane carries the sender-rating controls, which are the densest
+    // cluster of buttons in the module.
+    await page.goto("/dashboard/email");
+    await page.getByTestId("thread-row").first().click();
+    await expect(page.getByTestId("thread-pane")).toBeVisible();
+
+    expect(describeViolations(await scan(page))).toBe("");
+  });
+
+  test("the agenda has no violations", async ({ page }) => {
+    await page.goto("/dashboard/calendar");
+    await expect(page.getByTestId("agenda")).toBeVisible();
+
+    expect(describeViolations(await scan(page))).toBe("");
+  });
+});

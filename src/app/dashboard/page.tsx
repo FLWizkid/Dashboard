@@ -1,9 +1,11 @@
-import { CalendarClock, CalendarDays } from "lucide-react";
 import type { Metadata } from "next";
 
 import { HoursThisWeek } from "@/components/dashboard/hours-this-week";
+import {
+  NeedsAttention,
+  TodaysMeetings,
+} from "@/components/dashboard/todays-meetings";
 import { SuggestionPrompts } from "@/components/priority/suggestion-prompt";
-import { PlaceholderCard } from "@/components/dashboard/placeholder-card";
 import { TopPriorities } from "@/components/dashboard/top-priorities";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +17,9 @@ export const metadata: Metadata = {
 /**
  * The balanced snapshot.
  *
- * Tasks and hours are live. The two calendar cards hold their place until
- * Phase 2's interface lands — the layout was built for them, so they drop in
- * without moving anything else.
+ * Every card is live. The two that were placeholders through P2 — the day's
+ * meetings and the mail waiting on you — dropped into the layout that was
+ * built for them without anything else moving.
  */
 export default function DashboardHome() {
   return (
@@ -35,18 +37,8 @@ export default function DashboardHome() {
       <SuggestionPrompts />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <PlaceholderCard
-          title="Today's meetings"
-          description="Your calendar for the day, with prep and follow-ups attached."
-          phase="P2"
-          icon={<CalendarDays />}
-        />
-        <PlaceholderCard
-          title="Next two days"
-          description="A rolled-up preview with due and overdue tasks folded in."
-          phase="P2"
-          icon={<CalendarClock />}
-        />
+        <TodaysMeetings />
+        <NeedsAttention />
         <HoursThisWeek className="md:col-span-2 xl:col-span-1" />
       </div>
 

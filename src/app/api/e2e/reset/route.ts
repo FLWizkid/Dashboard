@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
     await import("@/lib/reports/repository.memory");
   const { resetMemoryConnectorStore } =
     await import("@/lib/connectors/repository.memory");
+  const { resetMemoryMail } = await import("@/lib/mail/repository.memory");
 
   resetMemoryStore();
   resetMemoryHoursStore();
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
   resetMemoryPriorityStore();
   resetMemoryReportStore();
   resetMemoryConnectorStore();
+  resetMemoryMail();
 
   const body = (await request.json().catch(() => null)) as {
     events?: MemoryEvent[];
