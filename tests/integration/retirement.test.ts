@@ -36,16 +36,46 @@ describeDb("retired placeholder tables", () => {
 
   const RETIRED = ["priorities", "time_entries"];
 
-  it("removes them from the API-exposed schema", async () => {
+  it("removes the superseded table from the API-exposed schema", async () => {
     // PostgREST exposes `public`. Not being here is what actually retires
     // them — everything else is tidiness.
+    //
+    // Only `priorities` is asserted absent: Phase 4 legitimately reintroduces
+    // the name `time_entries` for the real hours ledger, which is a different
+    // table that this migration must never touch. See the guard below.
     const { rows } = await client.query<{ table_name: string }>(
       `select table_name from information_schema.tables
-        where table_schema = 'public' and table_name = any($1)`,
-      [RETIRED],
+        where table_schema = 'public' and table_name = 'priorities'`,
     );
 
     expect(rows).toEqual([]);
+  });
+
+  it("does NOT archive a later table that reuses a retired name", async () => {
+    // The trap this guards against: migrations are re-applied routinely, and
+    // without the archive-exists check this migration would quietly move
+    // Phase 4's hours ledger out of the API on the next run.
+    const before = await client.query<{ count: string }>(
+      `select count(*) from information_schema.tables
+        where table_schema = 'public' and table_name = 'time_entries'`,
+    );
+    expect(Number(before.rows[0].count)).toBe(1);
+
+    const migration = await import("node:fs").then((fs) =>
+      fs.readFileSync(
+        "supabase/migrations/20260809000001_retire_placeholder_tables.sql",
+        "utf8",
+      ),
+    );
+    await client.query(migration);
+
+    const after = await client.query<{ count: string }>(
+      `select count(*) from information_schema.tables
+        where table_schema = 'public' and table_name = 'time_entries'`,
+    );
+    expect(Number(after.rows[0].count), "the hours ledger was archived").toBe(
+      1,
+    );
   });
 
   it("keeps them, and their data, in the archive schema", async () => {
@@ -143,8 +173,8 @@ describeDb("retired placeholder tables", () => {
     ]) {
       expect(present.has(table), `${table} went missing`).toBe(true);
     }
-    for (const table of RETIRED) {
-      expect(present.has(table), `${table} is still in public`).toBe(false);
-    }
+    expect(present.has("priorities"), "priorities is still in public").toBe(
+      false,
+    );
   });
 });

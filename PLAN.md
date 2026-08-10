@@ -227,10 +227,41 @@ Still to build before the P3 gate:
 - [ ] Kanban cards showing their linked notes and events
 - [ ] E2E: note → draft task → activate
 
-### P4 — Hours + Pomodoro
+### P4 — Hours + Pomodoro 🚧 in progress
 
-Pomodoro. Work-category classification. Hours rollups (focused + scheduled +
-manual). Weekly running total. Offline mobile time-logging with sync.
+Done and tested:
+
+- [x] Schema: `pomodoro_sessions`, `time_entries` as the focused+manual ledger,
+      `work_category_rules`, and per-event classification columns
+- [x] **Scheduled hours are derived from the calendar, never stored** — a
+      moved or cancelled meeting can't leave a stale ledger row. A check
+      constraint refuses `source = 'scheduled'`
+- [x] **Combined total counts overlap once**: a Pomodoro run during a meeting
+      is one hour, not two. Per-source totals stay plain sums, and the overlap
+      is reported
+- [x] Classifier with the specified precedence — **manual override always
+      wins**, enforced by a trigger because the classifier re-runs on every
+      sync. Every result explains itself
+- [x] Include/exclude toggles per event (tri-state) and per calendar
+- [x] Pomodoro state machine holding **instants, not remaining seconds**, so it
+      survives a reload, a locked phone and a sleeping laptop. Overruns capped;
+      abandoned sessions still count the time spent; breaks never count
+- [x] One running session at a time, enforced by a partial unique index
+- [x] Offline outbox: local write first, client-key idempotency, nothing
+      deleted until the server confirms, silence treated as "keep"
+- [x] Weekly (Mon-start) and monthly rollups that add up, with midnight-
+      crossing spans split across both days
+- [x] [The hours guide](docs/hours.md)
+
+Still to build before the P4 gate:
+
+- [ ] Pomodoro UI: the timer, the persistent "currently focusing" indicator,
+      session history
+- [ ] Hours view: the three sources split and combined, running weekly total
+- [ ] One-tap mobile logging and the manual-entry form, on the outbox
+- [ ] Classification UI: the rule editor and per-event override controls
+- [ ] Wiring the dashboard "hours this week" card to real data
+- [ ] E2E: log offline → reconnect → sync
 
 ### P5 — Priority engine + connected views
 

@@ -31,7 +31,23 @@ declare
 begin
   foreach retired in array array['priorities', 'time_entries']
   loop
+    -- Once a name has been retired, this migration is finished with it
+    -- **forever**. Without this guard, a later phase that legitimately
+    -- reintroduces the name — Phase 4's `time_entries`, the real hours ledger
+    -- — would be archived out of the API the next time migrations were
+    -- re-applied. Migrations get re-run routinely; this one must not be a
+    -- trap laid for a future table that happens to share a name.
     if exists (
+      select 1
+        from information_schema.tables
+       where table_schema = 'archive'
+         and table_name = retired
+    ) then
+      raise notice
+        'archive.% already exists; leaving public.% alone (it is a different table)',
+        retired, retired;
+
+    elsif exists (
       select 1
         from information_schema.tables
        where table_schema = 'public'
