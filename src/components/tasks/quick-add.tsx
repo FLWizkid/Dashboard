@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import {
   CalendarClock,
   CornerDownLeft,
@@ -332,7 +332,7 @@ export function QuickAdd({
       {/* Parsed suggestions — each one editable, each one clearable. */}
       <AnimatePresence initial={false}>
         {raw.trim() ? (
-          <motion.div
+          <m.div
             key="suggestions"
             initial={reduced ? false : { height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -463,14 +463,14 @@ export function QuickAdd({
                 </div>
               </div>
             ) : null}
-          </motion.div>
+          </m.div>
         ) : null}
       </AnimatePresence>
 
       {/* Expandable details — the same fields, as real controls. */}
       <AnimatePresence initial={false}>
         {detailsOpen ? (
-          <motion.div
+          <m.div
             id="quick-add-details"
             key="details"
             initial={reduced ? false : { height: 0, opacity: 0 }}
@@ -574,7 +574,7 @@ export function QuickAdd({
                 />
               </div>
             </div>
-          </motion.div>
+          </m.div>
         ) : null}
       </AnimatePresence>
     </div>

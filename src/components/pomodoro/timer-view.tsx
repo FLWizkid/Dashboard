@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import { Coffee, Pause, Play, SkipForward, Square, Timer } from "lucide-react";
 import * as React from "react";
 
@@ -260,7 +260,7 @@ function Dial({
           strokeWidth="10"
           className="stroke-line"
         />
-        <motion.circle
+        <m.circle
           cx="100"
           cy="100"
           r={radius}

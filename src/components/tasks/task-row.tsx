@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { ChevronDown, Link2, Pin, PinOff, Trash2 } from "lucide-react";
 import * as React from "react";
 
@@ -92,7 +92,7 @@ export const TaskRow = React.forwardRef<HTMLLIElement, TaskRowProps>(
     const confirmedLinks = task.links.filter((link) => link.confirmedAt);
 
     return (
-      <motion.li
+      <m.li
         ref={ref}
         layout={!reduced}
         initial={reduced ? false : { opacity: 0, y: 4 }}
@@ -199,7 +199,7 @@ export const TaskRow = React.forwardRef<HTMLLIElement, TaskRowProps>(
 
         <AnimatePresence initial={false}>
           {expanded ? (
-            <motion.div
+            <m.div
               id={detailsId}
               key="details"
               initial={reduced ? false : { height: 0, opacity: 0 }}
@@ -392,10 +392,10 @@ export const TaskRow = React.forwardRef<HTMLLIElement, TaskRowProps>(
                   </Button>
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           ) : null}
         </AnimatePresence>
-      </motion.li>
+      </m.li>
     );
   },
 );

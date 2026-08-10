@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { ArrowRight, ListChecks } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
@@ -134,7 +134,7 @@ export function TopPriorities({ limit = 5 }: { limit?: number }) {
             </Button>
           </div>
         ) : (
-          <motion.ul
+          <m.ul
             variants={staggerList(reduced)}
             initial="hidden"
             animate="visible"
@@ -143,7 +143,7 @@ export function TopPriorities({ limit = 5 }: { limit?: number }) {
           >
             <AnimatePresence initial={false}>
               {tasks.map((task) => (
-                <motion.li
+                <m.li
                   key={task.id}
                   layout={!reduced}
                   variants={riseIn(reduced)}
@@ -174,10 +174,10 @@ export function TopPriorities({ limit = 5 }: { limit?: number }) {
                       <WhyPanel row={byTaskId.get(task.id)!} />
                     )}
                   </div>
-                </motion.li>
+                </m.li>
               ))}
             </AnimatePresence>
-          </motion.ul>
+          </m.ul>
         )}
       </CardContent>
     </Card>

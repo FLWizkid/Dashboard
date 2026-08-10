@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { ArrowRight, Inbox } from "lucide-react";
 import * as React from "react";
 
@@ -167,7 +167,7 @@ export function BoardView() {
           <ul className="flex flex-1 flex-col gap-2">
             <AnimatePresence initial={false}>
               {lane.tasks.map((task) => (
-                <motion.li
+                <m.li
                   key={task.id}
                   layout={!reduceMotion}
                   initial={reduceMotion ? false : { opacity: 0, y: -4 }}
@@ -186,7 +186,7 @@ export function BoardView() {
                     onDragEnd={() => setDragging(null)}
                     onMove={(target) => move(task, target)}
                   />
-                </motion.li>
+                </m.li>
               ))}
             </AnimatePresence>
 

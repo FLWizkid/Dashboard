@@ -401,3 +401,165 @@ test.describe("accessibility", () => {
     ).toBeVisible();
   });
 });
+
+/* ── Every module, not just the ones that were easy ───────────────────── */
+
+/**
+ * The routes a person can reach, and what has to be on each one before it is
+ * fair to scan it. Scanning a skeleton proves nothing — axe is happiest with
+ * an empty page.
+ */
+const MODULES = [
+  { path: "/dashboard", ready: "Today" },
+  { path: "/dashboard/tasks", ready: "Tasks" },
+  { path: "/dashboard/kanban", ready: "Board" },
+  { path: "/dashboard/notes", ready: "Notes" },
+  { path: "/dashboard/pomodoro", ready: "Pomodoro" },
+  { path: "/dashboard/hours", ready: "Hours" },
+  { path: "/dashboard/reports", ready: "Reports" },
+  { path: "/dashboard/inbox", ready: "Inbox" },
+];
+
+test.describe("accessibility, every module", () => {
+  /**
+   * Before Phase 7 this file scanned whichever surfaces each phase happened to
+   * add. That is how a module ends up with three scans of its dialogs and none
+   * of the page they open from.
+   */
+  for (const { path, ready } of MODULES) {
+    test(`${path} has no WCAG A/AA violations`, async ({ page }) => {
+      await page.goto(path);
+      await expect(
+        page.getByRole("heading", { name: ready, exact: true }).first(),
+      ).toBeVisible();
+
+      expect(describeViolations(await scan(page))).toBe("");
+    });
+
+    test(`${path} survives prefers-reduced-motion`, async ({ page }) => {
+      // Two failure modes, and only the second is obvious. The loud one is an
+      // animation that still moves. The quiet one is content that never
+      // arrives, because it was revealed *by* an animation whose duration was
+      // collapsed to zero and whose completion callback therefore never fired.
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.goto(path);
+
+      await expect(
+        page.getByRole("heading", { name: ready, exact: true }).first(),
+      ).toBeVisible();
+
+      // Anything mounted with a reveal variant must have landed at full
+      // opacity rather than being stuck mid-transition.
+      //
+      // Scoped to *inline* opacity, because that is what Framer Motion writes
+      // and nothing else does. The first version of this read the computed
+      // value and failed on every page with a disabled button on it —
+      // `disabled:opacity-50` is a deliberate style, not a stalled animation,
+      // and a check that cannot tell them apart reports the wrong problem.
+      const stalled = await page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>("main [style*='opacity']")]
+          .map((element) => Number(element.style.opacity))
+          .filter((opacity) => opacity > 0 && opacity < 0.9),
+      );
+      expect(stalled).toEqual([]);
+
+      expect(describeViolations(await scan(page))).toBe("");
+    });
+  }
+
+  test("every module is reachable from the keyboard alone", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard");
+
+    const nav = page.getByRole("navigation", { name: "Modules" });
+    const links = nav.getByRole("link");
+
+    // Every module in the sidebar must be a real, focusable link. A div with
+    // an onClick looks identical until you try to reach it with Tab.
+    const count = await links.count();
+    expect(count).toBeGreaterThanOrEqual(MODULES.length);
+
+    for (let index = 0; index < count; index += 1) {
+      const link = links.nth(index);
+      await link.focus();
+      await expect(link).toBeFocused();
+      await expect(link).toHaveAttribute("href", /^\/dashboard/);
+    }
+  });
+
+  test("a board card can actually be moved with the keyboard", async ({
+    page,
+  }) => {
+    // The card advertises "use left and right arrow keys" in its label. This
+    // is the test that the advertisement is true — an instruction nobody
+    // implemented is worse than no instruction.
+    //
+    // The card has to be *ready* to move: priority and a due date, or the
+    // board refuses to promote it (see the next test). A bare title would
+    // fail here for the right reason and look like the wrong one.
+    await page.goto("/dashboard/tasks");
+    await quickAdd(page, "Move me by keyboard !high tomorrow");
+
+    await page.goto("/dashboard/kanban");
+    const card = page.getByLabel(/Move me by keyboard\. In Inbox\./);
+    await card.focus();
+    await page.keyboard.press("ArrowRight");
+
+    await expect(
+      page.getByLabel(/Move me by keyboard\. In Inbox\./),
+    ).toHaveCount(0);
+    await expect(
+      page.getByLabel(/Move me by keyboard\. In Ready\./),
+    ).toBeVisible();
+  });
+
+  test("a refused keyboard move explains itself instead of doing nothing", async ({
+    page,
+  }) => {
+    // Silence is the accessibility failure here. A sighted user might notice
+    // the card did not move; someone driving this by keyboard and screen
+    // reader gets no signal at all unless the refusal is announced.
+    await page.goto("/dashboard/tasks");
+    await quickAdd(page, "Not ready to move");
+
+    await page.goto("/dashboard/kanban");
+    await page.getByLabel(/Not ready to move\. In Inbox\./).focus();
+    await page.keyboard.press("ArrowRight");
+
+    await expect(page.getByText("Can't move to Ready")).toBeVisible();
+    await expect(
+      page.getByLabel(/Not ready to move\. In Inbox\./),
+    ).toBeVisible();
+  });
+
+  test("the Pomodoro timer starts from the keyboard", async ({ page }) => {
+    await page.goto("/dashboard/pomodoro");
+
+    // The control stays disabled until the stored session has been read back,
+    // so that a click landing in that window cannot be silently discarded.
+    // Waiting for it is the honest way to drive it — `click()` waits for
+    // enabled on its own, which is why only the keyboard path noticed.
+    const start = page.getByRole("button", { name: /Start focus/ });
+    await expect(start).toBeEnabled();
+
+    await start.focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByTestId("pomodoro-status")).toContainText("Running");
+  });
+
+  test("the 404 and the offline page are accessible too", async ({ page }) => {
+    // Both are pages you only ever see when something has already gone wrong,
+    // which is exactly when a broken one is least welcome — and exactly why
+    // neither had ever been scanned.
+    await page.goto("/no-such-page");
+    await expect(
+      page.getByRole("heading", { name: "There is nothing here" }),
+    ).toBeVisible();
+    expect(describeViolations(await scan(page))).toBe("");
+
+    await page.goto("/offline");
+    expect(describeViolations(await scan(page))).toBe("");
+  });
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import * as React from "react";
 
 import { DURATION, EASE } from "@/lib/motion";
@@ -62,7 +62,7 @@ export function CompleteButton({
     >
       {/* Brass pulse — decorative, so it never announces anything. */}
       {celebrating ? (
-        <motion.span
+        <m.span
           aria-hidden="true"
           initial={{ opacity: 0.55, scale: 1 }}
           animate={{ opacity: 0, scale: 2.1 }}
@@ -76,7 +76,7 @@ export function CompleteButton({
         className={cn(dimension, "relative")}
         aria-hidden="true"
       >
-        <motion.circle
+        <m.circle
           cx="12"
           cy="12"
           r="10"
@@ -91,7 +91,7 @@ export function CompleteButton({
           }}
           transition={{ duration: reduced ? 0 : DURATION.fast }}
         />
-        <motion.path
+        <m.path
           d="M7.5 12.4l3.1 3.1 6-6.2"
           fill="none"
           stroke="rgb(var(--primary-fg))"

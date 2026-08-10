@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import { CalendarDays, Info, PencilLine, Timer } from "lucide-react";
 import * as React from "react";
 
@@ -178,7 +178,7 @@ function Totals({
           </Card>
         ))}
 
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={pick(reduced)}
@@ -216,7 +216,7 @@ function Totals({
               )}
             </CardContent>
           </Card>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );

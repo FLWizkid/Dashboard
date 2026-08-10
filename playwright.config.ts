@@ -40,6 +40,23 @@ export default defineConfig({
   workers: 1,
   reporter: process.env.CI ? [["github"], ["list"]] : [["list"]],
 
+  /*
+   * Ten seconds, not Playwright's default five.
+   *
+   * These specs drive `next dev`, which compiles a route the first time
+   * anything asks for it. On a loaded machine that first hit can take longer
+   * than five seconds on its own, so whichever test happened to reach a route
+   * first would fail — and pass on the next run, because the route was then
+   * warm. Two different notes specs failed that way on consecutive Phase 7
+   * runs before this was set.
+   *
+   * A raised timeout does not make a slow assertion pass; it makes a *cold*
+   * one wait long enough to be measured. The individual `timeout: 10_000`
+   * arguments scattered through the specs were the same fix applied one test
+   * at a time, by whoever was unlucky enough to hit it.
+   */
+  expect: { timeout: 10_000 },
+
   use: {
     baseURL: BASE_URL,
     trace: "on-first-retry",

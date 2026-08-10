@@ -44,6 +44,20 @@ jobs:
       - name: Build
         run: npm run build
 
+      # The budget is only meaningful next to a build, so it lives here rather
+      # than in its own job.
+      - name: Performance budget
+        run: npm run check:bundle
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Drives a real browser at a production server and fails on a single CSP
+      # violation. A policy that only ever gets read is a policy nobody has
+      # tested: the failure mode is a page that renders and does nothing.
+      - name: Content Security Policy
+        run: npm run check:csp
+
   ops:
     name: Deployment configuration
     runs-on: ubuntu-latest

@@ -60,15 +60,18 @@ https://{$TAILNET_HOSTNAME} {
 		Cross-Origin-Resource-Policy "same-origin"
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
 
-		# Content Security Policy.
+		# NOTE: Content-Security-Policy is deliberately NOT set here.
 		#
-		# `script-src 'unsafe-inline'` is a known, deliberate gap: Next.js
-		# hydration ships inline scripts, and the nonce plumbing that removes
-		# this belongs with P2, where rendering third-party e-mail HTML makes
-		# XSS a real threat rather than a theoretical one. Recorded as a
-		# residual risk in docs/threat-model.md. Everything else is locked:
-		# no third-party origin can be reached, and nothing may frame this.
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'; worker-src 'self'"
+		# It used to be, with `script-src 'unsafe-inline'` and a comment
+		# admitting the gap. Closing that gap needs a per-request nonce, and a
+		# reverse proxy cannot mint one that the HTML it is forwarding already
+		# contains — so the application owns the policy now
+		# (src/lib/security/csp.ts, set by src/middleware.ts).
+		#
+		# Setting it here would *replace* the app's header, silently throwing
+		# away the nonce and leaving every page unable to run its own scripts.
+		# The Supabase paths below get a fixed policy of their own; they never
+		# serve HTML, so they never need a nonce.
 
 		# Caddy and Next.js both announce themselves otherwise.
 		-Server
@@ -79,6 +82,14 @@ https://{$TAILNET_HOSTNAME} {
 	# Kong routes these on the full path, so nothing is stripped here.
 	@supabase path /rest/v1/* /auth/v1/* /realtime/v1/* /storage/v1/* /functions/v1/*
 	handle @supabase {
+		# These return JSON, never HTML, so there is no nonce to carry and a
+		# fixed policy is exactly right. It is also the strictest one in the
+		# file: an API response has no legitimate reason to load anything at
+		# all, so everything is denied rather than narrowed.
+		header {
+			Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; sandbox"
+		}
+
 		reverse_proxy kong:8000 {
 			header_up X-Forwarded-Proto https
 		}

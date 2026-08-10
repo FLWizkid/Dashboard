@@ -16,7 +16,10 @@
     "test:all": "npm run test && npm run test:integration && npm run test:e2e",
     "icons": "node scripts/generate-icons.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "postbuild": "node ops/prune-runtime.mjs",
+    "check:csp": "node ops/check-csp.mjs",
+    "check:bundle": "node ops/check-bundle.mjs"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.11",
