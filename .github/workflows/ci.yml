@@ -5,8 +5,19 @@ on:
     branches: [main, "claude/**"]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Placeholders so a build never needs a real secret. The real values live
+  # only on the self-hosted box — never in the repo, never in CI.
+  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+
 jobs:
   verify:
+    name: Lint, types, unit tests, build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,8 +27,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
       - name: Lint
         run: npm run lint
@@ -25,13 +35,223 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test
+      - name: Formatting
+        run: npm run format:check
+
+      - name: Unit tests
         run: npm run test
 
       - name: Build
         run: npm run build
+
+      # The budget is only meaningful next to a build, so it lives here rather
+      # than in its own job.
+      - name: Performance budget
+        run: npm run check:bundle
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Drives a real browser at a production server and fails on a single CSP
+      # violation. A policy that only ever gets read is a policy nobody has
+      # tested: the failure mode is a page that renders and does nothing.
+      - name: Content Security Policy
+        run: npm run check:csp
+
+      # The service worker only registers in production, so the E2E suite —
+      # which runs `next dev` — cannot reach any of this.
+      - name: PWA installability and offline
+        run: npm run check:pwa
+
+  ops:
+    name: Deployment configuration
+    runs-on: ubuntu-latest
+
+    # The stack cannot be booted in CI — it needs a tailnet and a certificate.
+    # What can be checked is that every file it is assembled from is valid and
+    # that the exposure rules still hold, which is what actually goes wrong.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # A throwaway .env with the same shape the box gets.
+      - name: Generate a disposable environment
+        run: |
+          node ops/generate-secrets.mjs \
+            --hostname dashboard.ci.ts.net \
+            --bind 100.64.0.1 \
+            --out .env.ci
+
+      - name: docker compose config resolves
+        run: docker compose --env-file .env.ci config --quiet
+
+      - name: Nothing is published to every interface
+        run: |
+          # Belt and braces alongside the unit tests: assert on the *resolved*
+          # config, after variable substitution, not just the source file.
+          docker compose --env-file .env.ci config > resolved.yml
+          if grep -E '^\s+host_ip: (0\.0\.0\.0|::)' resolved.yml; then
+            echo "::error::a port is published on every interface"
+            exit 1
+          fi
+          grep -q 'host_ip: 100.64.0.1' resolved.yml
+
+      - name: Caddyfile is valid
+        run: |
+          # `caddy validate` loads the certificate files, so give it a
+          # throwaway pair to read.
+          mkdir -p ops/caddy/certs
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -subj "/CN=dashboard.ci.ts.net" \
+            -keyout ops/caddy/certs/dashboard.ci.ts.net.key \
+            -out   ops/caddy/certs/dashboard.ci.ts.net.crt
+          docker run --rm \
+            -e TAILNET_HOSTNAME=dashboard.ci.ts.net \
+            -v "$PWD/ops/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            -v "$PWD/ops/caddy/certs:/etc/caddy/certs:ro" \
+            caddy:2.10-alpine \
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      - name: Application image builds and serves
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_SUPABASE_URL=https://dashboard.ci.ts.net \
+            --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=ci-placeholder-anon-key \
+            -t cio-dashboard-app:ci .
+
+          docker run -d --name app-smoke -p 3000:3000 \
+            -e NEXT_PUBLIC_SUPABASE_URL=https://dashboard.ci.ts.net \
+            -e NEXT_PUBLIC_SUPABASE_ANON_KEY=ci-placeholder-anon-key \
+            cio-dashboard-app:ci
+
+          # The image is only useful if it actually serves. Poll the same
+          # endpoint the container healthcheck and Caddy use.
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/api/health | grep -q '"status":"ok"'; then
+              echo "container is serving"
+              docker rm -f app-smoke
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "::error::the app container never became healthy"
+          docker logs app-smoke
+          exit 1
+
+      - name: Backup image builds with a matching pg_dump
+        run: |
+          docker build -t cio-dashboard-backup:ci ops/backup
+          # A dump utility older than the server is the classic way to find
+          # out during a restore that the backups were never usable.
+          docker run --rm cio-dashboard-backup:ci pg_dump --version
+          docker run --rm cio-dashboard-backup:ci age --version
+          docker run --rm cio-dashboard-backup:ci rclone version | head -1
+
+      - name: Shell scripts parse
+        run: |
+          for script in ops/backup/*.sh; do
+            sh -n "$script" || exit 1
+            echo "ok  $script"
+          done
+
+      - name: PowerShell scripts parse
+        shell: pwsh
+        run: |
+          $failed = $false
+          Get-ChildItem ops/windows/*.ps1 | ForEach-Object {
+              $errors = $null
+              [System.Management.Automation.Language.Parser]::ParseFile(
+                  $_.FullName, [ref]$null, [ref]$errors) | Out-Null
+              if ($errors) {
+                  Write-Host "::error file=$($_.FullName)::$($errors[0].Message)"
+                  $failed = $true
+              } else {
+                  Write-Host "ok  $($_.Name)"
+              }
+          }
+          if ($failed) { exit 1 }
+
+      - name: No secret escaped into the repository
+        run: |
+          # .env.ci was just generated; it must not be tracked, and neither
+          # must anything else that looks like a real environment file.
+          if git ls-files --error-unmatch .env .env.ci 2>/dev/null; then
+            echo "::error::an environment file is tracked in a public repository"
+            exit 1
+          fi
+          if git ls-files | grep -E '^ops/caddy/certs/[^.]' ; then
+            echo "::error::a certificate is tracked"
+            exit 1
+          fi
+
+  integration:
+    name: Schema and RLS integration tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
         env:
-          # Placeholder values so CI never needs real secrets. Real values
-          # live only on the self-hosted box, never in the repo or CI.
-          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dashboard_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Applies every migration to a throwaway database, then asserts that a
+      # second user genuinely cannot reach the first user's rows.
+      - name: Integration tests
+        run: npm run test:integration
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/dashboard_test
+
+  e2e:
+    name: End-to-end and accessibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Drives the real UI against the in-memory repository and runs axe over
+      # the dashboard, the task list, the edit panel and the dialogs.
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

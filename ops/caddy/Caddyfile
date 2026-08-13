@@ -1,0 +1,124 @@
+# Caddy — the only thing on this box that listens on the tailnet.
+#
+# One hostname serves both the app and the Supabase APIs. That is not a
+# shortcut: the browser talks to Supabase directly, so app and API sharing an
+# origin means one certificate, no CORS in the normal path, and cookies that
+# behave. Path prefixes decide which upstream answers.
+#
+# ── TLS ───────────────────────────────────────────────────────────────────
+# Certificates come from `tailscale cert`, which gets a genuine Let's Encrypt
+# certificate for the *.ts.net name through Tailscale's DNS — trusted by every
+# device already, with no CA to install and nothing published to the internet.
+# ACME cannot run here: this host is not publicly reachable, by design.
+# ops/windows/Update-TailscaleCert.ps1 issues and renews them.
+{
+	# No public endpoint means no ACME, and no reason for an admin socket.
+	admin off
+	auto_https off
+
+	servers {
+		# Don't leak the reverse proxy's identity.
+		strict_sni_host
+	}
+}
+
+# Plain HTTP exists only to say "use HTTPS".
+http://{$TAILNET_HOSTNAME} {
+	redir https://{$TAILNET_HOSTNAME}{uri} permanent
+}
+
+https://{$TAILNET_HOSTNAME} {
+	tls /etc/caddy/certs/{$TAILNET_HOSTNAME}.crt /etc/caddy/certs/{$TAILNET_HOSTNAME}.key
+
+	encode zstd gzip
+
+	log {
+		output stdout
+		# Request URIs carry search terms — which, from P2, means they can carry
+		# fragments of your mail. Keep the path, drop the query string, and drop
+		# the headers that carry credentials.
+		format filter {
+			wrap json
+			fields {
+				request>uri regexp "\\?.*$" "?REDACTED"
+				request>headers>Authorization delete
+				request>headers>Cookie delete
+				request>headers>apikey delete
+			}
+		}
+	}
+
+	header {
+		# The stack is tailnet-only and always TLS. Two years, and every
+		# sub-name, so a stray http:// link can't downgrade a session.
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "same-origin"
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Resource-Policy "same-origin"
+		# Everything the product does not use is denied outright.
+		#
+		# `xr-spatial-tracking=(self)` is the exception, and it is listed
+		# rather than left to the default on purpose. The specification asks
+		# for a future immersive layer to be an addition rather than a
+		# rewrite, and a Permissions-Policy that denied it would make
+		# `navigator.xr` unavailable no matter what was built on top —
+		# a failure that would only surface in a headset, months later, with
+		# nothing in the code to point at. Granting it to `self` costs nothing
+		# today: the flat view never asks for a session. See docs/vr.md.
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=(), xr-spatial-tracking=(self)"
+
+		# NOTE: Content-Security-Policy is deliberately NOT set here.
+		#
+		# It used to be, with `script-src 'unsafe-inline'` and a comment
+		# admitting the gap. Closing that gap needs a per-request nonce, and a
+		# reverse proxy cannot mint one that the HTML it is forwarding already
+		# contains — so the application owns the policy now
+		# (src/lib/security/csp.ts, set by src/middleware.ts).
+		#
+		# Setting it here would *replace* the app's header, silently throwing
+		# away the nonce and leaving every page unable to run its own scripts.
+		# The Supabase paths below get a fixed policy of their own; they never
+		# serve HTML, so they never need a nonce.
+
+		# Caddy and Next.js both announce themselves otherwise.
+		-Server
+		-X-Powered-By
+	}
+
+	# ── Supabase APIs ──────────────────────────────────────────────────────
+	# Kong routes these on the full path, so nothing is stripped here.
+	@supabase path /rest/v1/* /auth/v1/* /realtime/v1/* /storage/v1/* /functions/v1/*
+	handle @supabase {
+		# These return JSON, never HTML, so there is no nonce to carry and a
+		# fixed policy is exactly right. It is also the strictest one in the
+		# file: an API response has no legitimate reason to load anything at
+		# all, so everything is denied rather than narrowed.
+		header {
+			Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; sandbox"
+		}
+
+		reverse_proxy kong:8000 {
+			header_up X-Forwarded-Proto https
+		}
+	}
+
+	# ── Application ────────────────────────────────────────────────────────
+	handle {
+		reverse_proxy app:3000 {
+			header_up X-Forwarded-Proto https
+
+			# A slow upstream should surface as a 502, not a hung tab.
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 30s
+			}
+		}
+	}
+
+	handle_errors {
+		respond "{err.status_code} {err.status_text}" {err.status_code}
+	}
+}

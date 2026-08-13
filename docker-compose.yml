@@ -1,0 +1,412 @@
+# CIO Executive Dashboard — the whole box, in one file.
+#
+# Next.js + self-hosted Supabase (Postgres, GoTrue, PostgREST, Realtime,
+# Storage, Kong) behind Caddy, plus a backup sidecar.
+#
+# ── The one rule that matters ─────────────────────────────────────────────
+# Nothing is published to 0.0.0.0. Caddy binds to ${BIND_ADDRESS}, which you
+# set to your Tailscale address; every other service is reachable only on the
+# internal Docker network. The default is 127.0.0.1, so a missing or
+# mistyped setting fails closed — the stack becomes unreachable rather than
+# public. Docker publishes ports by punching through the host firewall, so
+# "the firewall will catch it" is not a fallback that exists here.
+#
+# Start:  docker compose up -d
+# Admin:  docker compose --profile admin up -d      (adds Studio + meta)
+# Logs:   docker compose logs -f app
+#
+# Image tags are pinned deliberately. docs/runbook-windows.md explains how to
+# bump them and what to check afterwards.
+
+name: cio-dashboard
+
+x-restart: &restart
+  restart: unless-stopped
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
+services:
+  # ── Edge ────────────────────────────────────────────────────────────────
+  caddy:
+    image: caddy:2.10-alpine
+    <<: [*restart, *logging]
+    depends_on:
+      app:
+        condition: service_healthy
+      kong:
+        condition: service_started
+    ports:
+      # BIND_ADDRESS is your tailnet IP. Never 0.0.0.0.
+      - "${BIND_ADDRESS:-127.0.0.1}:443:443"
+      - "${BIND_ADDRESS:-127.0.0.1}:80:80"
+    environment:
+      TAILNET_HOSTNAME: ${TAILNET_HOSTNAME:?set TAILNET_HOSTNAME in .env}
+    volumes:
+      - ./ops/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates issued by `tailscale cert` on the host. Read-only:
+      # Caddy consumes them, it does not manage them.
+      - ./ops/caddy/certs:/etc/caddy/certs:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+  # ── Application ─────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Inlined into the browser bundle at build time, so a changed
+        # hostname means `docker compose build app`, not just a restart.
+        NEXT_PUBLIC_SUPABASE_URL: https://${TAILNET_HOSTNAME:?set TAILNET_HOSTNAME in .env}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY:?run ops/generate-secrets.mjs}
+    <<: [*restart, *logging]
+    depends_on:
+      kong:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_SUPABASE_URL: https://${TAILNET_HOSTNAME}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY}
+      # Server-side only. Bypasses RLS; never exposed to the browser. Used by
+      # the scheduled jobs, which have no session and therefore no auth.uid().
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY:?run ops/generate-secrets.mjs}
+      # The gateway on this network. A scheduled job should not depend on
+      # tailnet DNS and a TLS handshake to reach a database two containers away.
+      SUPABASE_INTERNAL_URL: http://kong:8000
+      # Proves a tokenless caller is the scheduler. Unset closes that path.
+      DASHBOARD_CRON_TOKEN: ${DASHBOARD_CRON_TOKEN:-}
+      DIGEST_CRON_TOKEN: ${DIGEST_CRON_TOKEN:-}
+      # Which account scheduled jobs act for. Only needed once more than one
+      # exists — until then the single account is unambiguous.
+      DASHBOARD_OWNER_USER_ID: ${DASHBOARD_OWNER_USER_ID:-}
+      # Where the Obsidian vault lives inside the container. Unset means notes
+      # stay in Postgres and the sync reports itself as not configured.
+      DASHBOARD_VAULT_PATH: ${DASHBOARD_VAULT_PATH:+/vault}
+      # External context. Unset means no egress at all.
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_API_URL: ${GITHUB_API_URL:-}
+      # Error reporting stays local unless you deliberately set a DSN.
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      DASHBOARD_ENVIRONMENT: ${DASHBOARD_ENVIRONMENT:-production}
+      TZ: ${TZ:-UTC}
+    volumes:
+      # The vault, as a folder on the host you also open in Obsidian. Bound
+      # only when DASHBOARD_VAULT_PATH is set; the fallback keeps compose
+      # valid when it is not, and the app ignores it because the environment
+      # variable is empty.
+      - ${DASHBOARD_VAULT_PATH:-./ops/vault-placeholder}:/vault
+    expose:
+      - "3000"
+
+  # ── Supabase: gateway ───────────────────────────────────────────────────
+  kong:
+    image: kong:2.8.1
+    <<: [*restart, *logging]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      TAILNET_HOSTNAME: ${TAILNET_HOSTNAME}
+    # Kong 2.8 cannot expand variables in a declarative config, so the file is
+    # a shell template rendered once at start-up. This is upstream Supabase's
+    # own trick, kept verbatim so the config file stays comparable to theirs.
+    entrypoint: >-
+      bash -c 'eval "echo \"$$(cat /home/kong/kong.template.yml)\"" > /home/kong/kong.yml
+      && exec /docker-entrypoint.sh kong docker-start'
+    volumes:
+      - ./ops/kong/kong.template.yml:/home/kong/kong.template.yml:ro
+    expose:
+      - "8000"
+
+  # ── Supabase: database ──────────────────────────────────────────────────
+  db:
+    image: supabase/postgres:15.8.1.060
+    <<: [*restart, *logging]
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      # Realtime needs logical decoding.
+      - -c
+      - wal_level=logical
+      - -c
+      - max_replication_slots=8
+      - -c
+      - max_wal_senders=8
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_PORT: 5432
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ops/generate-secrets.mjs}
+      JWT_SECRET: ${JWT_SECRET:?run ops/generate-secrets.mjs}
+      JWT_EXP: ${JWT_EXPIRY:-3600}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # Runs once, on an empty data directory only.
+      - ./ops/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    expose:
+      - "5432"
+
+  # ── Supabase: auth ──────────────────────────────────────────────────────
+  auth:
+    image: supabase/gotrue:v2.177.0
+    <<: [*restart, *logging]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: https://${TAILNET_HOSTNAME}
+
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
+
+      GOTRUE_SITE_URL: https://${TAILNET_HOSTNAME}
+      GOTRUE_URI_ALLOW_LIST: https://${TAILNET_HOSTNAME}/**
+
+      # Single-user product. Leave this true: the account is created once, by
+      # you, with the runbook's service-role call. Anyone who reaches the
+      # tailnet must not be able to enrol themselves.
+      GOTRUE_DISABLE_SIGNUP: ${DISABLE_SIGNUP:-true}
+
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: ${JWT_EXPIRY:-3600}
+
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
+
+      # MFA-ready, as specified: the factor tables and endpoints are live so
+      # enrolling TOTP later is a settings change, not a migration.
+      GOTRUE_MFA_ENABLED: "true"
+      GOTRUE_MFA_MAX_ENROLLED_FACTORS: "10"
+
+      GOTRUE_PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH:-12}
+      GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED: "true"
+      GOTRUE_SECURITY_REFRESH_TOKEN_REUSE_INTERVAL: "10"
+
+      # SMTP is optional. Without it, password recovery e-mails cannot be
+      # sent — with a single account on a private tailnet that is an
+      # acceptable trade, and the runbook documents the reset path.
+      GOTRUE_SMTP_HOST: ${SMTP_HOST:-}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT:-587}
+      GOTRUE_SMTP_USER: ${SMTP_USER:-}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS:-}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL:-doug@theonefor.ai}
+      GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME:-CIO Dashboard}
+      GOTRUE_MAILER_AUTOCONFIRM: ${MAILER_AUTOCONFIRM:-true}
+    expose:
+      - "9999"
+
+  # ── Supabase: REST ──────────────────────────────────────────────────────
+  rest:
+    image: postgrest/postgrest:v12.2.12
+    <<: [*restart, *logging]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
+      PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS:-public,storage}
+      # Every request runs as `anon` until a JWT upgrades it. RLS does the
+      # rest — see docs/data-model.md.
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
+      PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY:-3600}
+    command: ["postgrest"]
+    expose:
+      - "3000"
+
+  # ── Supabase: realtime ──────────────────────────────────────────────────
+  realtime:
+    image: supabase/realtime:v2.34.47
+    <<: [*restart, *logging]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB:-postgres}
+      DB_AFTER_CONNECT_QUERY: "SET search_path TO _realtime"
+      DB_ENC_KEY: ${REALTIME_ENC_KEY:?run ops/generate-secrets.mjs}
+      API_JWT_SECRET: ${JWT_SECRET}
+      SECRET_KEY_BASE: ${REALTIME_SECRET_KEY_BASE:?run ops/generate-secrets.mjs}
+      ERL_AFLAGS: -proto_dist inet_tcp
+      DNS_NODES: "''"
+      RLIMIT_NOFILE: "10000"
+      APP_NAME: realtime
+      SEED_SELF_HOST: "true"
+      RUN_JANITOR: "true"
+    expose:
+      - "4000"
+
+  # ── Supabase: storage ───────────────────────────────────────────────────
+  # Unused in Phase 1. It is here because P2 stores mail attachments; if you
+  # would rather not run it until then, comment out storage and imgproxy —
+  # nothing else depends on them.
+  storage:
+    image: supabase/storage-api:v1.25.7
+    <<: [*restart, *logging]
+    depends_on:
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_started
+    environment:
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
+      FILE_SIZE_LIMIT: ${STORAGE_FILE_SIZE_LIMIT:-52428800}
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+      ENABLE_IMAGE_TRANSFORMATION: "true"
+      IMGPROXY_URL: http://imgproxy:5001
+    volumes:
+      - storage-data:/var/lib/storage
+    expose:
+      - "5000"
+
+  imgproxy:
+    image: darthsim/imgproxy:v3.8.0
+    <<: [*restart, *logging]
+    environment:
+      IMGPROXY_BIND: ":5001"
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
+      IMGPROXY_USE_ETAG: "true"
+      IMGPROXY_ENABLE_WEBP_DETECTION: "true"
+    volumes:
+      - storage-data:/var/lib/storage
+    expose:
+      - "5001"
+
+  # ── Backups ─────────────────────────────────────────────────────────────
+  backup:
+    build:
+      context: ./ops/backup
+    <<: [*restart, *logging]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-postgres}
+      BACKUP_CRON: ${BACKUP_CRON:-0 2 * * *}
+      BACKUP_RECIPIENT: ${BACKUP_AGE_RECIPIENT:-}
+      BACKUP_RCLONE_REMOTE: ${BACKUP_RCLONE_REMOTE:-}
+      KEEP_DAILY: ${BACKUP_KEEP_DAILY:-14}
+      KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-8}
+      KEEP_MONTHLY: ${BACKUP_KEEP_MONTHLY:-24}
+    volumes:
+      # Copy 1 — same box, alongside the data.
+      - ./ops/backups:/backups
+      # Copy 2 — second disk or NAS. Bind this to a different physical device;
+      # a second folder on the same disk is not a second copy.
+      - ${BACKUP_SECONDARY_PATH:-./ops/backups-secondary}:/backups-secondary
+      # rclone remote for copy 3, off-site. Encrypted before it leaves.
+      - ${RCLONE_CONFIG_PATH:-./ops/backup/rclone}:/config/rclone:ro
+
+  # ── The clock ───────────────────────────────────────────────────────────
+  # Drives the digest, the vault sync and the external-context refresh. See
+  # docs/scheduler.md; ops/scheduler/entrypoint.sh explains why this is a
+  # container rather than pg_cron.
+  #
+  # It talks to the app over the internal Docker network, so nothing is
+  # published and no traffic leaves the box to make a scheduled job happen.
+  scheduler:
+    build:
+      context: ./ops/scheduler
+    <<: [*restart, *logging]
+    depends_on:
+      app:
+        condition: service_started
+    environment:
+      DASHBOARD_URL: http://app:3000
+      DASHBOARD_CRON_TOKEN: ${DASHBOARD_CRON_TOKEN:-}
+      DIGEST_CRON_TOKEN: ${DIGEST_CRON_TOKEN:-}
+      DIGEST_CRON_SCHEDULE: ${DIGEST_CRON_SCHEDULE:-5 * * * *}
+      VAULT_CRON_SCHEDULE: ${VAULT_CRON_SCHEDULE:-*/15 * * * *}
+      REFRESH_CRON_SCHEDULE: ${REFRESH_CRON_SCHEDULE:-*/15 * * * *}
+      TZ: ${TZ:-UTC}
+
+  # ── Operator tools (profile: admin) ─────────────────────────────────────
+  # Off by default. Studio is a broad, powerful surface; run it when you need
+  # it and stop it when you don't.
+  meta:
+    image: supabase/postgres-meta:v0.91.0
+    profiles: [admin]
+    <<: [*restart, *logging]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: db
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: ${POSTGRES_DB:-postgres}
+      PG_META_DB_USER: supabase_admin
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
+    expose:
+      - "8080"
+
+  studio:
+    image: supabase/studio:2025.06.30-sha-6f5982d
+    profiles: [admin]
+    <<: [*restart, *logging]
+    depends_on:
+      - meta
+    environment:
+      STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DEFAULT_ORGANIZATION_NAME: Personal
+      DEFAULT_PROJECT_NAME: CIO Dashboard
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_PUBLIC_URL: https://${TAILNET_HOSTNAME}
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      AUTH_JWT_SECRET: ${JWT_SECRET}
+    ports:
+      # Loopback on the box itself — not even on the tailnet.
+      - "127.0.0.1:3001:3000"
+
+volumes:
+  db-data:
+  storage-data:
+  caddy-data:
+  caddy-config:

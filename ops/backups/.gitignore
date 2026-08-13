@@ -1,0 +1,3 @@
+# Backup artefacts stay on the box.
+*
+!.gitignore
