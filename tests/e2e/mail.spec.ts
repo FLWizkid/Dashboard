@@ -109,7 +109,14 @@ test.describe("reading a thread", () => {
     const row = page
       .getByTestId("thread-row")
       .filter({ hasText: "Okta renewal" });
+
+    // Assert on the call, not only on the list. The row-count assertion below
+    // is satisfied by *any* state in which the row is absent — including the
+    // filter simply not having rendered results yet — so this test once
+    // stayed green while the mark-read request 400ed on every open.
+    const markRead = page.waitForResponse("**/api/mail/messages/read");
     await row.click();
+    expect((await markRead).status()).toBe(204);
 
     await expect(page.getByTestId("thread-pane")).toBeVisible();
 

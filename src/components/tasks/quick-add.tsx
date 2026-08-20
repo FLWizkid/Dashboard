@@ -102,6 +102,7 @@ export function QuickAdd({
 
   const [raw, setRaw] = React.useState("");
   const [draft, setDraft] = React.useState<Draft>(EMPTY_DRAFT);
+  const [unknownTag, setUnknownTag] = React.useState<string | null>(null);
   const [pinnedFields, setPinnedFields] = React.useState<Set<Field>>(new Set());
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const [now, setNow] = React.useState<Date | null>(null);
@@ -131,6 +132,7 @@ export function QuickAdd({
 
       if (!value.trim()) {
         setDraft((current) => ({ ...EMPTY_DRAFT, notes: current.notes }));
+        setUnknownTag(null);
         return;
       }
 
@@ -140,6 +142,8 @@ export function QuickAdd({
         categories: parseCategories,
         defaultDueHour,
       });
+
+      setUnknownTag(parsed.unknownTag);
 
       setDraft((current) => {
         const next: Draft = { ...current, title: parsed.title };
@@ -216,6 +220,7 @@ export function QuickAdd({
   function reset() {
     setRaw("");
     setDraft(EMPTY_DRAFT);
+    setUnknownTag(null);
     setPinnedFields(new Set());
     setDetailsOpen(false);
   }
@@ -396,6 +401,14 @@ export function QuickAdd({
                   onEdit={() => openDetails(ownerRef)}
                   onClear={() => clearField("owner")}
                 />
+              ) : null}
+
+              {unknownTag ? (
+                // The tag stays in the title (stripping it would lose what
+                // was typed) — but say so, instead of storing silent noise.
+                <Badge tone="outline" className="border-dashed">
+                  {unknownTag} isn&rsquo;t a category — it stays in the title
+                </Badge>
               ) : null}
 
               {missing ? (

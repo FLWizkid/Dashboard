@@ -187,7 +187,13 @@ function Totals({
             <CardHeader>
               <div className="min-w-0">
                 <CardTitle className="text-primary-soft-fg">Combined</CardTitle>
-                <CardDescription className="mt-1 text-primary-soft-fg/80">
+                {/*
+                  Full opacity, not /80. At 80% over `bg-primary-soft` this
+                  sits under the AA threshold — and because the card fades in,
+                  axe could catch it part-way through the transition and fail
+                  intermittently. Hierarchy comes from size and weight here.
+                */}
+                <CardDescription className="mt-1 text-primary-soft-fg">
                   Every minute counted once.
                 </CardDescription>
               </div>
