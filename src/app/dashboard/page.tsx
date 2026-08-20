@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { HoursThisWeek } from "@/components/dashboard/hours-this-week";
-import { NextTwoDays } from "@/components/dashboard/next-two-days";
+import { NextTwoDaysLazy } from "@/components/dashboard/next-two-days-lazy";
 import {
   NeedsAttention,
   TodaysMeetings,
@@ -41,7 +41,7 @@ export default function DashboardHome() {
         <TodaysMeetings />
         <NeedsAttention />
         <HoursThisWeek className="md:col-span-2 xl:col-span-1" />
-        <NextTwoDays className="md:col-span-2 xl:col-span-3" />
+        <NextTwoDaysLazy className="md:col-span-2 xl:col-span-3" />
       </div>
 
       <TopPriorities />

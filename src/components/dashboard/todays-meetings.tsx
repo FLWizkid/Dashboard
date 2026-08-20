@@ -22,17 +22,28 @@ import { Card } from "@/components/ui/card";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function TodaysMeetings({ className }: { className?: string }) {
-  const window = useMemo(() => {
+  // Deliberately the *two-day* window, then filtered to today. The Next two
+  // days card next to this one needs the same range, and asking for today and
+  // today-plus-tomorrow separately made the dashboard fetch the calendar
+  // twice on every load — which on a phone is the difference between the page
+  // being interactive and not.
+  const { window, endOfDay } = useMemo(() => {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
+    const dayEnd = start.getTime() + DAY_MS;
     return {
-      from: start.toISOString(),
-      to: new Date(start.getTime() + DAY_MS).toISOString(),
+      window: {
+        from: start.toISOString(),
+        to: new Date(start.getTime() + 2 * DAY_MS).toISOString(),
+      },
+      endOfDay: dayEnd,
     };
   }, []);
 
   const events = useCalendarEvents(window);
-  const list = (events.data?.events ?? []).slice(0, 4);
+  const list = (events.data?.events ?? [])
+    .filter((event) => Date.parse(event.startsAt) < endOfDay)
+    .slice(0, 4);
 
   return (
     <Card className={cn("p-5", className)} data-testid="todays-meetings">
@@ -195,7 +206,11 @@ export function NeedsAttention({ className }: { className?: string }) {
           aria-expanded={expanded}
           onClick={() => setExpanded((open) => !open)}
         >
-          {expanded ? "Show less" : `Show ${hidden} more`}
+          {/* Deliberately not "Show N more": the phone shell's overflow
+              button is labelled "More", and two controls whose accessible
+              names overlap are ambiguous to anyone navigating by name —
+              screen-reader users and automation alike. */}
+          {expanded ? "Show fewer" : `Show all ${all.length}`}
         </button>
       )}
     </Card>

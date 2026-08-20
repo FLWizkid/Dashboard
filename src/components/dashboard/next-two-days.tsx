@@ -40,7 +40,10 @@ export function NextTwoDays({ className }: { className?: string }) {
   }, []);
 
   const events = useCalendarEvents(window);
-  const tasks = useTasks("all");
+  // "open" rather than "all": the rollup discards completed work anyway, and
+  // this shares a query key with Top Priorities, so the dashboard asks for the
+  // task list once instead of twice.
+  const tasks = useTasks("open");
 
   const slots = useMemo(
     () =>
