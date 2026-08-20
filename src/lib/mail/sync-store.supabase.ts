@@ -126,7 +126,12 @@ export function createSyncStore(scope: DataScope): SyncStore {
 
       let written = 0;
       if (result.messages.length > 0) {
-        written = await writeMessages(client, scope, accountId, result.messages);
+        written = await writeMessages(
+          client,
+          scope,
+          accountId,
+          result.messages,
+        );
       }
 
       // The account carries the human-facing status; sync_state carries the

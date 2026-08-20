@@ -47,9 +47,23 @@ $$;
 comment on function public.set_message_search_vector(uuid, text) is
   'Builds a message search vector from plaintext without storing the plaintext.';
 
+-- Least privilege, but only where the roles exist. The Supabase roles are
+-- created by the platform image; a plain Postgres (the integration harness)
+-- has neither, and an unguarded grant would fail the whole migration there.
 revoke all on function public.set_message_search_vector(uuid, text) from public;
-grant execute on function public.set_message_search_vector(uuid, text)
-  to authenticated, service_role;
+
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then
+    grant execute on function public.set_message_search_vector(uuid, text)
+      to authenticated;
+  end if;
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    grant execute on function public.set_message_search_vector(uuid, text)
+      to service_role;
+  end if;
+end;
+$$;
 
 -- ── Retention purge, actually scheduled ──────────────────────────────────
 --

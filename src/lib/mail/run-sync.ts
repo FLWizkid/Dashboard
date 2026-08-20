@@ -128,9 +128,7 @@ export async function runMailSync(
           // failure should not mask the original one.
         });
 
-      outcomes.push(
-        outcome(account, { status: "degraded", error: message }),
-      );
+      outcomes.push(outcome(account, { status: "degraded", error: message }));
     }
   }
 

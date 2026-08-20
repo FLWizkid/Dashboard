@@ -12,9 +12,9 @@ import type { SyncStore, SyncableAccount } from "./sync-store.supabase";
  */
 
 vi.mock("./adapter-for-account", async () => {
-  const actual = await vi.importActual<
-    typeof import("./adapter-for-account")
-  >("./adapter-for-account");
+  const actual = await vi.importActual<typeof import("./adapter-for-account")>(
+    "./adapter-for-account",
+  );
   return {
     ...actual,
     adapterForAccount: vi.fn(() => ({}) as never),

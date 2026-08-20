@@ -423,8 +423,7 @@ Done and tested:
 - [x] Retention: `purge_expired_messages()` **scheduled** (hourly, pg_cron).
       It existed and was tested from P2 but nothing ever called it, so cached
       mail bodies only aged out inside the test suite. Corrected 2026-08-20.
-- [x] Audit logging: `audit_log` table (append-only, identifiers never content)
-      + `recordAudit()`. Listed as a locked decision since P0 and marked done
+- [x] Audit logging: `audit_log` table (append-only, identifiers never content) + `recordAudit()`. Listed as a locked decision since P0 and marked done
       in P7 without ever being built. Corrected 2026-08-20.
 - [x] 80 unit tests, 13 integration tests through real Postgres, 13 E2E specs,
       and axe scans of the workspace, the inbox and **the printed rendering**

@@ -96,8 +96,17 @@ begin
 end;
 $$;
 
+-- Guarded for the same reason as the sync-wiring migration: the Supabase
+-- roles exist on the platform image, not on a plain Postgres.
 revoke all on function public.purge_old_audit_log() from public;
-grant execute on function public.purge_old_audit_log() to service_role;
+
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    grant execute on function public.purge_old_audit_log() to service_role;
+  end if;
+end;
+$$;
 
 do $$
 begin
