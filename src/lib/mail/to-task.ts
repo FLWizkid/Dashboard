@@ -303,25 +303,38 @@ export function suggestPriority(
     }
   }
 
+  // Meeting timing is consulted before sender importance. The specified order
+  // is deadline → meeting timing → sender importance, and having these the
+  // other way round made the middle signal unreachable for exactly the
+  // senders whose mail is most likely to concern a meeting: anyone marked
+  // High or Critical returned on importance alone, so "this is prep for a
+  // meeting in the morning" never got to speak.
+  if (relatedEvent) {
+    const hoursAway =
+      (Date.parse(relatedEvent.startsAt) - options.now.getTime()) / 3_600_000;
+
+    if (hoursAway <= 48) {
+      // A Critical sender still lifts the ceiling. The meeting establishes
+      // the urgency; the sender sharpens it.
+      const value: TaskPriority =
+        importance === "critical" ? "critical" : "high";
+      return {
+        value,
+        source: "meeting_timing",
+        reason:
+          importance === "critical"
+            ? `“${relatedEvent.title}” is within two days, and this sender is marked Critical.`
+            : `“${relatedEvent.title}” is within two days, so prep is time-critical.`,
+      };
+    }
+  }
+
   if (importance === "critical" || importance === "high") {
     return {
       value: IMPORTANCE_TO_PRIORITY[importance] as TaskPriority,
       source: "sender_importance",
       reason: `You marked ${options.message.from.address} as ${importance === "critical" ? "Critical" : "High"} importance.`,
     };
-  }
-
-  if (relatedEvent) {
-    const hoursAway =
-      (Date.parse(relatedEvent.startsAt) - options.now.getTime()) / 3_600_000;
-
-    if (hoursAway <= 48) {
-      return {
-        value: "high",
-        source: "meeting_timing",
-        reason: `“${relatedEvent.title}” is within two days, so prep is time-critical.`,
-      };
-    }
   }
 
   if (importance === "low") {

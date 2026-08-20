@@ -27,6 +27,7 @@ import {
 } from "@/lib/mail/types";
 import { cn } from "@/lib/utils";
 
+import { CreateTaskFromMail } from "@/components/mail/create-task-from-mail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -384,6 +385,7 @@ function ThreadPane({
             </div>
 
             <MessageBody message={message} />
+            <CreateTaskFromMail messageId={message.id} />
           </li>
         ))}
       </ol>
