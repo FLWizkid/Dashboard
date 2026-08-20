@@ -233,6 +233,8 @@ export function QuickAdd({
       status: "inbox",
       pinned: false,
       sourceLink: null,
+      // Quick-add is a deliberate capture, so it is live work, never a draft.
+      isDraft: false,
       owner: draft.owner,
       // Set by the capture queue if this ever has to be held on the device;
       // an online capture has nothing to replay and so needs no key.

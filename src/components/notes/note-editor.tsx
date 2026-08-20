@@ -4,6 +4,7 @@ import { Archive, Link2, Trash2, TriangleAlert } from "lucide-react";
 import * as React from "react";
 
 import { ContextPanel } from "@/components/connectors/context-panel";
+import { FollowUpActions } from "@/components/notes/follow-up-actions";
 import { BacklinksPane } from "@/components/notes/backlinks-pane";
 import { WikiTextarea } from "@/components/notes/wiki-textarea";
 import { Button } from "@/components/ui/button";
@@ -311,6 +312,16 @@ export function NoteEditor({
               Version {note.data.version}
             </span>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-4">
+          <FollowUpActions
+            noteId={noteId}
+            noteTitle={note.data.title}
+            body={draft.body}
+          />
         </CardContent>
       </Card>
 

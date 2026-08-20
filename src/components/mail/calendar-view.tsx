@@ -4,9 +4,12 @@ import { CalendarDays, ExternalLink, MapPin, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { useCalendarEvents, useMailAccounts } from "@/lib/mail/client";
+import { twoDayRollup } from "@/lib/reports/summary";
+import { useTasks } from "@/lib/tasks/client";
 import type { CalendarEvent } from "@/lib/mail/types";
 import { cn } from "@/lib/utils";
 
+import { useSettings } from "@/components/settings-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,6 +34,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function CalendarView() {
   const [offset, setOffset] = useState(0);
+  const [mode, setMode] = useState<"day" | "two-day">("day");
 
   const { from, to, label } = useMemo(() => dayWindow(offset), [offset]);
 
@@ -46,34 +50,69 @@ export function CalendarView() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-fg">Calendar</h1>
-          <p className="text-sm text-fg-muted">{label}</p>
+          <p className="text-sm text-fg-muted">
+            {mode === "day" ? label : "Today and tomorrow, with what is due"}
+          </p>
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Labelled "Two days" rather than "Next two days" because this
+              toolbar also carries a "Next" button: two controls both starting
+              with the same word is ambiguous to read and worse to hear
+              announced.
+
+              Two views rather than one replacing the other. The single day is
+              what you want when working *in* a day; the two-day rollup is
+              what you want when deciding whether the next two are survivable,
+              and it is the only view that shows deadlines beside meetings. */}
           <Button
             type="button"
-            variant="ghost"
+            variant={mode === "day" ? "primary" : "ghost"}
             size="sm"
-            onClick={() => setOffset((n) => n - 1)}
+            aria-pressed={mode === "day"}
+            onClick={() => setMode("day")}
           >
-            Previous
+            Day
           </Button>
           <Button
             type="button"
-            variant={offset === 0 ? "primary" : "ghost"}
+            variant={mode === "two-day" ? "primary" : "ghost"}
             size="sm"
-            onClick={() => setOffset(0)}
+            aria-pressed={mode === "two-day"}
+            onClick={() => setMode("two-day")}
           >
-            Today
+            Two days
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setOffset((n) => n + 1)}
-          >
-            Next
-          </Button>
+
+          {mode === "day" && (
+            <>
+              <span aria-hidden className="mx-1 h-4 w-px bg-line" />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setOffset((n) => n - 1)}
+              >
+                Previous
+              </Button>
+              <Button
+                type="button"
+                variant={offset === 0 ? "primary" : "ghost"}
+                size="sm"
+                onClick={() => setOffset(0)}
+              >
+                Today
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setOffset((n) => n + 1)}
+              >
+                Next
+              </Button>
+            </>
+          )}
         </div>
       </header>
 
@@ -90,7 +129,9 @@ export function CalendarView() {
         </Card>
       )}
 
-      {events.isPending ? (
+      {mode === "two-day" ? (
+        <TwoDayAgenda />
+      ) : events.isPending ? (
         <Card className="p-4 text-sm text-fg-muted" aria-busy>
           Loading…
         </Card>
@@ -111,6 +152,111 @@ export function CalendarView() {
           ))}
         </ol>
       )}
+    </div>
+  );
+}
+
+/**
+ * Today and tomorrow, with due and overdue work interleaved.
+ *
+ * The specified rollup, and until now it existed only inside the reports
+ * page — so the calendar, the one place you go to ask what is coming, was
+ * the one place that could not tell you what was due. Reuses the report's
+ * `twoDayRollup` rather than a second implementation of "what counts as
+ * tomorrow".
+ */
+function TwoDayAgenda() {
+  const { timeZone } = useSettings();
+
+  const window = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    return {
+      from: start.toISOString(),
+      to: new Date(start.getTime() + 2 * DAY_MS).toISOString(),
+    };
+  }, []);
+
+  const events = useCalendarEvents(window);
+  const tasks = useTasks("all");
+
+  const slots = useMemo(
+    () =>
+      twoDayRollup({
+        tasks: tasks.data ?? [],
+        events: (events.data?.events ?? []).map((event) => ({
+          id: event.id,
+          title: event.title,
+          startsAt: event.startsAt,
+          endsAt: event.endsAt,
+          isCancelled: event.isCancelled,
+        })),
+        now: new Date(),
+        timeZone,
+      }),
+    [tasks.data, events.data?.events, timeZone],
+  );
+
+  if (events.isPending || tasks.isPending) {
+    return (
+      <Card className="p-4 text-sm text-fg-muted" aria-busy>
+        Loading…
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4" data-testid="two-day-agenda">
+      {slots.map((slot) => (
+        <Card key={slot.start} className="p-4">
+          <h2 className="text-sm font-semibold text-fg">{slot.label}</h2>
+
+          {slot.events.length === 0 && slot.tasks.length === 0 ? (
+            <p className="mt-2 text-sm text-fg-muted">
+              Nothing scheduled and nothing due.
+            </p>
+          ) : (
+            <ol role="list" className="mt-2 space-y-2">
+              {slot.events.map((event) => (
+                <li
+                  key={event.id}
+                  className="flex items-baseline gap-3 text-sm"
+                  data-testid="two-day-event"
+                >
+                  <time
+                    className="w-20 shrink-0 tabular-nums text-fg-muted"
+                    dateTime={event.startsAt}
+                  >
+                    {new Date(event.startsAt).toLocaleTimeString(undefined, {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </time>
+                  <span className="min-w-0 flex-1 text-fg">{event.title}</span>
+                </li>
+              ))}
+
+              {slot.tasks.map((task) => {
+                const overdue =
+                  task.dueAt !== null &&
+                  Date.parse(task.dueAt) < Date.parse(slot.start);
+
+                return (
+                  <li
+                    key={task.id}
+                    className="flex items-baseline gap-3 text-sm"
+                    data-testid="two-day-task"
+                  >
+                    <span className="w-20 shrink-0 text-fg-muted">Due</span>
+                    <span className="min-w-0 flex-1 text-fg">{task.title}</span>
+                    {overdue && <Badge tone="critical">Overdue</Badge>}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </Card>
+      ))}
     </div>
   );
 }

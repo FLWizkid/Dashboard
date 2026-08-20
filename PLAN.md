@@ -423,6 +423,17 @@ Done and tested:
 - [x] Retention: `purge_expired_messages()` **scheduled** (hourly, pg_cron).
       It existed and was tested from P2 but nothing ever called it, so cached
       mail bodies only aged out inside the test suite. Corrected 2026-08-20.
+- [x] Major-tier wiring (2026-08-20). Six behaviours whose machinery existed
+      but had no route into the product:
+      dashboard **next two days** card (reuses the report's `twoDayRollup`);
+      **needs-attention** count + expand, critical first;
+      calendar **two-day view** with due and overdue work beside meetings;
+      note follow-ups → **draft tasks** (`isDraft` now travels through the
+      create path it was missing from);
+      **manual priority override** reachable (`manualRank` won the comparator
+      from P5 and nothing could set it);
+      **caching policy + corporate** settable, with connect no longer leaving
+      it to the column default.
 - [x] Audit logging: `audit_log` table (append-only, identifiers never content) + `recordAudit()`. Listed as a locked decision since P0 and marked done
       in P7 without ever being built. Corrected 2026-08-20.
 - [x] 80 unit tests, 13 integration tests through real Postgres, 13 E2E specs,

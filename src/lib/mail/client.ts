@@ -147,8 +147,10 @@ export function useUpdateAccount() {
     }: {
       id: string;
       cachingPolicy?: MailAccount["cachingPolicy"];
+      isCorporate?: boolean;
       syncMailEnabled?: boolean;
       syncCalendarEnabled?: boolean;
+      retentionMonths?: number;
     }) =>
       request<{ account: MailAccount }>(`/api/mail/accounts/${id}`, {
         method: "PATCH",

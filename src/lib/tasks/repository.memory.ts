@@ -153,7 +153,7 @@ export const memoryTaskRepository: TaskRepository = {
       sourceLink: input.sourceLink,
       owner: input.owner,
       isReady: false,
-      isDraft: false,
+      isDraft: input.isDraft ?? false,
       canActivate: Boolean(input.owner && input.dueAt && input.priority),
       // A new task is never manually placed — only an explicit act sets this.
       manualRank: null,

@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarDays, Mail } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 
 import { useCalendarEvents, useThreads } from "@/lib/mail/client";
@@ -89,21 +89,53 @@ export function TodaysMeetings({ className }: { className?: string }) {
  * which on any real mailbox is a number in the hundreds and tells you nothing.
  * The rating is the owner's own judgement, so this card can only ever be as
  * noisy as they made it.
+ *
+ * Shows a **count** and the top three, expandable. The count is what makes it
+ * a dashboard card rather than a short inbox: "four waiting" is something you
+ * can act on without reading any of them.
  */
+
+/** Shown before expanding. Three is the specified preview size. */
+const ATTENTION_PREVIEW = 3;
+
 export function NeedsAttention({ className }: { className?: string }) {
   const threads = useThreads({
     unreadOnly: true,
     minImportance: "high",
-    limit: 5,
+    limit: 25,
   });
 
-  const list = threads.data?.threads ?? [];
+  const [expanded, setExpanded] = useState(false);
+
+  // Critical first, then High. The count is of everything waiting; the
+  // preview is the top three. Showing five with no total was the worst of
+  // both — too long to scan, and still silent about how much it was hiding.
+  const all = useMemo(() => {
+    const threadList = threads.data?.threads ?? [];
+    return [...threadList].sort((a, b) => {
+      const rank = (importance: string | null) =>
+        importance === "critical" ? 0 : 1;
+      return rank(a.senderImportance) - rank(b.senderImportance);
+    });
+  }, [threads.data?.threads]);
+
+  const list = expanded ? all : all.slice(0, ATTENTION_PREVIEW);
+  const hidden = all.length - list.length;
 
   return (
     <Card className={cn("p-5", className)} data-testid="needs-attention">
       <header className="flex items-center gap-2">
         <Mail aria-hidden className="size-4 text-fg-muted" />
         <h2 className="text-sm font-semibold text-fg">Needs attention</h2>
+        {all.length > 0 && (
+          // The count is the point of the card: "four things" is a decision
+          // you can make from the dashboard, a list of names is not.
+          <Badge
+            tone={all[0].senderImportance === "critical" ? "critical" : "high"}
+          >
+            {all.length}
+          </Badge>
+        )}
         <Link
           href="/dashboard/email"
           className="ml-auto text-xs text-fg-muted underline-offset-2 hover:underline"
@@ -154,6 +186,17 @@ export function NeedsAttention({ className }: { className?: string }) {
             </li>
           ))}
         </ol>
+      )}
+
+      {(hidden > 0 || expanded) && (
+        <button
+          type="button"
+          className="mt-3 rounded-sm text-xs text-fg-muted underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((open) => !open)}
+        >
+          {expanded ? "Show less" : `Show ${hidden} more`}
+        </button>
       )}
     </Card>
   );
