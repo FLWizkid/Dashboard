@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { CategoryManager } from "@/components/tasks/category-manager";
 import { TasksView } from "@/components/tasks/tasks-view";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,11 @@ export default function TasksPage() {
       </header>
 
       <TasksView />
+
+      {/* The taxonomy lives where it is used, folded away — a settings screen
+          consulted about once a quarter has no business at the top of a page
+          visited every day. */}
+      <CategoryManager />
     </div>
   );
 }

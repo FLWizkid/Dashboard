@@ -18,6 +18,19 @@ type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
 type TaskLinkRow = Database["public"]["Tables"]["task_links"]["Row"];
 type CategoryRow = Database["public"]["Tables"]["activity_categories"]["Row"];
 
+const CATEGORY_COLUMNS =
+  "id, slug, name, description, color, position, is_default, is_archived";
+
+/** A name to the slug the column's check constraint expects. */
+function slugify(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "category"
+  );
+}
+
 const TASK_COLUMNS =
   "id, title, notes, priority, due_at, category_id, status, pinned, source_link, owner, is_ready, is_draft, can_activate, manual_rank, manual_rank_set_at, completed_at, created_at, updated_at";
 
@@ -92,15 +105,59 @@ export function createSupabaseTaskRepository(): TaskRepository {
       const supabase = await createClient();
       const { data, error } = await supabase
         .from("activity_categories")
-        .select(
-          "id, slug, name, description, color, position, is_default, is_archived",
-        )
+        .select(CATEGORY_COLUMNS)
         .eq("is_archived", false)
         .order("position", { ascending: true })
         .returns<CategoryRow[]>();
 
       if (error) throw new Error(error.message);
       return (data ?? []).map(toCategory);
+    },
+
+    async createCategory(input) {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("activity_categories")
+        .insert({
+          slug: slugify(input.name),
+          name: input.name,
+          description: input.description,
+          color: input.color,
+        })
+        .select(CATEGORY_COLUMNS)
+        .single<CategoryRow>();
+
+      if (error) throw new Error(error.message);
+      return toCategory(data);
+    },
+
+    async updateCategory(id, patch) {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from("activity_categories")
+        .update({
+          // The slug follows the name: it is derived, not independently
+          // meaningful, and letting the two drift apart makes the URL-safe
+          // handle a lie about what the category is called.
+          ...(patch.name !== undefined && {
+            name: patch.name,
+            slug: slugify(patch.name),
+          }),
+          ...(patch.description !== undefined && {
+            description: patch.description,
+          }),
+          ...(patch.color !== undefined && { color: patch.color }),
+          ...(patch.position !== undefined && { position: patch.position }),
+          ...(patch.isArchived !== undefined && {
+            is_archived: patch.isArchived,
+          }),
+        })
+        .eq("id", id)
+        .select(CATEGORY_COLUMNS)
+        .single<CategoryRow>();
+
+      if (error) throw new Error(error.message);
+      return toCategory(data);
     },
 
     async listTasks(query: ListTasksQuery) {

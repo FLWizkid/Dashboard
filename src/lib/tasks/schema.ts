@@ -96,3 +96,52 @@ export type CreateTaskPayload = z.output<typeof createTaskSchema>;
 export type UpdateTaskPayload = z.output<typeof updateTaskSchema>;
 export type TaskLinkInput = z.output<typeof taskLinkInputSchema>;
 export type ListTasksQuery = z.output<typeof listTasksQuerySchema>;
+
+/* ── The taxonomy ─────────────────────────────────────────────────────── */
+
+/**
+ * Colour is a design-system token, never a hex value.
+ *
+ * The database says the same thing. A stored `#3f5f4a` survives a theme
+ * change and stops matching anything around it; a token follows the theme,
+ * which is the whole point of having one.
+ */
+export const CATEGORY_COLORS = [
+  "primary",
+  "accent",
+  "critical",
+  "high",
+  "normal",
+  "low",
+  "neutral",
+] as const;
+
+export const createCategorySchema = z.object({
+  name: z.string().trim().min(1, "A name is required").max(60),
+  description: z.string().trim().max(300).nullable().default(null),
+  color: z.enum(CATEGORY_COLORS).default("primary"),
+});
+
+export const updateCategorySchema = z
+  .object({
+    name: z.string().trim().min(1).max(60),
+    description: z.string().trim().max(300).nullable(),
+    color: z.enum(CATEGORY_COLORS),
+    position: z.number().int().min(0).max(999),
+    /**
+     * Archiving, not deleting.
+     *
+     * Tasks, hours and classification rules all point at a category, and the
+     * reports read months of them. Removing one would either orphan that
+     * history or rewrite it; archiving takes it out of every picker while
+     * leaving what already happened intact and explainable.
+     */
+    isArchived: z.boolean(),
+  })
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "Nothing to change",
+  });
+
+export type CreateCategoryPayload = z.infer<typeof createCategorySchema>;
+export type UpdateCategoryPayload = z.infer<typeof updateCategorySchema>;
