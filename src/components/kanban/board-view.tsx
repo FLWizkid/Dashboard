@@ -16,14 +16,21 @@ import {
   laneAfterMove,
   triageSuggestions,
 } from "@/lib/kanban/board";
-import { useTasks, useUpdateTask } from "@/lib/tasks/client";
+import { useCategories, useTasks, useUpdateTask } from "@/lib/tasks/client";
 import { describeMissingReadyFields } from "@/lib/tasks/ready";
 import { sortTasks } from "@/lib/tasks/sort";
-import { PRIORITY_LABELS, type Task, type TaskStatus } from "@/lib/tasks/types";
+import {
+  LINK_RELATION_LABELS,
+  PRIORITY_LABELS,
+  type ActivityCategory,
+  type Task,
+  type TaskStatus,
+} from "@/lib/tasks/types";
 import { formatDueDate } from "@/lib/time/format";
 import { useSettings } from "@/components/settings-provider";
 import { cn } from "@/lib/utils";
 
+const EMPTY_CATEGORIES: ActivityCategory[] = [];
 const EMPTY: Task[] = [];
 
 /**
@@ -41,6 +48,7 @@ const EMPTY: Task[] = [];
  */
 export function BoardView() {
   const tasksQuery = useTasks("all");
+  const categoriesQuery = useCategories();
   const updateTask = useUpdateTask();
   const { toast } = useToast();
   const { timeZone } = useSettings();
@@ -52,6 +60,7 @@ export function BoardView() {
   const [dragOver, setDragOver] = React.useState<TaskStatus | null>(null);
 
   const tasks = tasksQuery.data ?? EMPTY;
+  const categories = categoriesQuery.data ?? EMPTY_CATEGORIES;
   const lanes = React.useMemo(() => groupIntoLanes(tasks, sortTasks), [tasks]);
 
   const move = React.useCallback(
@@ -176,6 +185,7 @@ export function BoardView() {
                 >
                   <Card
                     task={task}
+                    categories={categories}
                     timeZone={timeZone}
                     now={now}
                     onKeyDown={(event) => handleKeyDown(event, task)}
@@ -208,6 +218,7 @@ export function BoardView() {
 
 function Card({
   task,
+  categories,
   timeZone,
   now,
   onKeyDown,
@@ -216,6 +227,7 @@ function Card({
   onMove,
 }: {
   task: Task;
+  categories: ActivityCategory[];
   timeZone: string;
   now: Date;
   onKeyDown: (event: React.KeyboardEvent) => void;
@@ -228,6 +240,10 @@ function Card({
     (suggestion) => suggestion.action === "promote",
   );
   const missing = describeMissingReadyFields(task);
+  const category = categories.find((item) => item.id === task.categoryId);
+  // Only confirmed links. A suggested-but-unconfirmed one is a question the
+  // owner has not answered, and a board card is the wrong place to ask it.
+  const links = task.links.filter((link) => link.confirmedAt);
 
   return (
     <article
@@ -252,12 +268,34 @@ function Card({
           <Badge tone="outline">Untriaged</Badge>
         )}
 
+        {/* The category, because the board is where you see the shape of a
+            week's work — and a lane full of cards with no idea whether they
+            are vendor admin or board prep tells you how busy you are and
+            nothing about what with. */}
+        {category ? <Badge tone="outline">{category.name}</Badge> : null}
+
         {task.dueAt ? (
           <span className="text-xs text-fg-muted">
             {formatDueDate(task.dueAt, now, timeZone)}
           </span>
         ) : null}
       </div>
+
+      {links.length > 0 ? (
+        <ul
+          role="list"
+          className="mt-2 flex flex-wrap gap-1"
+          data-testid="kanban-card-links"
+        >
+          {links.map((link) => (
+            <li key={link.id}>
+              <Badge tone="neutral">
+                {LINK_RELATION_LABELS[link.relation]}: {link.targetLabel}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       {missing && task.status === "inbox" ? (
         <p className="mt-2 text-xs text-fg-muted">{missing}</p>

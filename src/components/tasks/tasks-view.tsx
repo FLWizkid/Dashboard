@@ -2,6 +2,7 @@
 
 import { AnimatePresence } from "framer-motion";
 import { Inbox, Keyboard } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,7 @@ export function TasksView() {
 
   const [filter, setFilter] = React.useState<Filter>("open");
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
+
   const [shortcutsOpen, setShortcutsOpen] = React.useState(false);
 
   const listRef = React.useRef<HTMLDivElement>(null);
@@ -62,6 +64,26 @@ export function TasksView() {
 
   const allTasks = tasksQuery.data ?? EMPTY_TASKS;
   const categories = categoriesQuery.data ?? EMPTY_CATEGORIES;
+
+  // Arriving from a report's drill-down. The report names a problem; landing
+  // on a list of forty rows and hunting for it again is most of the work the
+  // link was supposed to save, so the task opens and scrolls itself into
+  // view. Runs once per id: re-running on every render would fight anyone
+  // who then collapsed it.
+  const searchParams = useSearchParams();
+  const requested = searchParams.get("task");
+  const openedRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    if (!requested || openedRef.current === requested) return;
+    if (!allTasks.some((task) => task.id === requested)) return;
+
+    openedRef.current = requested;
+    setExpandedId(requested);
+    document
+      .querySelector(`[data-task-id="${requested}"]`)
+      ?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [requested, allTasks]);
 
   const visible = React.useMemo(() => {
     const filtered = allTasks.filter((task) => {

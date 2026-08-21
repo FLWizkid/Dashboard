@@ -1,6 +1,7 @@
 "use client";
 
 import { Printer, SlidersHorizontal } from "lucide-react";
+import Link from "next/link";
 import * as React from "react";
 
 import { useSettings } from "@/components/settings-provider";
@@ -400,9 +401,19 @@ function TaskSections({
                         key={task.id}
                         className="flex items-baseline justify-between gap-3 py-2 text-sm"
                       >
-                        <span className="min-w-0 flex-1 text-fg">
+                        {/* Drill-down.
+                            A report that names a problem and gives you no way
+                            to reach it makes you find it again by hand — and
+                            the moment you have read "overdue: sign the
+                            renewal" is exactly the moment you want to open it.
+                            The link is hidden in print, where a URL under
+                            every line is noise on paper. */}
+                        <Link
+                          href={`/dashboard/tasks?task=${task.id}`}
+                          className="min-w-0 flex-1 rounded-sm text-fg underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring print:no-underline"
+                        >
                           {task.title}
-                        </span>
+                        </Link>
                         <span
                           className={cn(
                             "shrink-0 text-xs",
