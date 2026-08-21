@@ -246,8 +246,13 @@ test.describe("the dashboard reflects the task list", () => {
     await expect(
       page.getByRole("heading", { name: "Needs attention" }),
     ).toBeVisible();
+    // Hours-this-week moved to the hours page; what the home page owes you
+    // now is the ability to log time without going anywhere.
     await expect(
-      page.getByRole("heading", { name: "Hours this week" }),
+      page.getByRole("heading", { name: "Just finished something?" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Next two days" }),
     ).toBeVisible();
 
     // Nothing on this page should still be admitting it is unbuilt.

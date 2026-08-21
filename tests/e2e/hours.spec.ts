@@ -15,7 +15,10 @@ test.describe("hours", () => {
   }) => {
     await page.goto("/dashboard/hours");
 
-    await expect(page.getByRole("heading", { name: "Hours" })).toBeVisible();
+    // exact, because "Hours this week" now lives on this page too.
+    await expect(
+      page.getByRole("heading", { name: "Hours", exact: true }),
+    ).toBeVisible();
 
     // All four figures render, even at zero — an empty week is a legitimate
     // answer and blanking the cards would read as a loading failure.
@@ -48,7 +51,10 @@ test.describe("hours", () => {
     await expect(page.getByTestId("hours-combined")).toHaveText("30m");
   });
 
-  test("the dashboard card and the hours view agree", async ({ page }) => {
+  test("the weekly card and the hours view agree", async ({ page }) => {
+    // The card moved from the home page to this one — "am I on track" now
+    // sits beside the controls that can act on the answer. Same invariant,
+    // same page: the summary card and the detailed view must show one number.
     await page.goto("/dashboard/hours");
     await page
       .getByTestId("quick-log")
@@ -59,7 +65,6 @@ test.describe("hours", () => {
       timeout: 10_000,
     });
 
-    await page.goto("/dashboard");
     await expect(page.getByTestId("dashboard-hours-combined")).toHaveText(
       "1h",
       { timeout: 10_000 },

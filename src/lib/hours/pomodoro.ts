@@ -98,6 +98,26 @@ export function plannedMinutes(
   }
 }
 
+/**
+ * The length this state's interval actually has.
+ *
+ * The one-off override applies to focus blocks only, and it has to be applied
+ * *here* rather than only at session creation: the first version sent the
+ * override to the server and left the countdown reading the settings, so a
+ * forty-minute block was recorded as forty minutes while the dial counted
+ * down twenty-five. The clock the owner watches and the row the ledger keeps
+ * must be the same number, and this function is where both now look.
+ */
+export function effectivePlannedMinutes(
+  state: Pick<PomodoroState, "kind" | "plannedOverrideMinutes">,
+  settings: PomodoroSettings = DEFAULT_POMODORO,
+): number {
+  if (state.kind === "focus" && state.plannedOverrideMinutes) {
+    return state.plannedOverrideMinutes;
+  }
+  return plannedMinutes(state.kind, settings);
+}
+
 /** Milliseconds elapsed in the current interval. */
 export function elapsedMs(state: PomodoroState, now: Date): number {
   if (!state.startedAt || state.paused) return state.elapsedBeforeMs;
@@ -114,7 +134,7 @@ export function remainingSeconds(
   now: Date,
   settings: PomodoroSettings = DEFAULT_POMODORO,
 ): number {
-  const total = plannedMinutes(state.kind, settings) * 60_000;
+  const total = effectivePlannedMinutes(state, settings) * 60_000;
   return Math.max(0, Math.ceil((total - elapsedMs(state, now)) / 1000));
 }
 
@@ -125,7 +145,7 @@ export function isComplete(
   settings: PomodoroSettings = DEFAULT_POMODORO,
 ): boolean {
   if (!state.startedAt) return false;
-  return elapsedMs(state, now) >= plannedMinutes(state.kind, settings) * 60_000;
+  return elapsedMs(state, now) >= effectivePlannedMinutes(state, settings) * 60_000;
 }
 
 export function isRunning(state: PomodoroState): boolean {

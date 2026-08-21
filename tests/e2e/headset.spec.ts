@@ -129,8 +129,42 @@ test.describe("headset legibility", () => {
   });
 
   test("interactive targets are big enough for a raycast", async ({ page }) => {
+    // Measured at rest. This check is about geometry, not motion, and a
+    // element caught mid-transition reports the size it is passing through:
+    // a row growing into place is briefly 20px tall, and a control inside a
+    // layout animation is briefly a fraction under its final size. Both are
+    // facts about the animation rather than about the layout, and both would
+    // fail a check that is meant to ask "is this big enough to point at".
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
     await page.goto("/dashboard/tasks");
     await quickAdd(page, "Big enough to point at");
+
+    // Capture is optimistic, so for a moment the list holds both the
+    // provisional row and the confirmed one that replaces it. Measuring
+    // during that swap reports a row mid-collapse as an undersized target,
+    // which is a fact about the animation rather than about the layout this
+    // test is here to check.
+    await expect(page.locator('[data-task-id^="optimistic:"]')).toHaveCount(0);
+
+    // Creating a task invalidates the list, so a refetch follows the capture
+    // and re-mounts the rows behind it. Measuring between the two catches a
+    // row part-way through being rebuilt. Wait for the network to settle
+    // first, then confirm the row has a real box.
+    await page.waitForLoadState("networkidle");
+
+    await expect
+      .poll(
+        async () => {
+          const box = await page
+            .locator('[data-task-focusable="true"]')
+            .first()
+            .boundingBox();
+          return Math.round(box?.height ?? 0);
+        },
+        { timeout: 15_000 },
+      )
+      .toBeGreaterThanOrEqual(MINIMUM_TARGET_PX);
 
     const tooSmall = await page.evaluate((minimum) => {
       const offenders: string[] = [];

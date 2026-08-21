@@ -160,6 +160,20 @@ export function useCreateTask() {
 }
 
 /**
+ * Whether a task is the provisional row from an optimistic create.
+ *
+ * Provisional rows are shown but inert: completing or editing a row the
+ * server has not confirmed would target an id that does not exist, and the
+ * honest failure ("nothing happened") is worse than a briefly untouchable
+ * row. They also skip the exit animation — a farewell transition for a row
+ * that is being *replaced by itself* leaves a ghost in the DOM long enough
+ * for a click (or a test) to find the same task twice.
+ */
+export function isProvisionalTask(task: Pick<Task, "id">): boolean {
+  return task.id.startsWith("optimistic:");
+}
+
+/**
  * The row shown while the server is still thinking.
  *
  * Derived fields are computed the way the database computes them, so the
