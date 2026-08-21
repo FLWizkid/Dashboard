@@ -6,7 +6,7 @@ import * as React from "react";
 
 import { ManualEntryForm } from "@/components/hours/manual-entry-form";
 import { OutboxBanner } from "@/components/hours/outbox-banner";
-import { RuleEditor } from "@/components/hours/rule-editor";
+import { RuleEditorLazy } from "@/components/hours/rule-editor-lazy";
 import { ScheduledList } from "@/components/hours/scheduled-list";
 import { useSettings } from "@/components/settings-provider";
 import { Button } from "@/components/ui/button";
@@ -127,7 +127,7 @@ export function HoursView() {
         />
       </div>
 
-      <RuleEditor />
+      <RuleEditorLazy />
     </div>
   );
 }
