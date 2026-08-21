@@ -15,6 +15,8 @@
  * guess was right.
  */
 
+import { timingSafeEqual } from "node:crypto";
+
 /**
  * `DASHBOARD_CRON_TOKEN` is the name; `DIGEST_CRON_TOKEN` is what boxes
  * deployed before the scheduler existed already have in `.env`, and silently
@@ -43,12 +45,22 @@ export function isSchedulerRequest(
   return constantTimeEquals(bearerFrom(headers), expected);
 }
 
+/**
+ * Constant-time comparison, using the platform's.
+ *
+ * There was a hand-rolled XOR loop here while `crypto.timingSafeEqual` was
+ * already in use a module away, in the envelope encryption. Two
+ * implementations of the same primitive is one more than anyone will keep
+ * correct, and the hand-rolled one compared UTF-16 code units rather than
+ * bytes — equivalent for the ASCII tokens this generates, wrong the moment
+ * one is not.
+ *
+ * The length check stays and still short-circuits: `timingSafeEqual` throws
+ * on mismatched lengths, and a token's length is not the secret.
+ */
 function constantTimeEquals(presented: string, expected: string): boolean {
-  if (presented.length !== expected.length) return false;
-
-  let mismatch = 0;
-  for (let i = 0; i < expected.length; i += 1) {
-    mismatch |= presented.charCodeAt(i) ^ expected.charCodeAt(i);
-  }
-  return mismatch === 0;
+  const a = Buffer.from(presented, "utf8");
+  const b = Buffer.from(expected, "utf8");
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
 }
