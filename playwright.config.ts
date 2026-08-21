@@ -89,6 +89,16 @@ export default defineConfig({
     stderr: "pipe",
     env: {
       DASHBOARD_DATA_MODE: "memory",
+      // The same zone the browser runs in (`timezoneId` above).
+      //
+      // The memory fixtures seed meetings at "nine o'clock this morning",
+      // computed with the *server's* clock, while the agenda asks for "today"
+      // in the *browser's*. On a UTC machine those are the same day for
+      // twenty hours and different days for four: run the suite between
+      // 00:00 and 04:00 UTC and every calendar spec fails, because the seeded
+      // meetings genuinely fall outside the day being asked for. Pinning the
+      // server to the browser's zone makes "today" mean one thing.
+      TZ: "America/New_York",
       // Present but unused — memory mode never calls Supabase.
       NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "e2e-placeholder",
