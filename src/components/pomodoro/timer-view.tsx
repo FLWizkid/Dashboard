@@ -26,10 +26,9 @@ import { useToast } from "@/components/ui/toast";
 import { formatMinutes } from "@/lib/hours/aggregate";
 import { usePomodoro } from "@/lib/hours/client";
 import {
+  effectivePlannedMinutes,
   formatRemaining,
   POMODORO_KIND_LABELS,
-  effectivePlannedMinutes,
-  plannedMinutes,
   type PomodoroKind,
 } from "@/lib/hours/pomodoro";
 import { upNext, usePomodoroTimer } from "@/lib/hours/use-pomodoro";
