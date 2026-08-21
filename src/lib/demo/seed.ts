@@ -930,22 +930,28 @@ function inbox(clock: ReturnType<typeof weekClock>): InboxMessage[] {
 /* ── Mail and its calendar ────────────────────────────────────────────── */
 
 /**
- * A week of mail across both Microsoft accounts.
+ * A week of mail across all three mailboxes.
  *
- * `doug@theonefor.ai` is the owner's own tenant and caches in full, so its
- * threads have bodies. `doug@encountive.com` is marked corporate and caches
- * headers only — its messages arrive with `body: null` on purpose, which is
- * what the reader's "stored metadata only" notice exists to explain. Seeing
- * the two side by side is the clearest way to check the policy is real
- * rather than described.
+ * Three providers on purpose, because the whole point of the unified list is
+ * that they arrive indistinguishable except for the account tint — and the
+ * only way to see whether that reads is to have Microsoft, Google and Proton
+ * threads interleaved in one column.
+ *
+ * `doug@theonefor.ai` (Microsoft) and `doug@encountive.com` (Google) both
+ * cache in full, so their threads have bodies. `dougtully@proton.me` caches
+ * headers only, so its messages arrive with `body: null` on purpose — that is
+ * what the reader's "stored metadata only" notice exists to explain, and
+ * seeing it beside a full thread is the clearest way to check the policy is
+ * real rather than merely described.
  *
  * Sender importance covers all four levels, because the attention card, the
  * inbox pinning and the email→task priority suggestion all read it and none
  * of them can be judged from a single value.
  */
 function mail(clock: ReturnType<typeof weekClock>) {
-  const PRIMARY = "acc-m365-primary";
-  const SECONDARY = "acc-m365-secondary";
+  const PRIMARY = "acc-m365-theonefor";
+  const SECONDARY = "acc-google-encountive";
+  const PERSONAL = "acc-proton";
 
   const message = (
     id: string,
@@ -1043,14 +1049,14 @@ function mail(clock: ReturnType<typeof weekClock>) {
       minutes: 200,
     }),
 
-    // ── The governed mailbox: headers only, by policy ──────────────────
+    // ── The Google mailbox ─────────────────────────────────────────────
     message("m0000000-0000-4000-c000-000000000009", {
       accountId: SECONDARY,
       mailboxId: "mb-encountive-inbox",
       threadKey: "thr-demo-encountive-1",
       subject: "Encountive — quarterly platform review",
       from: { address: PEOPLE.maya.address, name: PEOPLE.maya.name },
-      // No body: this account caches metadata only.
+      body: "Platform review deck attached. The migration slide is the one that needs your call before Thursday.",
       importance: "high",
       minutes: 600,
     }),
@@ -1060,8 +1066,33 @@ function mail(clock: ReturnType<typeof weekClock>) {
       threadKey: "thr-demo-encountive-2",
       subject: "Encountive — invoice approval needed",
       from: { address: "billing@encountive.com", name: "Billing" },
+      body: "Invoice 4471 is waiting on approval. Net 30 from the 12th.",
       importance: "normal",
       minutes: 2_800,
+      isRead: true,
+    }),
+
+    // ── The metadata-only mailbox: headers, by policy ──────────────────
+    // Both of these deliberately lack a body. The reader must explain the
+    // absence rather than render an empty message, and that path needs a
+    // fixture or it stops being exercised the moment nobody remembers it.
+    message("m0000000-0000-4000-c000-000000000011", {
+      accountId: PERSONAL,
+      mailboxId: "mb-proton-inbox",
+      threadKey: "thr-demo-personal-1",
+      subject: "Re: weekend plans",
+      from: { address: "sam@example.net", name: "Sam" },
+      importance: "normal",
+      minutes: 1_100,
+    }),
+    message("m0000000-0000-4000-c000-000000000012", {
+      accountId: PERSONAL,
+      mailboxId: "mb-proton-inbox",
+      threadKey: "thr-demo-personal-2",
+      subject: "Your subscription renews on the 3rd",
+      from: { address: "billing@example.org", name: "Billing" },
+      importance: "low",
+      minutes: 4_000,
       isRead: true,
     }),
   ];
@@ -1212,8 +1243,10 @@ function mail(clock: ReturnType<typeof weekClock>) {
       accountId: SECONDARY,
       remoteId: "encountive-primary",
       name: "Encountive",
-      description: "Secondary tenant",
-      color: "#7A5F35",
+      description: "Google Workspace",
+      // The account's own tint, so a calendar entry and a mail row from the
+      // same mailbox agree about what colour that mailbox is.
+      color: "#9A4A08",
       timeZone: clock.timeZone,
       isPrimary: false,
       isVisible: true,

@@ -26,9 +26,12 @@ import { describeMissingReadyFields } from "@/lib/tasks/ready";
 import {
   LINK_RELATION_LABELS,
   PRIORITY_LABELS,
+  STATUS_LABELS,
   TASK_PRIORITIES,
+  TASK_STATUSES,
   type ActivityCategory,
   type TaskPriority,
+  type TaskStatus,
 } from "@/lib/tasks/types";
 import { formatDueDate, toDateTimeLocalValue } from "@/lib/time/format";
 import { zonedTimeToUtc } from "@/lib/time/zone";
@@ -42,6 +45,20 @@ interface Draft {
   priority: TaskPriority | null;
   categoryId: string | null;
   owner: string | null;
+  /**
+   * Which lane it lands in.
+   *
+   * Capture used to hard-code Inbox and leave the lane to a later drag. That
+   * is right for the one-line case and wrong for the other one: a task you
+   * are typing out in full — owner, due date, category — is a task you have
+   * already thought about, and making you find it on the board afterwards to
+   * say so is a second trip for something you knew at the time.
+   *
+   * `done` is offered too. Logging something you have already finished is a
+   * real thing people do, and refusing it just means it gets created and
+   * immediately ticked.
+   */
+  status: TaskStatus;
   notes: string;
   eventRef: EventReference | null;
   /** Confirm-before-link: false until the owner says yes, explicitly. */
@@ -54,6 +71,7 @@ const EMPTY_DRAFT: Draft = {
   priority: null,
   categoryId: null,
   owner: null,
+  status: "inbox",
   notes: "",
   eventRef: null,
   eventConfirmed: false,
@@ -103,7 +121,24 @@ export function QuickAdd({
   const [raw, setRaw] = React.useState("");
   const [draft, setDraft] = React.useState<Draft>(EMPTY_DRAFT);
   const [pinnedFields, setPinnedFields] = React.useState<Set<Field>>(new Set());
-  const [detailsOpen, setDetailsOpen] = React.useState(false);
+  /**
+   * The full form is open from the start.
+   *
+   * It used to be collapsed, on the theory that capture should be one line
+   * and triage should come later. That theory holds for a thought caught on
+   * the way into a meeting, and the single line still does exactly that —
+   * type, press Enter, done, the fields left empty.
+   *
+   * What it got wrong is the other half. When you sit down to write a real
+   * task you already know its owner, its lane and its due date, and hiding
+   * those behind a "Details" button turns one action into three: capture,
+   * find it again, fill it in. The owner's words were that the whole section
+   * should be part of the initial create.
+   *
+   * So it opens, and the disclosure stays — collapsing it is now a way to get
+   * a narrower box, not a prerequisite for using the fields.
+   */
+  const [detailsOpen, setDetailsOpen] = React.useState(true);
   const [now, setNow] = React.useState<Date | null>(null);
 
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -230,7 +265,7 @@ export function QuickAdd({
       priority: draft.priority,
       dueAt: draft.dueAt,
       categoryId: draft.categoryId,
-      status: "inbox",
+      status: draft.status,
       pinned: false,
       sourceLink: null,
       // Quick-add is a deliberate capture, so it is live work, never a draft.
@@ -552,6 +587,26 @@ export function QuickAdd({
                     </option>
                   ))}
                 </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="quick-add-status">Status</Label>
+                <Select
+                  id="quick-add-status"
+                  value={draft.status}
+                  onChange={(event) =>
+                    update("status", event.target.value as TaskStatus)
+                  }
+                  data-testid="quick-add-status"
+                >
+                  {TASK_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {STATUS_LABELS[status]}
+                    </option>
+                  ))}
+                </Select>
+                {/* Not a pinnable field: nothing in the parser sets a lane, so
+                    there is no suggestion here for a pin to protect. */}
               </div>
 
               <div className="space-y-1">

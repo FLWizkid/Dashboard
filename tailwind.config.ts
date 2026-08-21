@@ -47,6 +47,22 @@ const config: Config = {
           bright: rgb("accent-bright"),
           soft: rgb("accent-soft"),
         },
+        // The navy frame. Constant across both themes on purpose — see the
+        // note in globals.css.
+        chrome: {
+          DEFAULT: rgb("chrome"),
+          raised: rgb("chrome-raised"),
+          fg: rgb("chrome-fg"),
+          "fg-muted": rgb("chrome-fg-muted"),
+          line: rgb("chrome-line"),
+        },
+        // One tint per mailbox, always rendered next to the account's name.
+        account: {
+          1: rgb("account-1"),
+          2: rgb("account-2"),
+          3: rgb("account-3"),
+          4: rgb("account-4"),
+        },
         ring: rgb("ring"),
         danger: {
           DEFAULT: rgb("danger"),
@@ -69,6 +85,14 @@ const config: Config = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 4px)",
         sm: "calc(var(--radius) - 6px)",
+      },
+      // Elevation comes from the theme rather than from Tailwind's neutral
+      // greys, because a grey shadow over a navy page reads as grime.
+      boxShadow: {
+        sm: "var(--shadow-sm)",
+        DEFAULT: "var(--shadow-sm)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
       },
       transitionTimingFunction: {
         standard: "var(--ease-standard)",

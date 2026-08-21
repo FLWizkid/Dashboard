@@ -31,12 +31,30 @@ import {
  * real system does not make — which is a statement about nothing.
  */
 
-// The owner's own tenant, and the account everything defaults to.
-const ACCOUNT_ID = "acc-m365-primary";
-// The second mailbox. Governed by someone else's policy, which is why it
-// caches headers only — see docs/caching-policy.md.
-const THIRD_ACCOUNT_ID = "acc-m365-secondary";
+/*
+ * The three real mailboxes, each reached through the provider that actually
+ * hosts it. Getting this wrong is not cosmetic: the provider decides which
+ * API is called, which consent screen appears, and which scopes are asked
+ * for, so a mailbox pointed at the wrong one fails at authorisation with an
+ * error that reads like a permissions problem.
+ *
+ *   theonefor.ai   GoDaddy resells Microsoft 365, so the mailbox is M365 and
+ *                  Graph is the right API despite the domain being bought
+ *                  somewhere else entirely.
+ *   encountive.com Domain and website at SiteGround, which forwards mail on
+ *                  to Google Workspace. Google is where the mailbox lives, so
+ *                  Google is what this connects to. It was Microsoft here
+ *                  until the owner corrected it; it never was one.
+ *   proton.me      Personal. Proton has no sync API, so this goes through
+ *                  Bridge over local IMAP — see adapters/proton.ts.
+ *
+ * Nothing is migrated by any of this. Each provider stays the system of
+ * record for its own mail; the app is a client, and the local mirror is a
+ * cache governed by the per-account policy below.
+ */
+const ACCOUNT_ID = "acc-m365-theonefor";
 const SECOND_ACCOUNT_ID = "acc-proton";
+const THIRD_ACCOUNT_ID = "acc-google-encountive";
 
 interface State {
   accounts: MailAccount[];
@@ -76,18 +94,20 @@ function seed(): State {
     },
     {
       id: THIRD_ACCOUNT_ID,
-      provider: "microsoft",
-      remoteId: "m365-encountive",
+      provider: "gmail",
+      remoteId: "google-encountive",
       emailAddress: "doug@encountive.com",
       displayName: "Doug — encountive.com",
       status: "connected",
       statusDetail: null,
-      // Headers only, and marked corporate: a second organisation's mail is
-      // the case the policy exists for. Bodies stay on their servers.
-      cachingPolicy: "metadata",
-      isCorporate: true,
-      adminConsent: "granted",
-      retentionMonths: 12,
+      // Full, and not corporate: this is the owner's own Workspace, so there
+      // is no second organisation's policy to respect and no reason to give
+      // up local search over it. Compare the Proton account below, which is
+      // Metadata for a reason that actually applies to it.
+      cachingPolicy: "full",
+      isCorporate: false,
+      adminConsent: "not_required",
+      retentionMonths: 24,
       syncMailEnabled: true,
       syncCalendarEnabled: true,
       hasCredentials: true,
@@ -101,8 +121,8 @@ function seed(): State {
       id: SECOND_ACCOUNT_ID,
       provider: "proton_bridge",
       remoteId: "proton-1",
-      emailAddress: "doug@proton.me",
-      displayName: null,
+      emailAddress: "dougtully@proton.me",
+      displayName: "Doug — personal",
       status: "connected",
       statusDetail: null,
       // Deliberately Metadata, so the E2E suite exercises the refusal path.
@@ -247,6 +267,32 @@ function seed(): State {
       bodyFormat: null,
       receivedAt: at(300),
       sentAt: at(300),
+    }),
+    // The Google mailbox.
+    //
+    // This account had a mailbox and no mail, so the fixture had three
+    // accounts and threads from two of them — and the unified-inbox test
+    // could only ever assert two. That was invisible while rows showed a bare
+    // address; it stopped being invisible the moment each row had to carry
+    // its account's tint, because a tint that nothing renders is a tint
+    // nothing tests.
+    message({
+      id: "msg-encountive",
+      threadKey: "thr-encountive",
+      accountId: THIRD_ACCOUNT_ID,
+      mailboxId: "mb-encountive-inbox",
+      subject: "Encountive — platform review",
+      snippet: "The migration slide needs your call before Thursday.",
+      from: { address: "maya@encountive.com", name: "Maya Okafor" },
+      to: ["doug@encountive.com"],
+      // A body, because this account caches in full. Sitting next to the
+      // Proton thread above, which has none, the pair is what proves the
+      // per-account policy is real rather than described.
+      body: "The migration slide needs your call before Thursday.",
+      bodyFormat: "text",
+      senderImportance: "high",
+      receivedAt: at(90),
+      sentAt: at(90),
     }),
   ];
 

@@ -25,7 +25,9 @@ export function SignOutButton() {
       size="sm"
       onClick={handleSignOut}
       disabled={pending}
-      className="w-full justify-start"
+      // This button lives in the navy frame rather than on the page, so the
+      // ghost variant's page-tinted hover would be invisible beneath it.
+      className="w-full justify-start text-chrome-fg-muted hover:bg-chrome-raised hover:text-chrome-fg"
     >
       <LogOut />
       {pending ? "Signing out…" : "Sign out"}
