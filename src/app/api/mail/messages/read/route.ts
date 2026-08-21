@@ -19,7 +19,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
-  const parsed = markReadSchema.safeParse(await request.json());
+  // `request.json()` throws rather than returning null on a body that never
+  // finished arriving, and that throw escapes the guard below to become an
+  // uncaught exception and a logged server error.
+  //
+  // This route gets that more than any other because of *when* it is called:
+  // opening a thread marks it read, and closing the tab or moving to another
+  // module right afterwards makes the browser hang up mid-request. The
+  // accompanying ECONNRESET is the same event seen from the socket. Nothing
+  // is wrong on this side — the caller left — and reporting it as a server
+  // fault trains you to ignore the error log, which is the real cost.
+  //
+  // A truncated body is a malformed one, so it takes the 400 the route
+  // already has for that, quietly.
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  const parsed = markReadSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid request", issues: parsed.error.flatten() },

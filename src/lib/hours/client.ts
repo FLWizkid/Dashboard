@@ -44,6 +44,8 @@ export interface HoursResponse {
   window: { from: string; to: string; timeZone: string };
   totals: HoursTotals;
   days: Bucket[];
+  /** The last six months, for the other half of "weekly and monthly". */
+  months: Bucket[];
   entries: TimeEntry[];
   blocks: ScheduledBlock[];
 }

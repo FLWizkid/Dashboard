@@ -1,6 +1,8 @@
 import { isMemoryMode } from "@/lib/data-mode";
 
 import type {
+  CreateCategoryPayload,
+  UpdateCategoryPayload,
   CreateTaskPayload,
   ListTasksQuery,
   UpdateTaskPayload,
@@ -17,6 +19,11 @@ import type { ActivityCategory, Task } from "./types";
  */
 export interface TaskRepository {
   listCategories(): Promise<ActivityCategory[]>;
+  createCategory(input: CreateCategoryPayload): Promise<ActivityCategory>;
+  updateCategory(
+    id: string,
+    patch: UpdateCategoryPayload,
+  ): Promise<ActivityCategory>;
   listTasks(query: ListTasksQuery): Promise<Task[]>;
   getTask(id: string): Promise<Task | null>;
   createTask(input: CreateTaskPayload): Promise<Task>;

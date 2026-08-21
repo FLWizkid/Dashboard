@@ -150,7 +150,14 @@ export const TaskRow = React.forwardRef<HTMLLIElement, TaskRowProps>(
               onClick={onToggleExpanded}
               aria-expanded={expanded}
               aria-controls={detailsId}
-              className="flex w-full items-start gap-2 text-left"
+              // A single line of `text-sm` is 20px, so this control sized
+              // itself to 20px and sat below the 24px minimum the headset
+              // suite enforces for anything you point a raycast at. It is the
+              // primary control on every task row, which makes it the worst
+              // one to have be the smallest. `min-h-7` clears the floor with
+              // 4px to spare rather than landing exactly on it, so a change in
+              // font metrics does not quietly put it back under.
+              className="flex min-h-7 w-full items-start gap-2 text-left"
             >
               <span
                 className={cn(

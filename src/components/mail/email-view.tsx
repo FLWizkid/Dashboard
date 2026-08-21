@@ -25,6 +25,7 @@ import {
   type Message,
   type SenderImportance,
 } from "@/lib/mail/types";
+import { readableBody } from "@/lib/mail/readable";
 import { cn } from "@/lib/utils";
 
 import { CreateTaskFromMail } from "@/components/mail/create-task-from-mail";
@@ -402,10 +403,13 @@ function ThreadPane({
  * that seems broken and one that seems deliberate.
  */
 function MessageBody({ message }: { message: Message }) {
-  if (message.body) {
-    return (
-      <p className="mt-2 whitespace-pre-wrap text-sm text-fg">{message.body}</p>
-    );
+  // HTML bodies are reduced to their text before they reach the DOM. The
+  // markup is never rendered — see src/lib/mail/readable.ts for why showing
+  // a sender's HTML is a decision this product has not taken.
+  const text = readableBody(message.body, message.bodyFormat);
+
+  if (text) {
+    return <p className="mt-2 whitespace-pre-wrap text-sm text-fg">{text}</p>;
   }
 
   return (

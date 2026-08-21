@@ -301,3 +301,57 @@ function applyOptimisticPatch(task: Task, patch: UpdateTaskPayload): Task {
 
   return next;
 }
+
+/* ── The taxonomy ─────────────────────────────────────────────────────── */
+
+export function useCreateCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      name: string;
+      description?: string | null;
+      color?: string;
+    }) => {
+      const data = await request<{ category: ActivityCategory }>(
+        "/api/categories",
+        { method: "POST", body: JSON.stringify(input) },
+      );
+      return data.category;
+    },
+    onSettled: () => {
+      // Everything filed by category re-reads: the pickers, the splits and
+      // the rollups all draw from this one list.
+      void queryClient.invalidateQueries({ queryKey: taskKeys.categories });
+      void queryClient.invalidateQueries({ queryKey: taskKeys.all });
+    },
+  });
+}
+
+export function useUpdateCategory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...patch
+    }: {
+      id: string;
+      name?: string;
+      description?: string | null;
+      color?: string;
+      position?: number;
+      isArchived?: boolean;
+    }) => {
+      const data = await request<{ category: ActivityCategory }>(
+        `/api/categories/${id}`,
+        { method: "PATCH", body: JSON.stringify(patch) },
+      );
+      return data.category;
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: taskKeys.categories });
+      void queryClient.invalidateQueries({ queryKey: taskKeys.all });
+    },
+  });
+}
