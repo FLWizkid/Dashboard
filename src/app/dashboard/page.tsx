@@ -6,6 +6,7 @@ import {
   NeedsAttention,
   TodaysMeetings,
 } from "@/components/dashboard/todays-meetings";
+import { QuickLinks } from "@/components/dashboard/quick-links";
 import { SuggestionPrompts } from "@/components/priority/suggestion-prompt";
 import { TopPriorities } from "@/components/dashboard/top-priorities";
 
@@ -25,12 +26,21 @@ export const metadata: Metadata = {
 export default function DashboardHome() {
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-xl font-semibold tracking-tight text-fg">Today</h1>
-        <p className="mt-1 text-sm text-fg-muted">
-          Log what you just did, then your meetings, your next two days, and
-          what needs doing.
-        </p>
+      {/* The outbound links sit beside the title rather than below the cards.
+          The point of them is to be reachable without reading the page first,
+          and anything below the fold is not. */}
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-fg">
+            Today
+          </h1>
+          <p className="mt-1 text-sm text-fg-muted">
+            Log what you just did, then your meetings, your next two days, and
+            what needs doing.
+          </p>
+        </div>
+
+        <QuickLinks className="flex shrink-0 flex-wrap gap-2" />
       </header>
 
       {/* Questions first. A prompt buried under three cards is a prompt that

@@ -2,6 +2,18 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * The surface everything sits on.
+ *
+ * The shadow used to be a hard-coded `rgb(0 0 0 / 0.04)` — nearly invisible
+ * on paper and entirely invisible on a dark page, which left every card as a
+ * hairline rectangle and made the whole interface read as flat. It now takes
+ * the theme's own elevation token: navy-tinted in daylight, because a grey
+ * shadow over a blue page reads as grime, and in the dark it leans on
+ * `--surface-raised` instead, where nothing casts a visible shadow against
+ * near-black and separation has to come from the surface being genuinely
+ * lighter than what is behind it.
+ */
 export function Card({
   className,
   ...props
@@ -9,7 +21,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-lg border border-line bg-surface-raised shadow-[0_1px_2px_rgb(0_0_0/0.04)]",
+        "rounded-lg border border-line bg-surface-raised shadow-sm",
         className,
       )}
       {...props}

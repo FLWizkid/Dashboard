@@ -30,6 +30,26 @@ export const OFFLINE_CSP = [
 const nextConfig = {
   reactStrictMode: true,
 
+  /*
+   * Which hosts may pull `/_next/*` from the development server.
+   *
+   * Without this, Next logs a cross-origin warning for requests the E2E suite
+   * makes — it browses `127.0.0.1` while the server considers itself
+   * `localhost` — and says a future major version will refuse them outright.
+   *
+   * The warning is worth fixing on its own account. The reason it got chased
+   * down is stranger: an unresolved warning raises the "1 Issue" badge in the
+   * development overlay, and at phone width that badge sits over the bottom
+   * navigation bar and swallows taps meant for it. Two runs in three, some
+   * test that clicks the bottom bar timed out with `<nextjs-portal>
+   * intercepts pointer events` — and *which* test failed moved between runs,
+   * which is the signature of an overlay appearing partway through a session
+   * rather than of a broken control.
+   *
+   * Development only; the built server ignores it.
+   */
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
+
   // Emits .next/standalone — a self-contained server with only the modules it
   // actually imports. The container copies that instead of node_modules, which
   // is what keeps the image small enough to rebuild comfortably on the box.
