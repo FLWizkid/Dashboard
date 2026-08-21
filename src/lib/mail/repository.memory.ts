@@ -31,7 +31,11 @@ import {
  * real system does not make — which is a statement about nothing.
  */
 
-const ACCOUNT_ID = "acc-google";
+// The owner's own tenant, and the account everything defaults to.
+const ACCOUNT_ID = "acc-m365-primary";
+// The second mailbox. Governed by someone else's policy, which is why it
+// caches headers only — see docs/caching-policy.md.
+const THIRD_ACCOUNT_ID = "acc-m365-secondary";
 const SECOND_ACCOUNT_ID = "acc-proton";
 
 interface State {
@@ -51,10 +55,10 @@ function seed(): State {
   const accounts: MailAccount[] = [
     {
       id: ACCOUNT_ID,
-      provider: "gmail",
-      remoteId: "google-1",
+      provider: "microsoft",
+      remoteId: "m365-theonefor",
       emailAddress: "doug@theonefor.ai",
-      displayName: "Doug",
+      displayName: "Doug — theonefor.ai (primary)",
       status: "connected",
       statusDetail: null,
       cachingPolicy: "full",
@@ -69,6 +73,29 @@ function seed(): State {
       lastError: null,
       lastErrorAt: null,
       createdAt: at(60 * 24 * 30),
+    },
+    {
+      id: THIRD_ACCOUNT_ID,
+      provider: "microsoft",
+      remoteId: "m365-encountive",
+      emailAddress: "doug@encountive.com",
+      displayName: "Doug — encountive.com",
+      status: "connected",
+      statusDetail: null,
+      // Headers only, and marked corporate: a second organisation's mail is
+      // the case the policy exists for. Bodies stay on their servers.
+      cachingPolicy: "metadata",
+      isCorporate: true,
+      adminConsent: "granted",
+      retentionMonths: 12,
+      syncMailEnabled: true,
+      syncCalendarEnabled: true,
+      hasCredentials: true,
+      lastSyncAt: at(11),
+      lastSuccessAt: at(11),
+      lastError: null,
+      lastErrorAt: null,
+      createdAt: at(60 * 24 * 21),
     },
     {
       id: SECOND_ACCOUNT_ID,
@@ -116,6 +143,17 @@ function seed(): State {
       totalCount: 1,
       syncEnabled: true,
       position: 1,
+    },
+    {
+      id: "mb-encountive-inbox",
+      accountId: THIRD_ACCOUNT_ID,
+      remoteId: "INBOX",
+      name: "Inbox",
+      kind: "inbox",
+      unreadCount: 1,
+      totalCount: 2,
+      syncEnabled: true,
+      position: 0,
     },
     {
       id: "mb-proton-inbox",
@@ -306,14 +344,59 @@ function seed(): State {
   return { accounts, mailboxes, messages, senders, calendars, events };
 }
 
-let state = seed();
+/**
+ * The store lives on `globalThis`, like every other memory repository here.
+ *
+ * A module-level `let` looked equivalent and is not: in development Next
+ * hands server components and route handlers their own module instances, so
+ * a seed applied through one was invisible to the other — the demo week
+ * wrote its mail into a copy that nothing read. The symbol is what makes it
+ * one store rather than several that agree by luck.
+ */
+const STATE_KEY = Symbol.for("dashboard.memoryMailState");
+
+function stateStore(): { current: State } {
+  const globalStore = globalThis as typeof globalThis & {
+    [STATE_KEY]?: { current: State };
+  };
+  globalStore[STATE_KEY] ??= { current: seed() };
+  return globalStore[STATE_KEY];
+}
+
+/**
+ * Adds to the seeded mailbox rather than replacing it.
+ *
+ * Merging, not overwriting: the built-in fixtures are what the end-to-end
+ * suite asserts against, and a demo that swapped them out would quietly move
+ * the ground under every mail test. The demo week appends its own threads to
+ * the same accounts.
+ */
+export function seedMemoryMail(extra: Partial<State>): void {
+  const current = stateStore().current;
+  stateStore().current = {
+    accounts: extra.accounts ?? current.accounts,
+    mailboxes: extra.mailboxes ?? current.mailboxes,
+    // Deduplicated by id: seeding twice must not double the mailbox. The
+    // caller is supposed to run once, and "supposed to" is not a guarantee
+    // worth betting a duplicate-key warning on.
+    messages: byId([...current.messages, ...(extra.messages ?? [])]),
+    senders: byId([...current.senders, ...(extra.senders ?? [])]),
+    calendars: byId([...current.calendars, ...(extra.calendars ?? [])]),
+    events: byId([...current.events, ...(extra.events ?? [])]),
+  };
+}
+
+/** Last write wins, order preserved. */
+function byId<T extends { id: string }>(rows: T[]): T[] {
+  return [...new Map(rows.map((row) => [row.id, row])).values()];
+}
 
 export function resetMemoryMail(): void {
-  state = seed();
+  stateStore().current = seed();
 }
 
 function accountFor(id: string): MailAccount {
-  const account = state.accounts.find((a) => a.id === id);
+  const account = stateStore().current.accounts.find((a) => a.id === id);
   if (!account) throw new MailAccountNotFoundError(id);
   return account;
 }
@@ -326,7 +409,9 @@ function accountFor(id: string): MailAccount {
  * a seeded fixture cannot smuggle one past it.
  */
 function visible(message: Message & { threadKey: string }): Message {
-  const account = state.accounts.find((a) => a.id === message.accountId);
+  const account = stateStore().current.accounts.find(
+    (a) => a.id === message.accountId,
+  );
   const allowed =
     account !== undefined &&
     policyAllowsStorage(account.cachingPolicy) &&
@@ -339,8 +424,8 @@ function visible(message: Message & { threadKey: string }): Message {
 }
 
 function summarise(threadKey: string): ThreadSummary | null {
-  const inThread = state.messages
-    .filter((m) => m.threadKey === threadKey)
+  const inThread = stateStore()
+    .current.messages.filter((m) => m.threadKey === threadKey)
     .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
 
   if (inThread.length === 0) return null;
@@ -388,11 +473,11 @@ function summarise(threadKey: string): ThreadSummary | null {
 
 export const memoryMailRepository: MailRepository = {
   async listAccounts() {
-    return state.accounts.map((a) => ({ ...a }));
+    return stateStore().current.accounts.map((a) => ({ ...a }));
   },
 
   async getAccount(id) {
-    const account = state.accounts.find((a) => a.id === id);
+    const account = stateStore().current.accounts.find((a) => a.id === id);
     return account ? { ...account } : null;
   },
 
@@ -410,7 +495,7 @@ export const memoryMailRepository: MailRepository = {
     // immediately. Leaving bodies behind under Metadata would make the setting
     // a label rather than a rule.
     if (!policyAllowsBodies(account.cachingPolicy)) {
-      for (const message of state.messages) {
+      for (const message of stateStore().current.messages) {
         if (message.accountId === id) {
           message.body = null;
           message.bodyFormat = null;
@@ -418,7 +503,9 @@ export const memoryMailRepository: MailRepository = {
       }
     }
     if (!policyAllowsStorage(account.cachingPolicy)) {
-      state.messages = state.messages.filter((m) => m.accountId !== id);
+      stateStore().current.messages = stateStore().current.messages.filter(
+        (m) => m.accountId !== id,
+      );
     }
 
     return { ...account };
@@ -426,27 +513,37 @@ export const memoryMailRepository: MailRepository = {
 
   async disconnectAccount(id) {
     accountFor(id);
-    state.accounts = state.accounts.filter((a) => a.id !== id);
-    state.messages = state.messages.filter((m) => m.accountId !== id);
-    state.mailboxes = state.mailboxes.filter((m) => m.accountId !== id);
-    const calendarIds = state.calendars
-      .filter((c) => c.accountId === id)
+    stateStore().current.accounts = stateStore().current.accounts.filter(
+      (a) => a.id !== id,
+    );
+    stateStore().current.messages = stateStore().current.messages.filter(
+      (m) => m.accountId !== id,
+    );
+    stateStore().current.mailboxes = stateStore().current.mailboxes.filter(
+      (m) => m.accountId !== id,
+    );
+    const calendarIds = stateStore()
+      .current.calendars.filter((c) => c.accountId === id)
       .map((c) => c.id);
-    state.calendars = state.calendars.filter((c) => c.accountId !== id);
-    state.events = state.events.filter(
+    stateStore().current.calendars = stateStore().current.calendars.filter(
+      (c) => c.accountId !== id,
+    );
+    stateStore().current.events = stateStore().current.events.filter(
       (e) => !calendarIds.includes(e.calendarId),
     );
   },
 
   async listMailboxes(accountId) {
-    return state.mailboxes
-      .filter((m) => m.accountId === accountId)
+    return stateStore()
+      .current.mailboxes.filter((m) => m.accountId === accountId)
       .sort((a, b) => a.position - b.position)
       .map((m) => ({ ...m }));
   },
 
   async listThreads(query: ThreadQuery) {
-    const keys = [...new Set(state.messages.map((m) => m.threadKey))];
+    const keys = [
+      ...new Set(stateStore().current.messages.map((m) => m.threadKey)),
+    ];
     const needle = query.q?.trim().toLowerCase();
 
     return keys
@@ -456,12 +553,13 @@ export const memoryMailRepository: MailRepository = {
       .filter((t) => !query.unreadOnly || t.unreadCount > 0)
       .filter((t) => {
         if (!query.mailboxKind) return true;
-        const kinds = state.messages
-          .filter((m) => m.threadKey === t.id)
+        const kinds = stateStore()
+          .current.messages.filter((m) => m.threadKey === t.id)
           .map(
             (m) =>
-              state.mailboxes.find((box) => box.id === m.mailboxId)?.kind ??
-              "other",
+              stateStore().current.mailboxes.find(
+                (box) => box.id === m.mailboxId,
+              )?.kind ?? "other",
           );
         return kinds.includes(query.mailboxKind);
       })
@@ -490,8 +588,8 @@ export const memoryMailRepository: MailRepository = {
     const thread = summarise(id);
     if (!thread) return null;
 
-    const messages = state.messages
-      .filter((m) => m.threadKey === id)
+    const messages = stateStore()
+      .current.messages.filter((m) => m.threadKey === id)
       .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))
       .map(visible);
 
@@ -499,7 +597,7 @@ export const memoryMailRepository: MailRepository = {
   },
 
   async getMessage(id) {
-    const message = state.messages.find((m) => m.id === id);
+    const message = stateStore().current.messages.find((m) => m.id === id);
     if (!message) return null;
 
     const account = accountFor(message.accountId);
@@ -511,25 +609,29 @@ export const memoryMailRepository: MailRepository = {
   },
 
   async markRead(messageIds, read) {
-    for (const message of state.messages) {
+    for (const message of stateStore().current.messages) {
       if (messageIds.includes(message.id)) message.isRead = read;
     }
   },
 
   async setFlag(messageId, flagged) {
-    const message = state.messages.find((m) => m.id === messageId);
+    const message = stateStore().current.messages.find(
+      (m) => m.id === messageId,
+    );
     if (!message) throw new MessageNotFoundError(messageId);
     message.isFlagged = flagged;
     return visible(message);
   },
 
   async listSenders() {
-    return state.senders.map((s) => ({ ...s }));
+    return stateStore().current.senders.map((s) => ({ ...s }));
   },
 
   async rateSender(address, importance, notes) {
     const normalized = address.trim().toLowerCase();
-    let sender = state.senders.find((s) => s.address === normalized);
+    let sender = stateStore().current.senders.find(
+      (s) => s.address === normalized,
+    );
 
     if (!sender) {
       sender = {
@@ -540,7 +642,7 @@ export const memoryMailRepository: MailRepository = {
         notes: notes ?? null,
         updatedAt: new Date().toISOString(),
       };
-      state.senders.push(sender);
+      stateStore().current.senders.push(sender);
     } else {
       sender.importance = importance;
       if (notes !== undefined) sender.notes = notes;
@@ -550,7 +652,7 @@ export const memoryMailRepository: MailRepository = {
     // A rating applies to mail already received, not only to what arrives
     // next — otherwise marking someone critical does nothing until they write
     // again, which is the opposite of what the owner meant.
-    for (const message of state.messages) {
+    for (const message of stateStore().current.messages) {
       if (message.from.address.toLowerCase() === normalized) {
         message.senderImportance = importance;
       }
@@ -560,16 +662,18 @@ export const memoryMailRepository: MailRepository = {
   },
 
   async listCalendars() {
-    return state.calendars.map((c) => ({ ...c }));
+    return stateStore().current.calendars.map((c) => ({ ...c }));
   },
 
   async listEvents(query: EventQuery) {
     const visibleCalendars = new Set(
-      state.calendars.filter((c) => c.isVisible).map((c) => c.id),
+      stateStore()
+        .current.calendars.filter((c) => c.isVisible)
+        .map((c) => c.id),
     );
 
-    return state.events
-      .filter((e) => visibleCalendars.has(e.calendarId))
+    return stateStore()
+      .current.events.filter((e) => visibleCalendars.has(e.calendarId))
       .filter((e) => !query.calendarId || e.calendarId === query.calendarId)
       .filter((e) => e.endsAt >= query.from && e.startsAt <= query.to)
       .filter((e) =>
@@ -580,7 +684,7 @@ export const memoryMailRepository: MailRepository = {
   },
 
   async setCalendarVisible(id, visible_) {
-    const calendar = state.calendars.find((c) => c.id === id);
+    const calendar = stateStore().current.calendars.find((c) => c.id === id);
     if (!calendar) throw new Error(`Calendar ${id} was not found`);
     calendar.isVisible = visible_;
     return { ...calendar };

@@ -104,7 +104,15 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
   const scriptSrc = [
     "'self'",
     `'nonce-${nonce}'`,
-    "'strict-dynamic'",
+    // Production only.
+    //
+    // `strict-dynamic` makes browsers that understand it ignore `'self'`, and
+    // Next's development server loads lazy chunks and HMR updates through
+    // paths the nonce does not reach — so in dev the effect is a card that
+    // silently never arrives, with the reason buried in the console. That is
+    // a bad trade for a policy whose job is to harden the deployed box, which
+    // runs a production build and keeps the directive.
+    ...(development ? [] : ["'strict-dynamic'"]),
     ...(development ? ["'unsafe-eval'"] : []),
   ];
 

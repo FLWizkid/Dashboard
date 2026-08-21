@@ -13,6 +13,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { formatMinutes } from "@/lib/hours/aggregate";
 import { useOutbox } from "@/lib/hours/use-outbox";
+import { useCategories, useTasks } from "@/lib/tasks/client";
 
 /**
  * One-tap logging.
@@ -26,14 +27,43 @@ import { useOutbox } from "@/lib/hours/use-outbox";
  * Everything else — attributing it to a task, correcting the time — is
  * editable afterwards on a real screen. Capture first; classify later is the
  * same principle the task inbox runs on.
+ *
+ * ── The one classification worth doing up front ──────────────────────────
+ * Which category it was. Not because the corridor is the right place to file
+ * things, but because it is the only place you still remember: an hour logged
+ * as "unfiled" on Tuesday is an hour nobody can attribute on Friday, and the
+ * weekly split — the thing the hours module exists to produce — quietly
+ * degrades. The choice sticks between logs, so the common case stays one tap.
+ *
+ * ── Thirty minutes is the floor ──────────────────────────────────────────
+ * A quarter of an hour is below the resolution anyone reconstructs
+ * accurately after the fact, and offering it invites a precision the memory
+ * cannot supply.
  */
 
-const PRESETS = [15, 30, 45, 60, 90] as const;
+const PRESETS = [30, 45, 60, 90] as const;
 
 export function QuickLog() {
   const outbox = useOutbox();
   const { toast } = useToast();
+  const categories = useCategories();
+  const tasks = useTasks("open");
   const [busy, setBusy] = React.useState<number | null>(null);
+
+  // Which task the time is against. Optional, and remembered like the
+  // category — logging three blocks against the same piece of work is the
+  // common case, not the exception.
+  const [taskId, setTaskId] = React.useState<string>("");
+
+  // Remembered across logs. Consecutive entries in a working day are usually
+  // the same kind of work, so re-picking every time would be the friction
+  // this control exists to remove.
+  const [categoryId, setCategoryId] = React.useState<string>("");
+
+  const chosen = (categories.data ?? []).find(
+    (category) => category.id === categoryId,
+  );
+  const chosenTask = (tasks.data ?? []).find((task) => task.id === taskId);
 
   const log = async (minutes: number) => {
     setBusy(minutes);
@@ -45,14 +75,22 @@ export function QuickLog() {
         source: "manual",
         startedAt: startedAt.toISOString(),
         endedAt: endedAt.toISOString(),
+        categoryId: categoryId || null,
+        taskId: taskId || null,
         note: null,
       });
 
       toast({
         title: `${formatMinutes(minutes)} logged`,
-        description: outbox.online
-          ? "Saved."
-          : "Saved on this device — it'll sync when you're back online.",
+        description: [
+          chosenTask ? `Against “${chosenTask.title}”.` : null,
+          chosen ? `Filed under ${chosen.name}.` : "Unfiled.",
+          outbox.online
+            ? "Saved."
+            : "Saved on this device — it'll sync when you're back online.",
+        ]
+          .filter(Boolean)
+          .join(" "),
         tone: "success",
       });
     } finally {
@@ -72,7 +110,61 @@ export function QuickLog() {
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="space-y-3">
+        <div className="space-y-1">
+          <label
+            htmlFor="quick-log-category"
+            className="text-xs font-medium text-fg"
+          >
+            File it under
+          </label>
+          <select
+            id="quick-log-category"
+            className="w-full rounded-md border border-line bg-surface px-2 py-2 text-sm sm:max-w-xs"
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.target.value)}
+            data-testid="quick-log-category"
+          >
+            {/* Unfiled stays available and stays first. Forcing a category
+                here would mean the honest answer — "I do not remember" — is
+                the one thing the control will not accept. */}
+            <option value="">Unfiled</option>
+            {(categories.data ?? []).map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1">
+          <label
+            htmlFor="quick-log-task"
+            className="text-xs font-medium text-fg"
+          >
+            Against a task
+          </label>
+          <select
+            id="quick-log-task"
+            className="w-full rounded-md border border-line bg-surface px-2 py-2 text-sm sm:max-w-xs"
+            value={taskId}
+            onChange={(event) => setTaskId(event.target.value)}
+            data-testid="quick-log-task"
+          >
+            {/* Optional, and first: most logged time is not against one
+                specific task, and pretending otherwise would make the common
+                case the awkward one. */}
+            <option value="">No particular task</option>
+            {(tasks.data ?? [])
+              .filter((task) => !task.isDraft)
+              .map((task) => (
+                <option key={task.id} value={task.id}>
+                  {task.title}
+                </option>
+              ))}
+          </select>
+        </div>
+
         <div className="flex flex-wrap gap-2" data-testid="quick-log">
           {PRESETS.map((minutes) => (
             <Button

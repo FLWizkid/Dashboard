@@ -74,6 +74,18 @@ function getStore(): MemoryStore {
   return globalStore[STORE_KEY];
 }
 
+/**
+ * Seeds tasks wholesale.
+ *
+ * Takes finished `Task` rows rather than create payloads so a demo can set
+ * what the create path deliberately will not: a completion timestamp in the
+ * past, a manual rank, a draft awaiting an owner. Those are the states worth
+ * looking at, and none of them can be reached by capturing a task now.
+ */
+export function seedMemoryTasks(tasks: Task[]): void {
+  getStore().tasks = [...tasks];
+}
+
 /** Test-only reset hook, exposed through the E2E route handler. */
 export function resetMemoryStore(): void {
   const store = getStore();

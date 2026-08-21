@@ -21,6 +21,7 @@ export const startSessionSchema = z.object({
   kind: z.enum(POMODORO_KINDS).default("focus"),
   taskId: z.string().uuid().nullable().default(null),
   plannedMinutes: z.number().int().min(1).max(240),
+  categoryId: z.string().uuid().nullable().default(null),
   /**
    * The client's clock, not the server's.
    *

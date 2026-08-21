@@ -40,6 +40,11 @@ function getStore(): MemoryNoteStore {
   return globalStore[STORE_KEY];
 }
 
+/** Seeds notes wholesale, for the demo week. */
+export function seedMemoryNotes(notes: Note[]): void {
+  getStore().notes = [...notes];
+}
+
 /** Test-only reset hook, exposed through the E2E route handler. */
 export function resetMemoryNoteStore(): void {
   getStore().notes = [];

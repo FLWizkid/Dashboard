@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { HoursThisWeek } from "@/components/dashboard/hours-this-week";
 import { NextTwoDaysLazy } from "@/components/dashboard/next-two-days-lazy";
+import { QuickLog } from "@/components/hours/quick-log";
 import {
   NeedsAttention,
   TodaysMeetings,
@@ -28,19 +28,27 @@ export default function DashboardHome() {
       <header>
         <h1 className="text-xl font-semibold tracking-tight text-fg">Today</h1>
         <p className="mt-1 text-sm text-fg-muted">
-          Your meetings, your next two days, and what needs doing.
+          Log what you just did, then your meetings, your next two days, and
+          what needs doing.
         </p>
       </header>
 
       {/* Questions first. A prompt buried under three cards is a prompt that
           never gets answered, and an unanswered suggestion does nothing at
           all — no link, no effect on the ranking. */}
+      {/* Logging time is the first thing on the page, above every card and
+          every prompt. It is the one action with a deadline attached — the
+          longer it waits, the less accurate it can be — and it was previously
+          two navigations away, which is how time tracking quietly stops
+          happening. Everything below is something to read; this is something
+          to do. */}
+      <QuickLog />
+
       <SuggestionPrompts />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <TodaysMeetings />
         <NeedsAttention />
-        <HoursThisWeek className="md:col-span-2 xl:col-span-1" />
         <NextTwoDaysLazy className="md:col-span-2 xl:col-span-3" />
       </div>
 

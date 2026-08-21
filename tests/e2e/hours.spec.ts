@@ -164,20 +164,20 @@ test.describe("hours", () => {
 
     await page
       .getByTestId("quick-log")
-      .getByRole("button", { name: "15m", exact: true })
+      .getByRole("button", { name: "30m", exact: true })
       .first()
       .click();
 
-    await expect(page.getByTestId("hours-manual")).toHaveText("15m", {
+    await expect(page.getByTestId("hours-manual")).toHaveText("30m", {
       timeout: 20_000,
     });
     await expect(page.getByTestId("outbox-banner")).toBeHidden({
       timeout: 20_000,
     });
 
-    // Not 30m. The second attempt was answered with the row that already
+    // Not 1h. The second attempt was answered with the row that already
     // existed rather than inserting another.
-    await expect(page.getByTestId("hours-manual")).toHaveText("15m");
+    await expect(page.getByTestId("hours-manual")).toHaveText("30m");
   });
 });
 

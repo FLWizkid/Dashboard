@@ -53,6 +53,21 @@ export interface PomodoroState {
   completedFocus: number;
   /** Optional task linkage, as specified. */
   taskId: string | null;
+  /**
+   * What this focus block is for, chosen before starting.
+   *
+   * Carried onto the time entry when the session ends, so focused hours land
+   * in the weekly split instead of arriving unfiled.
+   */
+  categoryId: string | null;
+  /**
+   * A one-off length for this block, in minutes.
+   *
+   * `null` means "use the configured 25/5/15". Kept beside the state rather
+   * than written into settings because "I have forty minutes before the next
+   * meeting" is a fact about this afternoon, not a new preference.
+   */
+  plannedOverrideMinutes: number | null;
   /** The session row this maps to, once one exists. */
   sessionId: string | null;
 }
@@ -64,6 +79,8 @@ export const IDLE: PomodoroState = {
   paused: false,
   completedFocus: 0,
   taskId: null,
+  categoryId: null,
+  plannedOverrideMinutes: null,
   sessionId: null,
 };
 

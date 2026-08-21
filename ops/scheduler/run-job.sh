@@ -34,11 +34,15 @@ fi
 
 # A header file, not `-H` on the command line: arguments are visible in the
 # container's process list to anything that can read /proc.
+# Both temp files exist before the trap references them. Installing the trap
+# first left a window in which an exit ran `rm -f "$body"` with $body unset —
+# harmless under `set -u` only because the trap is not a checked context, and
+# not worth relying on.
 headers="$(mktemp)"
-trap 'rm -f "$headers" "$body"' EXIT
-printf 'authorization: Bearer %s\n' "$token" > "$headers"
-
 body="$(mktemp)"
+trap 'rm -f "$headers" "$body"' EXIT
+
+printf 'authorization: Bearer %s\n' "$token" > "$headers"
 
 status="$(
 	curl --silent --show-error \
