@@ -28,6 +28,7 @@ function payload(title: string): CreateTaskPayload {
     status: "inbox",
     pinned: false,
     sourceLink: null,
+    isDraft: false,
     owner: null,
     links: [],
     clientKey: null,

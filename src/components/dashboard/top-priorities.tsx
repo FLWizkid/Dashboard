@@ -40,6 +40,45 @@ import type { Task } from "@/lib/tasks/types";
  * than one that shows a slightly different order for half a second, and the
  * two orderings agree about the obvious cases anyway.
  */
+/**
+ * The manual override, made reachable.
+ *
+ * `manualRank` has always won outright in the comparator and no interface
+ * ever set it, so "manual override always available" was true of the scoring
+ * engine and false of the product. The only lever that existed was the pin,
+ * which is a 5% nudge — useful, but not the same as *deciding*.
+ *
+ * Forcing to the top is a statement, so it says so plainly and is as easy to
+ * take back as it was to make. Releasing hands the task back to the engine
+ * rather than freezing it at a rank it happens to hold.
+ */
+function ManualRankButton({
+  task,
+  onSet,
+}: {
+  task: Task;
+  onSet: (manualRank: number | null) => void;
+}) {
+  const forced = task.manualRank !== null;
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="mt-0.5 shrink-0 text-xs"
+      aria-pressed={forced}
+      onClick={() => onSet(forced ? null : 0)}
+      title={
+        forced
+          ? "Hand this back to the priority engine"
+          : "Keep this first, whatever the engine says"
+      }
+    >
+      {forced ? "Release" : "Force to top"}
+    </Button>
+  );
+}
+
 export function TopPriorities({ limit = 5 }: { limit?: number }) {
   const reduced = useReducedMotion();
   const tasksQuery = useTasks("open");
@@ -174,6 +213,13 @@ export function TopPriorities({ limit = 5 }: { limit?: number }) {
                       <WhyPanel row={byTaskId.get(task.id)!} />
                     )}
                   </div>
+
+                  <ManualRankButton
+                    task={task}
+                    onSet={(manualRank) =>
+                      updateTask.mutate({ id: task.id, patch: { manualRank } })
+                    }
+                  />
                 </m.li>
               ))}
             </AnimatePresence>

@@ -7,6 +7,7 @@ import { useCalendarEvents, useMailAccounts } from "@/lib/mail/client";
 import type { CalendarEvent } from "@/lib/mail/types";
 import { cn } from "@/lib/utils";
 
+import { TwoDayAgenda } from "@/components/mail/two-day-agenda";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,6 +32,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function CalendarView() {
   const [offset, setOffset] = useState(0);
+  const [mode, setMode] = useState<"day" | "two-day">("day");
 
   const { from, to, label } = useMemo(() => dayWindow(offset), [offset]);
 
@@ -46,34 +48,69 @@ export function CalendarView() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-fg">Calendar</h1>
-          <p className="text-sm text-fg-muted">{label}</p>
+          <p className="text-sm text-fg-muted">
+            {mode === "day" ? label : "Today and tomorrow, with what is due"}
+          </p>
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Labelled "Two days" rather than "Next two days" because this
+              toolbar also carries a "Next" button: two controls both starting
+              with the same word is ambiguous to read and worse to hear
+              announced.
+
+              Two views rather than one replacing the other. The single day is
+              what you want when working *in* a day; the two-day rollup is
+              what you want when deciding whether the next two are survivable,
+              and it is the only view that shows deadlines beside meetings. */}
           <Button
             type="button"
-            variant="ghost"
+            variant={mode === "day" ? "primary" : "ghost"}
             size="sm"
-            onClick={() => setOffset((n) => n - 1)}
+            aria-pressed={mode === "day"}
+            onClick={() => setMode("day")}
           >
-            Previous
+            Day
           </Button>
           <Button
             type="button"
-            variant={offset === 0 ? "primary" : "ghost"}
+            variant={mode === "two-day" ? "primary" : "ghost"}
             size="sm"
-            onClick={() => setOffset(0)}
+            aria-pressed={mode === "two-day"}
+            onClick={() => setMode("two-day")}
           >
-            Today
+            Two days
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setOffset((n) => n + 1)}
-          >
-            Next
-          </Button>
+
+          {mode === "day" && (
+            <>
+              <span aria-hidden className="mx-1 h-4 w-px bg-line" />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setOffset((n) => n - 1)}
+              >
+                Previous
+              </Button>
+              <Button
+                type="button"
+                variant={offset === 0 ? "primary" : "ghost"}
+                size="sm"
+                onClick={() => setOffset(0)}
+              >
+                Today
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setOffset((n) => n + 1)}
+              >
+                Next
+              </Button>
+            </>
+          )}
         </div>
       </header>
 
@@ -90,7 +127,9 @@ export function CalendarView() {
         </Card>
       )}
 
-      {events.isPending ? (
+      {mode === "two-day" ? (
+        <TwoDayAgenda />
+      ) : events.isPending ? (
         <Card className="p-4 text-sm text-fg-muted" aria-busy>
           Loading…
         </Card>

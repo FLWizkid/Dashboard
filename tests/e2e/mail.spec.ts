@@ -194,4 +194,43 @@ test.describe("the dashboard cards", () => {
     await expect(card).toContainText("Priya Raman");
     await expect(card).not.toContainText("Vendor Sales");
   });
+
+  test("the next two days card is on the dashboard", async ({ page }) => {
+    // The header has promised "your next two days" since P1 while the rollup
+    // lived only in reports. This is the assertion that keeps the promise
+    // honest — a card that exists rather than a sentence about one.
+    await page.goto("/dashboard");
+
+    await expect(page.getByTestId("next-two-days")).toBeVisible();
+  });
+});
+
+test.describe("the two-day calendar", () => {
+  test("shows meetings and what is due together", async ({ page }) => {
+    await page.goto("/dashboard/calendar");
+    await page.getByRole("button", { name: "Two days", exact: true }).click();
+
+    const agenda = page.getByTestId("two-day-agenda");
+    await expect(agenda).toBeVisible();
+    await expect(agenda.getByTestId("two-day-event").first()).toBeVisible();
+  });
+
+  test("a task due today appears beside the meetings", async ({ page }) => {
+    // The whole reason for this view: a deadline and a meeting compete for
+    // the same two days, and seeing them apart is how one of them is missed.
+    const dueToday = new Date();
+    dueToday.setHours(17, 0, 0, 0);
+
+    const created = await page.request.post("/api/tasks", {
+      data: { title: "Sign the renewal", dueAt: dueToday.toISOString() },
+    });
+    expect(created.ok()).toBe(true);
+
+    await page.goto("/dashboard/calendar");
+    await page.getByRole("button", { name: "Two days", exact: true }).click();
+
+    await expect(page.getByTestId("two-day-agenda")).toContainText(
+      "Sign the renewal",
+    );
+  });
 });

@@ -229,6 +229,9 @@ export function createSupabaseMailRepository(scope: DataScope): MailRepository {
           ...(patch.retentionMonths !== undefined && {
             retention_months: patch.retentionMonths,
           }),
+          ...(patch.isCorporate !== undefined && {
+            is_corporate: patch.isCorporate,
+          }),
         })
         .match({ ...ownerFilter(scope), id })
         .select(ACCOUNT_COLUMNS)

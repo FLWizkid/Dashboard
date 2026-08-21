@@ -60,8 +60,18 @@ failures as well as the successes.
 
 ## Corporate accounts and the consent path
 
-A mailbox marked corporate starts at **Off**, and the connect flow offers a
-consent path rather than a policy dropdown:
+A newly connected mailbox starts at **Metadata** — headers, no bodies — which
+is the honest position for an account whose status nobody has stated yet.
+Marking it corporate, from **What is kept locally** on the Email page, moves it
+to **Off** in the same request and withdraws Full from the control entirely.
+
+> Until 2026-08-20 this section described behaviour that did not exist: the
+> connect flow set no policy at all, so every mailbox silently took the column
+> default and nothing in the product could change it. The database trigger was
+> real throughout — it has always refused corporate + Full — but a backstop is
+> not a setting.
+
+The consent path, for tenants that gate the application:
 
 1. `not_required` — a personal account, or a tenant that does not gate the app.
 2. `required` — the provider has told us an administrator must approve it.

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { HoursThisWeek } from "@/components/dashboard/hours-this-week";
+import { NextTwoDaysLazy } from "@/components/dashboard/next-two-days-lazy";
 import {
   NeedsAttention,
   TodaysMeetings,
@@ -17,9 +18,9 @@ export const metadata: Metadata = {
 /**
  * The balanced snapshot.
  *
- * Every card is live. The two that were placeholders through P2 — the day's
- * meetings and the mail waiting on you — dropped into the layout that was
- * built for them without anything else moving.
+ * Every card is live. The header has promised "your next two days" since P1;
+ * that card now exists rather than being a sentence about one, and it reuses
+ * the report's rollup so the two cannot disagree.
  */
 export default function DashboardHome() {
   return (
@@ -40,6 +41,7 @@ export default function DashboardHome() {
         <TodaysMeetings />
         <NeedsAttention />
         <HoursThisWeek className="md:col-span-2 xl:col-span-1" />
+        <NextTwoDaysLazy className="md:col-span-2 xl:col-span-3" />
       </div>
 
       <TopPriorities />

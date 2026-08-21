@@ -152,9 +152,11 @@ create table if not exists public.mail_accounts (
   status              public.account_status not null default 'connected',
   status_detail       text,
 
-  -- Corporate accounts default to Off, as specified. The default here is
-  -- 'full' because the column is set explicitly at connect time from
-  -- `is_corporate`; see the trigger below, which refuses the unsafe combination.
+  -- Headers only until the owner says what kind of mailbox this is. Marking
+  -- an account corporate moves it to Off; the trigger below refuses the
+  -- corporate + Full combination outright. (This comment previously claimed
+  -- the default was 'full' and that connect set it explicitly. Neither was
+  -- true: connect set nothing, so every account took this default.)
   caching_policy      public.caching_policy not null default 'metadata',
   is_corporate        boolean not null default false,
   admin_consent       public.admin_consent_state not null default 'not_required',

@@ -45,6 +45,13 @@ export const createTaskSchema = z.object({
   pinned: z.boolean().default(false),
   sourceLink: z.string().url().max(2000).nullable().default(null),
   owner: z.string().trim().max(120).nullable().default(null),
+  /**
+   * A follow-up captured from a note arrives as a draft: visible on the note
+   * it came from, absent from the board and every count until an owner, a due
+   * date and a priority are supplied. Defaults false, so an ordinary capture
+   * is live work and only a caller that means it can make a draft.
+   */
+  isDraft: z.boolean().default(false),
   links: z.array(taskLinkInputSchema).max(20).default([]),
   /**
    * Idempotency key for a capture made while offline.

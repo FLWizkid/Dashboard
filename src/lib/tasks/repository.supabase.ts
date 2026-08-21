@@ -184,6 +184,7 @@ export function createSupabaseTaskRepository(): TaskRepository {
           pinned: input.pinned,
           source_link: input.sourceLink,
           owner: input.owner,
+          is_draft: input.isDraft,
           client_key: input.clientKey,
           completed_at: completedAtFor(input.status, null, now) ?? null,
         })
