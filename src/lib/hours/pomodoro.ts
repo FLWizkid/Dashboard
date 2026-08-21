@@ -145,7 +145,9 @@ export function isComplete(
   settings: PomodoroSettings = DEFAULT_POMODORO,
 ): boolean {
   if (!state.startedAt) return false;
-  return elapsedMs(state, now) >= effectivePlannedMinutes(state, settings) * 60_000;
+  return (
+    elapsedMs(state, now) >= effectivePlannedMinutes(state, settings) * 60_000
+  );
 }
 
 export function isRunning(state: PomodoroState): boolean {
