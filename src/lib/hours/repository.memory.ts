@@ -109,6 +109,23 @@ export function resetMemoryHoursStore(): void {
   store.events = [];
 }
 
+/**
+ * Seeds the stored halves of the hours module.
+ *
+ * Scheduled time is derived from events and never stored, so it is absent
+ * here on purpose — `seedMemoryEvents` is how that column gets its data.
+ */
+export function seedMemoryHours(input: {
+  sessions?: PomodoroSession[];
+  entries?: TimeEntry[];
+  rules?: WorkCategoryRule[];
+}): void {
+  const store = getStore();
+  if (input.sessions) store.sessions = [...input.sessions];
+  if (input.entries) store.entries = [...input.entries];
+  if (input.rules) store.rules = [...input.rules];
+}
+
 /** Test-only seeding hook for the derived scheduled column. */
 export function seedMemoryEvents(events: MemoryEvent[]): void {
   getStore().events = events;
