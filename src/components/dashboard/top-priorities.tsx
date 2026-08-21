@@ -24,7 +24,7 @@ import { useToast } from "@/components/ui/toast";
 import { riseIn, staggerList } from "@/lib/motion";
 import { useRanking } from "@/lib/priority/client";
 import { WhyLine, WhyPanel } from "@/components/priority/why-panel";
-import { useTasks, useUpdateTask } from "@/lib/tasks/client";
+import { isProvisionalTask, useTasks, useUpdateTask } from "@/lib/tasks/client";
 import { isOverdue, topPriorities } from "@/lib/tasks/sort";
 import type { Task } from "@/lib/tasks/types";
 
@@ -186,13 +186,17 @@ export function TopPriorities({ limit = 5 }: { limit?: number }) {
                   key={task.id}
                   layout={!reduced}
                   variants={riseIn(reduced)}
-                  exit="exit"
+                  // Provisional rows vanish without a farewell: an exit
+                  // animation for a row being replaced by its confirmed self
+                  // leaves two copies in the DOM at once.
+                  exit={isProvisionalTask(task) ? undefined : "exit"}
                   className="flex items-start gap-3 rounded-md px-1 py-1.5"
                 >
                   <CompleteButton
                     completed={false}
                     size="sm"
                     label={task.title}
+                    disabled={isProvisionalTask(task)}
                     onToggle={() => complete(task)}
                     className="mt-0.5"
                   />

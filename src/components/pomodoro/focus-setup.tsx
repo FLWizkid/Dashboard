@@ -92,8 +92,10 @@ export function FocusSetup({
               onClick={() => onLengthChange(null)}
               className={buttonClass(plannedOverrideMinutes === null)}
             >
-              {defaultMinutes}m
-              <span className="ml-1 text-xs opacity-70">default</span>
+              {/* One run of text at full contrast. The earlier version dimmed
+                  the word "default" with opacity, which is how a hint drops
+                  below WCAG AA while looking perfectly tasteful. */}
+              {defaultMinutes}m · default
             </button>
 
             {LENGTHS.filter((minutes) => minutes !== defaultMinutes).map(

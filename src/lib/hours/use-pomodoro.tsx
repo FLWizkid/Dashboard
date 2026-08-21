@@ -12,6 +12,7 @@ import {
   isRunning,
   nextKind,
   pause as pauseState,
+  effectivePlannedMinutes,
   plannedMinutes,
   remainingSeconds,
   resume as resumeState,
@@ -199,7 +200,7 @@ export function usePomodoroMachine(
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
-  const total = plannedMinutes(state.kind, settings) * 60;
+  const total = effectivePlannedMinutes(state, settings) * 60;
   const remaining = hydrated ? remainingSeconds(state, now, settings) : total;
   const elapsed = hydrated ? elapsedMs(state, now) : 0;
   const progress = total > 0 ? Math.min(1, elapsed / (total * 1000)) : 0;
@@ -224,10 +225,10 @@ export function usePomodoroMachine(
         options.plannedOverrideMinutes ?? state.plannedOverrideMinutes;
       // A one-off length only applies to focus. A forty-minute short break is
       // not a thing anyone means.
-      const planned =
-        kind === "focus" && override
-          ? override
-          : plannedMinutes(kind, settings);
+      const planned = effectivePlannedMinutes(
+        { kind, plannedOverrideMinutes: override },
+        settings,
+      );
 
       // Optimistic: the timer starts on screen immediately and the row is
       // created behind it. A slow round trip must not cost the owner seconds

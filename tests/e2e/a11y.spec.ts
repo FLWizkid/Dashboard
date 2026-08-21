@@ -42,6 +42,11 @@ test.describe("accessibility", () => {
     await quickAdd(page, "Draft the board deck !high friday 3pm #strategic");
     await quickAdd(page, "Untriaged capture");
 
+    // Capture is optimistic, so the list briefly holds both the provisional
+    // row and the confirmed one replacing it. Scanning mid-swap audits a row
+    // that is on its way out — a fact about the animation, not the markup.
+    await expect(page.locator('[data-task-id^="optimistic:"]')).toHaveCount(0);
+
     const results = await scan(page);
     expect(describeViolations(results)).toBe("");
   });
@@ -131,7 +136,9 @@ test.describe("accessibility", () => {
 
   test("the hours view has no WCAG A/AA violations", async ({ page }) => {
     await page.goto("/dashboard/hours");
-    await expect(page.getByRole("heading", { name: "Hours" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Hours", exact: true }),
+    ).toBeVisible();
 
     // Log something first: the empty view exercises far less of the markup
     // than the one with a populated ledger and an outbox banner.
