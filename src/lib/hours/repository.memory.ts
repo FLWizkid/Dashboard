@@ -170,6 +170,7 @@ export const memoryHoursRepository: HoursRepository = {
       id: randomUUID(),
       kind: input.kind,
       taskId: input.taskId,
+      categoryId: input.categoryId ?? null,
       plannedMinutes: input.plannedMinutes,
       startedAt: input.startedAt ?? now,
       endedAt: null,
@@ -220,7 +221,9 @@ export const memoryHoursRepository: HoursRepository = {
     const entry = writeEntry(store, {
       source: "focused",
       taskId: session.taskId,
-      categoryId: null,
+      // Inherited from the session. Chosen once, when starting, rather than
+      // asked for again at the end when the answer is already fading.
+      categoryId: session.categoryId,
       sessionId: session.id,
       startedAt: session.startedAt,
       endedAt,

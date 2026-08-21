@@ -46,6 +46,7 @@ interface SessionRow {
   id: string;
   kind: PomodoroKind;
   task_id: string | null;
+  category_id: string | null;
   planned_minutes: number;
   started_at: string;
   ended_at: string | null;
@@ -107,7 +108,7 @@ interface CalendarRow {
 }
 
 const SESSION_COLUMNS =
-  "id, kind, task_id, planned_minutes, started_at, ended_at, completed, seconds, note, created_at, updated_at";
+  "id, kind, task_id, category_id, planned_minutes, started_at, ended_at, completed, seconds, note, created_at, updated_at";
 
 const ENTRY_COLUMNS =
   "id, source, task_id, category_id, session_id, started_at, ended_at, minutes, note, client_key, created_at, updated_at";
@@ -128,6 +129,7 @@ function toSession(row: SessionRow): PomodoroSession {
     id: row.id,
     kind: row.kind,
     taskId: row.task_id,
+    categoryId: row.category_id,
     plannedMinutes: row.planned_minutes,
     startedAt: row.started_at,
     endedAt: row.ended_at,
@@ -210,6 +212,7 @@ export function createSupabaseHoursRepository(): HoursRepository {
         .insert({
           kind: input.kind,
           task_id: input.taskId,
+          category_id: input.categoryId ?? null,
           planned_minutes: input.plannedMinutes,
           ...(input.startedAt ? { started_at: input.startedAt } : {}),
         })
@@ -260,7 +263,9 @@ export function createSupabaseHoursRepository(): HoursRepository {
         {
           source: "focused",
           task_id: session.taskId,
-          category_id: null,
+          // Inherited from the session: chosen once when starting, rather
+          // than asked for again at the end when the answer has faded.
+          category_id: session.categoryId,
           session_id: session.id,
           started_at: session.startedAt,
           ended_at: session.endedAt ?? input.endedAt,

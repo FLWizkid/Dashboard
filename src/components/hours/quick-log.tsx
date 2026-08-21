@@ -13,7 +13,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { formatMinutes } from "@/lib/hours/aggregate";
 import { useOutbox } from "@/lib/hours/use-outbox";
-import { useCategories } from "@/lib/tasks/client";
+import { useCategories, useTasks } from "@/lib/tasks/client";
 
 /**
  * One-tap logging.
@@ -47,7 +47,13 @@ export function QuickLog() {
   const outbox = useOutbox();
   const { toast } = useToast();
   const categories = useCategories();
+  const tasks = useTasks("open");
   const [busy, setBusy] = React.useState<number | null>(null);
+
+  // Which task the time is against. Optional, and remembered like the
+  // category — logging three blocks against the same piece of work is the
+  // common case, not the exception.
+  const [taskId, setTaskId] = React.useState<string>("");
 
   // Remembered across logs. Consecutive entries in a working day are usually
   // the same kind of work, so re-picking every time would be the friction
@@ -57,6 +63,7 @@ export function QuickLog() {
   const chosen = (categories.data ?? []).find(
     (category) => category.id === categoryId,
   );
+  const chosenTask = (tasks.data ?? []).find((task) => task.id === taskId);
 
   const log = async (minutes: number) => {
     setBusy(minutes);
@@ -69,17 +76,21 @@ export function QuickLog() {
         startedAt: startedAt.toISOString(),
         endedAt: endedAt.toISOString(),
         categoryId: categoryId || null,
+        taskId: taskId || null,
         note: null,
       });
 
       toast({
         title: `${formatMinutes(minutes)} logged`,
         description: [
+          chosenTask ? `Against “${chosenTask.title}”.` : null,
           chosen ? `Filed under ${chosen.name}.` : "Unfiled.",
           outbox.online
             ? "Saved."
             : "Saved on this device — it'll sync when you're back online.",
-        ].join(" "),
+        ]
+          .filter(Boolean)
+          .join(" "),
         tone: "success",
       });
     } finally {
@@ -123,6 +134,34 @@ export function QuickLog() {
                 {category.name}
               </option>
             ))}
+          </select>
+        </div>
+
+        <div className="space-y-1">
+          <label
+            htmlFor="quick-log-task"
+            className="text-xs font-medium text-fg"
+          >
+            Against a task
+          </label>
+          <select
+            id="quick-log-task"
+            className="w-full rounded-md border border-line bg-surface px-2 py-2 text-sm sm:max-w-xs"
+            value={taskId}
+            onChange={(event) => setTaskId(event.target.value)}
+            data-testid="quick-log-task"
+          >
+            {/* Optional, and first: most logged time is not against one
+                specific task, and pretending otherwise would make the common
+                case the awkward one. */}
+            <option value="">No particular task</option>
+            {(tasks.data ?? [])
+              .filter((task) => !task.isDraft)
+              .map((task) => (
+                <option key={task.id} value={task.id}>
+                  {task.title}
+                </option>
+              ))}
           </select>
         </div>
 

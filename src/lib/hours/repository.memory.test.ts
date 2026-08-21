@@ -33,6 +33,7 @@ describe("pomodoro sessions", () => {
     await repo.startSession({
       kind: "focus",
       taskId: null,
+      categoryId: null,
       plannedMinutes: 25,
       startedAt: "2026-08-10T09:00:00.000Z",
     });
@@ -41,6 +42,7 @@ describe("pomodoro sessions", () => {
       repo.startSession({
         kind: "focus",
         taskId: null,
+        categoryId: null,
         plannedMinutes: 25,
       }),
     ).rejects.toBeInstanceOf(SessionAlreadyRunningError);
@@ -50,6 +52,7 @@ describe("pomodoro sessions", () => {
     const first = await repo.startSession({
       kind: "focus",
       taskId: null,
+      categoryId: null,
       plannedMinutes: 25,
       startedAt: "2026-08-10T09:00:00.000Z",
     });
@@ -62,7 +65,12 @@ describe("pomodoro sessions", () => {
     });
 
     await expect(
-      repo.startSession({ kind: "focus", taskId: null, plannedMinutes: 25 }),
+      repo.startSession({
+        kind: "focus",
+        taskId: null,
+        categoryId: null,
+        plannedMinutes: 25,
+      }),
     ).resolves.toMatchObject({ endedAt: null });
   });
 
@@ -70,6 +78,7 @@ describe("pomodoro sessions", () => {
     const session = await repo.startSession({
       kind: "focus",
       taskId: null,
+      categoryId: null,
       plannedMinutes: 25,
       startedAt: "2026-08-10T09:00:00.000Z",
     });
@@ -94,6 +103,7 @@ describe("pomodoro sessions", () => {
     const session = await repo.startSession({
       kind: "long_break",
       taskId: null,
+      categoryId: null,
       plannedMinutes: 15,
       startedAt: "2026-08-10T09:00:00.000Z",
     });

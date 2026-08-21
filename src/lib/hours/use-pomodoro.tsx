@@ -78,6 +78,8 @@ export interface UsePomodoroResult {
   stop(): Promise<void>;
   skip(): void;
   setTask(taskId: string | null): void;
+  setCategory(categoryId: string | null): void;
+  setPlannedOverride(minutes: number | null): void;
 }
 
 function readStored(): PomodoroState | null {
@@ -205,16 +207,42 @@ export function usePomodoroMachine(
   /* ── Transitions ────────────────────────────────────────────────────── */
 
   const start = React.useCallback(
-    async (options: { kind?: PomodoroKind; taskId?: string | null } = {}) => {
+    async (
+      options: {
+        kind?: PomodoroKind;
+        taskId?: string | null;
+        categoryId?: string | null;
+        plannedOverrideMinutes?: number | null;
+      } = {},
+    ) => {
       setError(null);
       const at = new Date();
       const kind = options.kind ?? state.kind;
       const taskId = options.taskId ?? state.taskId;
+      const categoryId = options.categoryId ?? state.categoryId;
+      const override =
+        options.plannedOverrideMinutes ?? state.plannedOverrideMinutes;
+      // A one-off length only applies to focus. A forty-minute short break is
+      // not a thing anyone means.
+      const planned =
+        kind === "focus" && override
+          ? override
+          : plannedMinutes(kind, settings);
 
       // Optimistic: the timer starts on screen immediately and the row is
       // created behind it. A slow round trip must not cost the owner seconds
       // off their first Pomodoro.
-      const optimistic = startState({ ...state, kind, taskId }, at, { taskId });
+      const optimistic = startState(
+        {
+          ...state,
+          kind,
+          taskId,
+          categoryId,
+          plannedOverrideMinutes: override,
+        },
+        at,
+        { taskId },
+      );
       setState(optimistic);
       setNow(at);
 
@@ -222,7 +250,8 @@ export function usePomodoroMachine(
         const session = await startMutation.mutateAsync({
           kind,
           taskId: taskId ?? null,
-          plannedMinutes: plannedMinutes(kind, settings),
+          categoryId: categoryId ?? null,
+          plannedMinutes: planned,
           startedAt: at.toISOString(),
         });
         setState((current) => ({ ...current, sessionId: session.id }));
@@ -287,6 +316,14 @@ export function usePomodoroMachine(
     setState((current) => skipState(current, settings));
   }, [settings]);
 
+  const setCategory = React.useCallback((categoryId: string | null) => {
+    setState((current) => ({ ...current, categoryId }));
+  }, []);
+
+  const setPlannedOverride = React.useCallback((minutes: number | null) => {
+    setState((current) => ({ ...current, plannedOverrideMinutes: minutes }));
+  }, []);
+
   const setTask = React.useCallback((taskId: string | null) => {
     setState((current) => ({ ...current, taskId }));
   }, []);
@@ -307,6 +344,8 @@ export function usePomodoroMachine(
     stop,
     skip,
     setTask,
+    setCategory,
+    setPlannedOverride,
   };
 }
 

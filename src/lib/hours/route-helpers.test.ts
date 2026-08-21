@@ -43,6 +43,7 @@ const session: PomodoroSession = {
   id: "session-1",
   kind: "focus",
   taskId: null,
+  categoryId: null,
   plannedMinutes: 25,
   startedAt: "2026-08-10T09:00:00.000Z",
   endedAt: null,

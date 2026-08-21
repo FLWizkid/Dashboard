@@ -4,6 +4,7 @@ import { m, useReducedMotion } from "framer-motion";
 import { Coffee, Pause, Play, SkipForward, Square, Timer } from "lucide-react";
 import * as React from "react";
 
+import { FocusSetup } from "@/components/pomodoro/focus-setup";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -206,6 +207,15 @@ export function TimerView() {
           )}
         </CardContent>
       </Card>
+
+      <FocusSetup
+        categoryId={timer.state.categoryId}
+        onCategoryChange={timer.setCategory}
+        plannedOverrideMinutes={timer.state.plannedOverrideMinutes}
+        onLengthChange={timer.setPlannedOverride}
+        defaultMinutes={timer.settings.focusMinutes}
+        disabled={timer.running || timer.state.paused}
+      />
 
       <TaskPicker
         value={timer.state.taskId}

@@ -376,11 +376,19 @@ export function seedMemoryMail(extra: Partial<State>): void {
   stateStore().current = {
     accounts: extra.accounts ?? current.accounts,
     mailboxes: extra.mailboxes ?? current.mailboxes,
-    messages: [...current.messages, ...(extra.messages ?? [])],
-    senders: [...current.senders, ...(extra.senders ?? [])],
-    calendars: extra.calendars ?? current.calendars,
-    events: [...current.events, ...(extra.events ?? [])],
+    // Deduplicated by id: seeding twice must not double the mailbox. The
+    // caller is supposed to run once, and "supposed to" is not a guarantee
+    // worth betting a duplicate-key warning on.
+    messages: byId([...current.messages, ...(extra.messages ?? [])]),
+    senders: byId([...current.senders, ...(extra.senders ?? [])]),
+    calendars: byId([...current.calendars, ...(extra.calendars ?? [])]),
+    events: byId([...current.events, ...(extra.events ?? [])]),
   };
+}
+
+/** Last write wins, order preserved. */
+function byId<T extends { id: string }>(rows: T[]): T[] {
+  return [...new Map(rows.map((row) => [row.id, row])).values()];
 }
 
 export function resetMemoryMail(): void {

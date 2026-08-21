@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { HoursThisWeek } from "@/components/dashboard/hours-this-week";
 import { HoursView } from "@/components/hours/hours-view";
 import { QuickLog } from "@/components/hours/quick-log";
 
@@ -22,6 +23,12 @@ export default function HoursPage() {
       <div className="lg:hidden">
         <QuickLog />
       </div>
+
+      {/* The week at a glance, moved here from the dashboard. It answers
+          "am I on track", which is a question you ask in the place where you
+          can do something about the answer — not one you want occupying a
+          third of the home screen every morning. */}
+      <HoursThisWeek />
 
       <HoursView />
 

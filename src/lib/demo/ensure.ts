@@ -21,7 +21,24 @@ import { reportError } from "@/lib/observability/report";
  * tests see would be worse than no demo.
  */
 
-let started: Promise<void> | null = null;
+/**
+ * Memoised on `globalThis`, not in module scope.
+ *
+ * Next gives server components and route handlers their own module
+ * instances in development, so a module-level flag let the seed run more
+ * than once — and because the mail seed appends, the second run duplicated
+ * every message and event. React noticed before I did, with a duplicate-key
+ * warning on the calendar.
+ */
+const SEEDED_KEY = Symbol.for("dashboard.demoWeekSeeded");
+
+function memo(): { started?: Promise<void> } {
+  const globalStore = globalThis as typeof globalThis & {
+    [SEEDED_KEY]?: { started?: Promise<void> };
+  };
+  globalStore[SEEDED_KEY] ??= {};
+  return globalStore[SEEDED_KEY];
+}
 
 export function ensureDemoSeeded(): Promise<void> {
   if (!process.env.DASHBOARD_DEMO_DATA) return Promise.resolve();
@@ -39,9 +56,11 @@ export function ensureDemoSeeded(): Promise<void> {
     return Promise.resolve();
   }
 
-  // Memoised on the promise, not on a boolean: two requests arriving together
+  const state = memo();
+
+  // Memoised on the promise, not a boolean: two requests arriving together
   // would otherwise both start seeding and interleave their writes.
-  started ??= (async () => {
+  state.started ??= (async () => {
     try {
       const { seedDemoWeek } = await import("./seed");
       await seedDemoWeek();
@@ -57,5 +76,5 @@ export function ensureDemoSeeded(): Promise<void> {
     }
   })();
 
-  return started;
+  return state.started;
 }

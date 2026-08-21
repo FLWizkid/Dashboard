@@ -757,6 +757,7 @@ function hours(clock: ReturnType<typeof weekClock>): {
         id,
         kind: "focus",
         taskId,
+        categoryId: null,
         plannedMinutes: 25,
         startedAt,
         endedAt,
