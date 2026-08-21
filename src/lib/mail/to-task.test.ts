@@ -296,16 +296,33 @@ describe("suggestPriority", () => {
     expect(suggested!.reason).toContain("Q3 board review");
   });
 
-  it("respects the ordering: importance beats meeting timing", () => {
-    // Sender importance is something the owner stated; meeting proximity is
-    // something we inferred.
+  it("respects the ordering: meeting timing beats sender importance", () => {
+    // The specified order is deadline → meeting timing → sender importance.
+    // This test previously asserted the opposite, which is how the deviation
+    // survived a green suite: with importance first, an imminent meeting
+    // could never be the stated reason for mail from the very people most
+    // likely to be writing about one.
     const suggested = suggestPriority(
       options({ message: message({ senderImportance: "critical" }) }),
       null,
       event(),
     );
 
+    expect(suggested!.source).toBe("meeting_timing");
+    // A Critical sender still lifts the value, it just is not the reason.
+    expect(suggested!.value).toBe("critical");
+    expect(suggested!.reason).toContain("Q3 board review");
+  });
+
+  it("falls back to sender importance when no meeting is near", () => {
+    const suggested = suggestPriority(
+      options({ message: message({ senderImportance: "critical" }) }),
+      null,
+      null,
+    );
+
     expect(suggested!.source).toBe("sender_importance");
+    expect(suggested!.value).toBe("critical");
   });
 
   it("suggests nothing when there is no signal at all", () => {

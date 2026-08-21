@@ -302,6 +302,13 @@ describeDb("retention", () => {
 
       expect(rows.map((row) => row.proname)).toEqual([
         "purge_expired_messages",
+        // Deliberate, and the conversation this test exists to force: the
+        // audit log ages out at 24 months, the same window as the mail it
+        // describes. A log that outlives its subject is a list of things you
+        // can no longer look up; one that outlives it *indefinitely* is a
+        // growing record of behaviour kept for no stated purpose. It removes
+        // only audit rows — never a task, note, hour or link.
+        "purge_old_audit_log",
         "purge_old_digests",
         // Deliberate, and the conversation this test exists to force: it
         // removes *cached references nothing links to* — never a link, which

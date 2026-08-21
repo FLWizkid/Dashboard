@@ -178,6 +178,10 @@ calendar now make it eight. What is in the repo today:
 - [x] Microsoft Graph adapter, feature-flagged on the Azure registration
 - [x] Proton Bridge IMAP/SMTP adapter, with its constraints declared
 - [x] Sync service: policy gating on the write path, stale-but-safe
+- [x] Sync **wiring**: `/api/mail/sync` + scheduler job + persistence (`sync-store.supabase.ts`).
+      The engine and adapters were written and tested during P2 but had no
+      caller, so a connected account never populated anything. Corrected
+      2026-08-20; the earlier tick overstated what shipped.
       degradation, exponential back-off
 - [x] Email → task with the specified precedence and a reason for every
       suggestion
@@ -416,6 +420,11 @@ Done and tested:
       a failure, and the endpoint's bearer token path is _closed_ when the
       token is unset rather than open to everyone
 - [x] Retention: `purge_old_digests()` on the same 24-month window
+- [x] Retention: `purge_expired_messages()` **scheduled** (hourly, pg_cron).
+      It existed and was tested from P2 but nothing ever called it, so cached
+      mail bodies only aged out inside the test suite. Corrected 2026-08-20.
+- [x] Audit logging: `audit_log` table (append-only, identifiers never content) + `recordAudit()`. Listed as a locked decision since P0 and marked done
+      in P7 without ever being built. Corrected 2026-08-20.
 - [x] 80 unit tests, 13 integration tests through real Postgres, 13 E2E specs,
       and axe scans of the workspace, the inbox and **the printed rendering**
 - [x] [The reports guide](docs/reports.md) — definitions, schedule, email setup

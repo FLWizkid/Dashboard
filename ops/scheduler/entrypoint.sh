@@ -37,6 +37,7 @@ fi
 DIGEST_CRON="${DIGEST_CRON_SCHEDULE:-5 * * * *}"
 VAULT_CRON="${VAULT_CRON_SCHEDULE:-*/15 * * * *}"
 REFRESH_CRON="${REFRESH_CRON_SCHEDULE:-*/15 * * * *}"
+MAIL_CRON="${MAIL_CRON_SCHEDULE:-*/10 * * * *}"
 
 : "${DASHBOARD_URL:?DASHBOARD_URL is not set — the scheduler has nothing to call}"
 
@@ -60,6 +61,7 @@ mkdir -p /etc/crontabs
 	printf '%s /usr/local/bin/run-job.sh digests /api/digests/run >> /proc/1/fd/1 2>&1\n' "$DIGEST_CRON"
 	printf '%s /usr/local/bin/run-job.sh vault /api/vault/sync >> /proc/1/fd/1 2>&1\n' "$VAULT_CRON"
 	printf '%s /usr/local/bin/run-job.sh refresh /api/connectors/refresh >> /proc/1/fd/1 2>&1\n' "$REFRESH_CRON"
+	printf '%s /usr/local/bin/run-job.sh mail /api/mail/sync >> /proc/1/fd/1 2>&1\n' "$MAIL_CRON"
 } > /etc/crontabs/root
 
 chmod 600 /etc/crontabs/root
@@ -68,5 +70,6 @@ echo "target:          $DASHBOARD_URL"
 echo "digests:         $DIGEST_CRON"
 echo "vault sync:      $VAULT_CRON"
 echo "context refresh: $REFRESH_CRON"
+echo "mail sync:       $MAIL_CRON"
 
 exec crond -f -l 8
