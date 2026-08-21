@@ -113,7 +113,11 @@ export function HoursView() {
 
       <Totals totals={totals} loading={hours.isLoading} reduced={reduced} />
 
-      <DayBars days={hours.data?.days ?? []} loading={hours.isLoading} />
+      <Breakdown
+        days={hours.data?.days ?? []}
+        months={hours.data?.months ?? []}
+        loading={hours.isLoading}
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <ManualEntryForm />
@@ -224,29 +228,82 @@ function Totals({
 
 /* ── Daily breakdown ──────────────────────────────────────────────────── */
 
-function DayBars({ days, loading }: { days: Bucket[]; loading: boolean }) {
-  const peak = Math.max(1, ...days.map((day) => day.totals.combined));
+/**
+ * The breakdown, at either scale.
+ *
+ * The specification asks for weekly *and* monthly, and the monthly rollup has
+ * been computed since P4 while being returned to nobody — so the view could
+ * answer "how did this week go" and not "how did this month go", which is the
+ * question that actually gets asked in a quarterly review.
+ *
+ * One card with a toggle rather than two stacked charts: they answer the same
+ * question at different zoom levels, and showing both at once invites reading
+ * one for the other.
+ */
+function Breakdown({
+  days,
+  months,
+  loading,
+}: {
+  days: Bucket[];
+  months: Bucket[];
+  loading: boolean;
+}) {
+  const [scale, setScale] = React.useState<"week" | "month">("week");
+  const buckets = scale === "week" ? days : months;
+  const peak = Math.max(1, ...buckets.map((bucket) => bucket.totals.combined));
 
   return (
     <Card>
       <CardHeader>
         <div className="min-w-0">
-          <CardTitle>Across the week</CardTitle>
+          <CardTitle>
+            {scale === "week" ? "Across the week" : "Across the months"}
+          </CardTitle>
           <CardDescription className="mt-1">
-            Combined hours per day. A block that crosses midnight is split
-            between the two days it actually occupied.
+            {scale === "week"
+              ? "Combined hours per day. A block that crosses midnight is split between the two days it actually occupied."
+              : "Combined hours per month, over the last six."}
           </CardDescription>
+        </div>
+
+        <div
+          role="group"
+          aria-label="Breakdown scale"
+          className="flex shrink-0 items-center gap-1"
+        >
+          <Button
+            type="button"
+            size="sm"
+            variant={scale === "week" ? "primary" : "ghost"}
+            aria-pressed={scale === "week"}
+            onClick={() => setScale("week")}
+          >
+            Week
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={scale === "month" ? "primary" : "ghost"}
+            aria-pressed={scale === "month"}
+            onClick={() => setScale("month")}
+          >
+            Month
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
         {loading ? (
           <p className="text-sm text-fg-muted">Loading…</p>
         ) : (
-          <ul className="space-y-2">
-            {days.map((day) => (
-              <li key={day.start} className="flex items-center gap-3 text-sm">
+          <ul className="space-y-2" data-testid="hours-breakdown">
+            {buckets.map((bucket) => (
+              <li
+                key={bucket.start}
+                className="flex items-center gap-3 text-sm"
+              >
                 <span className="w-24 shrink-0 text-xs text-fg-muted">
-                  {day.label}
+                  {bucket.label}
                 </span>
                 <span
                   className="h-3 min-w-px flex-1 overflow-hidden rounded-full bg-surface-muted"
@@ -255,12 +312,12 @@ function DayBars({ days, loading }: { days: Bucket[]; loading: boolean }) {
                   <span
                     className="block h-full rounded-full bg-primary transition-[width] duration-base ease-standard"
                     style={{
-                      width: `${(day.totals.combined / peak) * 100}%`,
+                      width: `${(bucket.totals.combined / peak) * 100}%`,
                     }}
                   />
                 </span>
                 <span className="w-16 shrink-0 text-right tabular-nums text-fg-muted">
-                  {formatMinutes(day.totals.combined)}
+                  {formatMinutes(bucket.totals.combined)}
                 </span>
               </li>
             ))}

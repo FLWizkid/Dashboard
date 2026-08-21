@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import {
   totalsFor,
+  monthlyBreakdown,
   weeklyBreakdown,
   type HoursInterval,
 } from "@/lib/hours/aggregate";
@@ -81,6 +82,11 @@ export async function GET(request: NextRequest) {
       window: { from: from.toISOString(), to: to.toISOString(), timeZone },
       totals: totalsFor(intervals),
       days: weeklyBreakdown({ intervals, timeZone, now: from }),
+      // The specification asks for weekly *and* monthly. The monthly rollup
+      // has been computed since P4 and returned by nothing, so the view had
+      // no way to answer "how did this month go" — a question a CIO asks
+      // rather more often than "how did this week go".
+      months: monthlyBreakdown({ intervals, timeZone, now: from }),
       entries,
       blocks,
     });
