@@ -62,6 +62,12 @@ export interface QuickAddResult {
   dueAt: Suggestion<string> | null;
   priority: Suggestion<TaskPriority> | null;
   categorySlug: Suggestion<string> | null;
+  /**
+   * A `#tag` that matched no category. It stays in the title — stripping it
+   * would silently lose what the owner typed — but it is reported here so the
+   * interface can say so instead of leaving the tag as unexplained noise.
+   */
+  unknownTag: string | null;
   owner: Suggestion<string> | null;
   eventRef: Suggestion<EventReference> | null;
   /** Ordered by position in the input; drives the input highlighter. */
@@ -285,8 +291,15 @@ function findTime(text: string, requireMeridiem: boolean): TimeMatch | null {
  * Dates
  * ──────────────────────────────────────────────────────────────────────── */
 
-/** Optional lead-in words that belong to the date and should vanish with it. */
-const LEAD = "(?:(?:by|due|on|before|until|till)\\s+)?";
+/**
+ * Optional lead-in words that belong to the date and should vanish with it.
+ *
+ * Anchored the same way as `AT_PREFIX`: the lead-in must start the string or
+ * follow whitespace. Without that anchor the "on" *inside* a word could be
+ * claimed as the lead-in of the date after it — "finish the section tomorrow"
+ * stored a task called "finish the secti".
+ */
+const LEAD = "(?:(?<![^\\s])(?:by|due|on|before|until|till)\\s+)?";
 
 /**
  * Month names are enumerated in full rather than matched as a prefix plus
@@ -747,6 +760,7 @@ export function parseQuickAdd(
   const priority = parsePriority(scanner);
 
   let categorySlug: Suggestion<string> | null = null;
+  let unknownTag: string | null = null;
   const categoryMatch = scanner.find(CATEGORY_TOKEN);
   if (categoryMatch) {
     const slug = resolveCategory(categoryMatch[1], categories);
@@ -757,9 +771,13 @@ export function parseQuickAdd(
         "category",
       );
       categorySlug = { value: slug, raw, confidence: "explicit" };
+    } else {
+      // An unresolved `#tag` is left alone: it stays in the title rather than
+      // silently disappearing into a category that doesn't exist. But it is
+      // *reported*, so the preview can say "#foo isn't a category" instead of
+      // shipping the tag as unexplained noise in the stored title.
+      unknownTag = `#${categoryMatch[1]}`;
     }
-    // An unresolved `#tag` is left alone: it stays in the title rather than
-    // silently disappearing into a category that doesn't exist.
   }
 
   let owner: Suggestion<string> | null = null;
@@ -791,6 +809,7 @@ export function parseQuickAdd(
     dueAt,
     priority,
     categorySlug,
+    unknownTag,
     owner,
     eventRef,
     consumed: [...scanner.consumed].sort((a, b) => a.start - b.start),

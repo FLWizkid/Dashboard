@@ -7,6 +7,9 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 
+import { useToast } from "@/components/ui/toast";
+import { reportError } from "@/lib/observability/report";
+
 import type { ThreadQuery, ThreadSummary } from "./repository";
 import type {
   Calendar,
@@ -104,6 +107,7 @@ export function useThread(
 
 export function useMarkRead() {
   const client = useQueryClient();
+  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (input: { messageIds: string[]; read: boolean }) =>
@@ -113,6 +117,18 @@ export function useMarkRead() {
       }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: mailKeys.all });
+    },
+    onError: (error) => {
+      // This fires as a side effect of opening a thread, so a failure has no
+      // natural place to be seen — which is exactly how a broken call stayed
+      // invisible while the row it should have un-bolded kept its emphasis.
+      // Log it structured and say it once, plainly.
+      reportError(error, { source: "mail.markRead", severity: "warning" });
+      toast({
+        title: "Couldn’t mark the thread read",
+        description: "It will keep showing as unread until the next refresh.",
+        tone: "danger",
+      });
     },
   });
 }

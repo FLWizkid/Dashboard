@@ -51,10 +51,37 @@ import {
  * Nothing is migrated by any of this. Each provider stays the system of
  * record for its own mail; the app is a client, and the local mirror is a
  * cache governed by the per-account policy below.
+ *
+ * Fixture ids are UUIDs, not slugs. The API schemas validate ids as UUIDs
+ * (`markReadSchema.messageIds`, `threadQuerySchema.accountId`,
+ * `eventQuerySchema.calendarId`), and this fake must satisfy the same
+ * contract the real store does. With slug ids, every mark-as-read call in
+ * memory mode failed schema validation with a 400 — while the E2E suite
+ * stayed green, because it asserted on a row's absence rather than on the
+ * call succeeding. The block prefix says what kind of thing each id is in a
+ * trace; the tail byte says which one. Remote ids stay provider-shaped
+ * ("INBOX", "primary") because that is what the real providers send.
  */
-const ACCOUNT_ID = "acc-m365-theonefor";
-const SECOND_ACCOUNT_ID = "acc-proton";
-const THIRD_ACCOUNT_ID = "acc-google-encountive";
+const ACCOUNT_ID = "acc00000-0000-4000-8000-000000000001"; // M365, theonefor.ai
+const SECOND_ACCOUNT_ID = "acc00000-0000-4000-8000-000000000002"; // Proton, personal
+const THIRD_ACCOUNT_ID = "acc00000-0000-4000-8000-000000000003"; // Google, encountive.com
+const MB_INBOX = "ba000000-0000-4000-8000-000000000001";
+const MB_SENT = "ba000000-0000-4000-8000-000000000002";
+const MB_PROTON_INBOX = "ba000000-0000-4000-8000-000000000003";
+const MB_ENCOUNTIVE_INBOX = "ba000000-0000-4000-8000-000000000004";
+const MSG_BOARD = "ee000000-0000-4000-8000-000000000001";
+const MSG_VENDOR = "ee000000-0000-4000-8000-000000000002";
+const MSG_REPLY = "ee000000-0000-4000-8000-000000000003";
+const MSG_PROTON = "ee000000-0000-4000-8000-000000000004";
+const MSG_ENCOUNTIVE = "ee000000-0000-4000-8000-000000000005";
+const THR_BOARD = "dd000000-0000-4000-8000-000000000001";
+const THR_VENDOR = "dd000000-0000-4000-8000-000000000002";
+const THR_PROTON = "dd000000-0000-4000-8000-000000000003";
+const THR_ENCOUNTIVE = "dd000000-0000-4000-8000-000000000004";
+const CAL_PRIMARY = "ca000000-0000-4000-8000-000000000001";
+const EVT_BOARD = "ef000000-0000-4000-8000-000000000001";
+const EVT_ONETOONE = "ef000000-0000-4000-8000-000000000002";
+const EVT_DECLINED = "ef000000-0000-4000-8000-000000000003";
 
 interface State {
   accounts: MailAccount[];
@@ -143,7 +170,7 @@ function seed(): State {
 
   const mailboxes: Mailbox[] = [
     {
-      id: "mb-inbox",
+      id: MB_INBOX,
       accountId: ACCOUNT_ID,
       remoteId: "INBOX",
       name: "Inbox",
@@ -154,7 +181,7 @@ function seed(): State {
       position: 0,
     },
     {
-      id: "mb-sent",
+      id: MB_SENT,
       accountId: ACCOUNT_ID,
       remoteId: "SENT",
       name: "Sent",
@@ -165,7 +192,7 @@ function seed(): State {
       position: 1,
     },
     {
-      id: "mb-encountive-inbox",
+      id: MB_ENCOUNTIVE_INBOX,
       accountId: THIRD_ACCOUNT_ID,
       remoteId: "INBOX",
       name: "Inbox",
@@ -176,7 +203,7 @@ function seed(): State {
       position: 0,
     },
     {
-      id: "mb-proton-inbox",
+      id: MB_PROTON_INBOX,
       accountId: SECOND_ACCOUNT_ID,
       remoteId: "INBOX",
       name: "Inbox",
@@ -193,7 +220,7 @@ function seed(): State {
   ): Message & { threadKey: string } => ({
     accountId: ACCOUNT_ID,
     threadId: over.threadKey,
-    mailboxId: "mb-inbox",
+    mailboxId: MB_INBOX,
     remoteId: over.id,
     messageIdHeader: `<${over.id}@example.test>`,
     subject: "No subject",
@@ -215,8 +242,8 @@ function seed(): State {
 
   const messages = [
     message({
-      id: "msg-board",
-      threadKey: "thr-board",
+      id: MSG_BOARD,
+      threadKey: THR_BOARD,
       subject: "Board pack for Thursday",
       snippet: "Can you review the security section before Thursday?",
       from: { address: "chair@board.example", name: "Priya Raman" },
@@ -227,8 +254,8 @@ function seed(): State {
       sentAt: at(25),
     }),
     message({
-      id: "msg-vendor",
-      threadKey: "thr-vendor",
+      id: MSG_VENDOR,
+      threadKey: THR_VENDOR,
       subject: "Okta renewal — pricing",
       snippet: "Attaching the revised quote.",
       from: { address: "sales@vendor.example", name: "Vendor Sales" },
@@ -240,8 +267,8 @@ function seed(): State {
       sentAt: at(180),
     }),
     message({
-      id: "msg-reply",
-      threadKey: "thr-board",
+      id: MSG_REPLY,
+      threadKey: THR_BOARD,
       subject: "Re: Board pack for Thursday",
       snippet: "Looking at it now.",
       from: { address: "doug@theonefor.ai", name: "Doug" },
@@ -249,15 +276,15 @@ function seed(): State {
       body: "Looking at it now.",
       bodyFormat: "text",
       isRead: true,
-      mailboxId: "mb-sent",
+      mailboxId: MB_SENT,
       receivedAt: at(20),
       sentAt: at(20),
     }),
     message({
-      id: "msg-proton",
-      threadKey: "thr-proton",
+      id: MSG_PROTON,
+      threadKey: THR_PROTON,
       accountId: SECOND_ACCOUNT_ID,
-      mailboxId: "mb-proton-inbox",
+      mailboxId: MB_PROTON_INBOX,
       subject: "Personal — insurance renewal",
       snippet: "Your policy renews next month.",
       from: { address: "noreply@insurer.example", name: "Insurer" },
@@ -277,10 +304,10 @@ function seed(): State {
     // its account's tint, because a tint that nothing renders is a tint
     // nothing tests.
     message({
-      id: "msg-encountive",
-      threadKey: "thr-encountive",
+      id: MSG_ENCOUNTIVE,
+      threadKey: THR_ENCOUNTIVE,
       accountId: THIRD_ACCOUNT_ID,
-      mailboxId: "mb-encountive-inbox",
+      mailboxId: MB_ENCOUNTIVE_INBOX,
       subject: "Encountive — platform review",
       snippet: "The migration slide needs your call before Thursday.",
       from: { address: "maya@encountive.com", name: "Maya Okafor" },
@@ -314,7 +341,7 @@ function seed(): State {
 
   const calendars: Calendar[] = [
     {
-      id: "cal-primary",
+      id: CAL_PRIMARY,
       accountId: ACCOUNT_ID,
       remoteId: "primary",
       name: "Doug",
@@ -329,8 +356,8 @@ function seed(): State {
 
   const events: CalendarEvent[] = [
     {
-      id: "evt-board",
-      calendarId: "cal-primary",
+      id: EVT_BOARD,
+      calendarId: CAL_PRIMARY,
       remoteId: "evt-board",
       seriesId: null,
       title: "Board prep",
@@ -348,8 +375,8 @@ function seed(): State {
       meetingUrl: "https://meet.example/board-prep",
     },
     {
-      id: "evt-onetoone",
-      calendarId: "cal-primary",
+      id: EVT_ONETOONE,
+      calendarId: CAL_PRIMARY,
       remoteId: "evt-onetoone",
       seriesId: "series-1",
       title: "1:1 with Maya",
@@ -367,8 +394,8 @@ function seed(): State {
       meetingUrl: null,
     },
     {
-      id: "evt-declined",
-      calendarId: "cal-primary",
+      id: EVT_DECLINED,
+      calendarId: CAL_PRIMARY,
       remoteId: "evt-declined",
       seriesId: null,
       title: "All-hands (declined)",

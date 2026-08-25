@@ -50,6 +50,39 @@ describe("title extraction", () => {
     );
   });
 
+  it("never claims a date lead-in from inside a word", () => {
+    // "secti[on] tomorrow" once matched the "on <date>" lead-in against the
+    // tail of the word before the date, storing a task called "…secti".
+    const cases: Array<[string, string]> = [
+      [
+        "Review the security section tomorrow 4pm",
+        "Review the security section",
+      ],
+      ["Finish the migration friday", "Finish the migration"],
+      ["Confirm standby tomorrow", "Confirm standby"],
+      ["Check overdue items tomorrow", "Check overdue items"],
+      [
+        "Chase the until-now silent vendor tomorrow",
+        "Chase the until-now silent vendor",
+      ],
+    ];
+    for (const [input, title] of cases) {
+      const result = parseQuickAdd(input, options);
+      expect(result.title, input).toBe(title);
+      expect(result.dueAt, input).not.toBeNull();
+    }
+  });
+
+  it("still removes a real lead-in with its date", () => {
+    expect(parseQuickAdd("File the report by friday", options).title).toBe(
+      "File the report",
+    );
+    expect(parseQuickAdd("Review on monday", options).title).toBe("Review");
+    expect(parseQuickAdd("Pay invoice due tomorrow", options).title).toBe(
+      "Pay invoice",
+    );
+  });
+
   it("never produces an empty title", () => {
     // The whole input is a date; there is nothing else to call the task.
     const result = parseQuickAdd("tomorrow", options);
@@ -164,6 +197,16 @@ describe("category", () => {
     const result = parseQuickAdd("Ship #nonsense", options);
     expect(result.categorySlug).toBeNull();
     expect(result.title).toBe("Ship #nonsense");
+  });
+
+  it("reports the unknown tag so the interface can say so", () => {
+    // Staying in the title is deliberate; staying there *silently* was the
+    // bug. The preview reads this field and explains the leftover tag.
+    expect(parseQuickAdd("Ship #nonsense", options).unknownTag).toBe(
+      "#nonsense",
+    );
+    expect(parseQuickAdd("Ship #vendor", options).unknownTag).toBeNull();
+    expect(parseQuickAdd("Ship it", options).unknownTag).toBeNull();
   });
 
   it("resolves against a caller-supplied taxonomy", () => {
