@@ -18,6 +18,13 @@ pomodoro/hours and reports. Email reads but does not yet compose; see
 
 ---
 
+## Just want to look at it?
+
+Non-technical, on Windows, and you only want to click around with sample data?
+**[Follow the five-minute preview guide →](./docs/TRY-IT-LOCALLY.md)** — install
+Node, download the ZIP, double-click `start-here`, open `http://localhost:3000`.
+Nothing is saved and nothing touches your real accounts.
+
 ## Running it on your box
 
 The whole stack — Next.js, Postgres, GoTrue, PostgREST, Realtime, Storage,
