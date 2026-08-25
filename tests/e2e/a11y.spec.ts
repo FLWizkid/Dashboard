@@ -42,6 +42,11 @@ test.describe("accessibility", () => {
     await quickAdd(page, "Draft the board deck !high friday 3pm #strategic");
     await quickAdd(page, "Untriaged capture");
 
+    // Capture is optimistic, so the list briefly holds both the provisional
+    // row and the confirmed one replacing it. Scanning mid-swap audits a row
+    // that is on its way out — a fact about the animation, not the markup.
+    await expect(page.locator('[data-task-id^="optimistic:"]')).toHaveCount(0);
+
     const results = await scan(page);
     expect(describeViolations(results)).toBe("");
   });
@@ -131,7 +136,9 @@ test.describe("accessibility", () => {
 
   test("the hours view has no WCAG A/AA violations", async ({ page }) => {
     await page.goto("/dashboard/hours");
-    await expect(page.getByRole("heading", { name: "Hours" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Hours", exact: true }),
+    ).toBeVisible();
 
     // Log something first: the empty view exercises far less of the markup
     // than the one with a populated ledger and an outbox banner.
@@ -588,4 +595,48 @@ test.describe("email and calendar", () => {
 
     expect(describeViolations(await scan(page))).toBe("");
   });
+});
+
+/**
+ * Both palettes, not just the one the browser happens to pick.
+ *
+ * Every scan above runs in whatever theme Chromium boots into, which is
+ * light — so the entire dark palette went unscanned, and a contrast failure
+ * there would have shipped without a word. That is not hypothetical: the
+ * light palette shipped a `--fg-subtle` a hair under AA and only these scans
+ * caught it, which is exactly the class of mistake the unscanned half was
+ * free to make.
+ *
+ * `emulateMedia` is enough to drive this, because the boot script in the root
+ * layout resolves the theme from `prefers-color-scheme` when nobody has
+ * chosen. Setting the preference before navigating lands the page in that
+ * theme before first paint, the same way it would for a real visitor.
+ *
+ * Two representative pages rather than every one: the dashboard is the
+ * densest arrangement of tokens in the product, and the inbox carries the
+ * account tints, which are the newest colours and the ones most likely to
+ * have been eyeballed rather than calculated.
+ */
+test.describe("both themes", () => {
+  for (const colorScheme of ["light", "dark"] as const) {
+    test(`the dashboard has no violations in ${colorScheme}`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await page.goto("/dashboard");
+      await expect(
+        page.getByRole("heading", { name: "Today", exact: true }),
+      ).toBeVisible();
+
+      expect(describeViolations(await scan(page))).toBe("");
+    });
+
+    test(`the inbox has no violations in ${colorScheme}`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme });
+      await page.goto("/dashboard/email");
+      await expect(page.getByTestId("thread-row").first()).toBeVisible();
+
+      expect(describeViolations(await scan(page))).toBe("");
+    });
+  }
 });

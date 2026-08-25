@@ -12,6 +12,7 @@ import { Input, Label, Select, Textarea } from "@/components/ui/field";
 import { canMoveTo } from "@/lib/kanban/board";
 import { DURATION, EASE } from "@/lib/motion";
 import type { UpdateTaskPayload } from "@/lib/tasks/schema";
+import { isProvisionalTask } from "@/lib/tasks/client";
 import { isOverdue } from "@/lib/tasks/sort";
 import {
   LINK_RELATION_LABELS,
@@ -91,6 +92,9 @@ export const TaskRow = React.forwardRef<HTMLLIElement, TaskRowProps>(
 
     const category = categories.find((item) => item.id === task.categoryId);
     const confirmedLinks = task.links.filter((link) => link.confirmedAt);
+    // An optimistic row the server has not confirmed yet. Visible, inert,
+    // and gone without ceremony the moment the real row replaces it.
+    const provisional = isProvisionalTask(task);
 
     return (
       <m.li
@@ -99,8 +103,8 @@ export const TaskRow = React.forwardRef<HTMLLIElement, TaskRowProps>(
         initial={reduced ? false : { opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         exit={
-          reduced
-            ? { opacity: 0 }
+          reduced || provisional
+            ? { opacity: 0, transition: { duration: 0 } }
             : {
                 opacity: 0,
                 height: 0,
@@ -121,14 +125,20 @@ export const TaskRow = React.forwardRef<HTMLLIElement, TaskRowProps>(
         )}
       >
         <div
-          tabIndex={tabIndex}
+          // No tabindex at all while provisional, rather than -1: a
+          // tabindex="-1" is still a tabindex, and anything auditing the page
+          // for interactive targets (the headset raycast check, for one) will
+          // measure a row that is on its way out.
+          tabIndex={provisional ? undefined : tabIndex}
           onFocus={onFocus}
-          data-task-focusable="true"
+          data-task-focusable={provisional ? undefined : "true"}
           aria-label={task.title}
+          aria-busy={provisional || undefined}
           className="flex items-start gap-3 rounded-lg p-3"
         >
           <CompleteButton
             completed={completed}
+            disabled={provisional}
             onToggle={onComplete}
             label={task.title}
             className="mt-0.5"
@@ -140,7 +150,14 @@ export const TaskRow = React.forwardRef<HTMLLIElement, TaskRowProps>(
               onClick={onToggleExpanded}
               aria-expanded={expanded}
               aria-controls={detailsId}
-              className="flex w-full items-start gap-2 text-left"
+              // A single line of `text-sm` is 20px, so this control sized
+              // itself to 20px and sat below the 24px minimum the headset
+              // suite enforces for anything you point a raycast at. It is the
+              // primary control on every task row, which makes it the worst
+              // one to have be the smallest. `min-h-7` clears the floor with
+              // 4px to spare rather than landing exactly on it, so a change in
+              // font metrics does not quietly put it back under.
+              className="flex min-h-7 w-full items-start gap-2 text-left"
             >
               <span
                 className={cn(

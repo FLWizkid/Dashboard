@@ -17,11 +17,19 @@ export const threadQuerySchema = z.object({
 export const updateAccountSchema = z
   .object({
     cachingPolicy: z.enum(CACHING_POLICIES).optional(),
+    /**
+     * Marking a mailbox corporate is a policy statement, so it is settable
+     * and it has consequences: the database trigger refuses corporate + Full,
+     * and the connect flow starts a corporate account at Off.
+     */
+    isCorporate: z.boolean().optional(),
     syncMailEnabled: z.boolean().optional(),
     syncCalendarEnabled: z.boolean().optional(),
     // Two years by default; the schema's own bound is what stops a typo
     // becoming an indefinite retention policy.
-    retentionMonths: z.number().int().min(1).max(120).optional(),
+    // Matches the database bound (1–240). The two disagreeing meant a value
+    // the schema allowed and the column rejected, or the reverse.
+    retentionMonths: z.number().int().min(1).max(240).optional(),
   })
   .refine((patch) => Object.keys(patch).length > 0, {
     message: "Nothing to change",

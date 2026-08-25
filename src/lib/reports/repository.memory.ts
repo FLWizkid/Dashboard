@@ -41,6 +41,11 @@ function getStore(): MemoryReportStore {
   return globalStore[STORE_KEY];
 }
 
+/** Seeds the in-app digest inbox for the demo week. */
+export function seedMemoryInbox(messages: InboxMessage[]): void {
+  getStore().inbox = [...messages];
+}
+
 /** Test-only reset hook, exposed through the E2E route handler. */
 export function resetMemoryReportStore(): void {
   const store = getStore();

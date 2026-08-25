@@ -15,6 +15,14 @@ export interface PomodoroSession {
   id: string;
   kind: PomodoroKind;
   taskId: string | null;
+  /**
+   * What kind of work this focus block is.
+   *
+   * Chosen before the timer starts and carried onto the `focused` time entry
+   * when it finishes, so a Pomodoro lands in the weekly split rather than in
+   * an "unfiled" column nobody can attribute afterwards.
+   */
+  categoryId: string | null;
   plannedMinutes: number;
   startedAt: string;
   /** `null` while it is still running. */

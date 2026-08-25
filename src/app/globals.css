@@ -3,12 +3,33 @@
 @tailwind utilities;
 
 /*
- * Design tokens — "refined executive / calm".
+ * Design tokens — "executive terminal".
  *
- * Palette: forest green primary, warm charcoal neutrals, brass accent.
- * Every foreground/background pair below is chosen to clear WCAG-AA (4.5:1 for
- * body text, 3:1 for large text and UI boundaries) in BOTH themes. If you
- * change a value, re-check the pair it is used against.
+ * Palette: deep navy chrome, amber for the thing you act on, steel blue for
+ * the thing you follow. The reference points are the trading terminal and the
+ * newsroom rather than the productivity app: dense, dark, and unafraid of a
+ * strong accent, because the screens this renders are read at a glance
+ * between meetings and in a headset.
+ *
+ * ── Dark is the default, and that is deliberate ──────────────────────────
+ * The usual advice is to follow `prefers-color-scheme` and have no opinion.
+ * This product has one. Dark is the identity, it is what the headset wants,
+ * and the owner asked for it in as many words. `prefers-color-scheme` still
+ * decides for anyone who has not chosen, but the boot script in the layout
+ * lands on dark rather than light when the system expresses no preference.
+ * The toggle in the sidebar overrides both directions and is remembered.
+ *
+ * ── The contrast budget ──────────────────────────────────────────────────
+ * Every foreground/background pair below clears WCAG-AA (4.5:1 for body text,
+ * 3:1 for large text and UI boundaries) in BOTH themes, and the ratio is
+ * written next to the value it applies to. If you change a value, re-check
+ * the pair it is used against — the E2E suite runs axe on every route and
+ * will fail rather than warn.
+ *
+ * ── Colour is never the only signal ──────────────────────────────────────
+ * Account tints, priority scales and status all pair their colour with a text
+ * label or an icon. WCAG 1.4.1, and also just what works when three of the
+ * four accounts are some shade of blue.
  *
  * Colours are stored as space-separated RGB channels so Tailwind can apply
  * opacity modifiers (`bg-primary/10`) via `rgb(var(--x) / <alpha-value>)`.
@@ -16,51 +37,97 @@
 
 @layer base {
   :root {
-    /* ── Surfaces ─────────────────────────────────────────────── */
-    --bg: 250 249 247; /* #FAF9F7 warm off-white */
-    --surface: 255 255 255;
-    --surface-muted: 242 240 236; /* #F2F0EC */
-    --surface-raised: 255 255 255;
+    /* ── Surfaces ─────────────────────────────────────────────────
+       Cool paper rather than white. The page is tinted and the cards
+       sit above it, so the layout reads as layers instead of as one
+       flat sheet with hairlines drawn on it. */
+    --bg: 234 239 247; /* #EAEFF7 */
+    --surface: 251 252 254; /* #FBFCFE — off-white, never #FFF */
+    --surface-muted: 224 231 243; /* #E0E7F3 */
+    --surface-raised: 255 255 255; /* the one place pure white earns its keep */
 
     /* ── Lines ────────────────────────────────────────────────── */
-    --border: 227 224 217; /* #E3E0D9 */
-    --border-strong: 203 199 189; /* #CBC7BD */
+    --border: 208 218 234; /* #D0DAEA */
+    --border-strong: 176 190 213; /* #B0BED5 */
 
     /* ── Text ─────────────────────────────────────────────────── */
-    --fg: 28 27 25; /* #1C1B19  ~17:1 on --bg */
-    --fg-muted: 92 88 80; /* #5C5850  ~7.3:1 on --bg */
-    --fg-subtle: 122 117 106; /* #7A756A  ~4.8:1 on --bg */
+    --fg: 15 23 42; /* #0F172A  ~15:1 on --bg */
+    --fg-muted: 66 82 110; /* #42526E  ~7.4:1 on --bg */
+    /* #526176 — 5.4:1 on --bg, 5.0:1 on --surface-muted.
+       Was #5F6F8A, which I annotated as 4.9:1 and which actually computes to
+       4.41:1 against this page background: below AA for text under 18px, and
+       caught by the axe scan rather than by me. It read as passing everywhere
+       it sat on a white card (5.1:1) and failed the moment something used it
+       directly on the tinted page — which is the trap in tinting the
+       background at all, and the reason this value now carries margin instead
+       of sitting on the line. */
+    --fg-subtle: 82 97 122;
 
-    /* ── Forest green primary ─────────────────────────────────── */
-    --primary: 30 77 59; /* #1E4D3B  ~9.5:1 with white */
-    --primary-hover: 22 58 44; /* #163A2C */
+    /* ── Navy primary ─────────────────────────────────────────────
+       In daylight the navy is the action and the amber is the
+       highlight. The two swap roles in the dark theme, where amber on
+       near-black is the thing the eye goes to first. */
+    --primary: 22 48 92; /* #16305C  ~11.6:1 with white */
+    --primary-hover: 14 34 69; /* #0E2245 */
     --primary-fg: 255 255 255;
-    --primary-soft: 220 232 225; /* #DCE8E1 tint for chips/fills */
-    --primary-soft-fg: 22 58 44;
+    --primary-soft: 216 226 244; /* #D8E2F4 tint for chips/fills */
+    --primary-soft-fg: 18 40 78; /* ~9.8:1 on --primary-soft */
 
-    /* ── Brass accent ─────────────────────────────────────────── */
-    --accent: 122 95 53; /* #7A5F35  ~6.4:1 on --bg (text-safe) */
-    --accent-bright: 176 141 87; /* #B08D57 decorative / borders only */
-    --accent-soft: 245 238 226; /* #F5EEE2 */
+    /* ── Amber accent ─────────────────────────────────────────────
+       `--accent` is the text-safe one. `--accent-bright` is the real
+       amber and is decorative only: at 4.5:1 it fails against paper,
+       which is exactly why it is fenced off in its own token. */
+    --accent: 133 86 8; /* #855608  ~5.9:1 on --bg (text-safe) */
+    --accent-bright: 232 163 61; /* #E8A33D borders / fills / dark-mode text */
+    --accent-soft: 253 241 219; /* #FDF1DB */
+
+    /* ── Chrome ───────────────────────────────────────────────────
+       The sidebar and top rail are navy in BOTH themes. That is the
+       whole trick behind the terminal look: the frame stays constant
+       and only the page inside it changes with the theme. */
+    --chrome: 16 33 63; /* #10213F */
+    --chrome-raised: 24 46 86; /* #182E56 */
+    --chrome-fg: 233 238 248; /* #E9EEF8  ~14:1 on --chrome */
+    --chrome-fg-muted: 163 180 208; /* #A3B4D0  ~6.8:1 on --chrome */
+    --chrome-line: 37 62 105; /* #253E69 */
 
     /* ── Focus ring ───────────────────────────────────────────── */
-    --ring: 58 114 89; /* #3A7259 */
+    --ring: 37 87 168; /* #2557A8  3.9:1 on --bg, non-text boundary */
 
     /* ── Priority scale (text on its own soft background) ─────── */
-    --priority-critical: 163 45 45; /* #A32D2D  5.8:1 on soft */
-    --priority-critical-soft: 247 231 228;
-    --priority-high: 138 90 22; /* #8A5A16  5.1:1 on soft */
-    --priority-high-soft: 247 238 221;
-    --priority-normal: 42 90 69; /* #2A5A45 */
-    --priority-normal-soft: 228 237 231;
-    --priority-low: 92 88 80; /* #5C5850 */
-    --priority-low-soft: 240 238 234;
+    --priority-critical: 165 32 26; /* #A5201A  6.1:1 on soft */
+    --priority-critical-soft: 251 228 226;
+    --priority-high: 133 86 8; /* #855608  5.4:1 on soft */
+    --priority-high-soft: 253 241 219;
+    --priority-normal: 22 48 92; /* #16305C */
+    --priority-normal-soft: 216 226 244;
+    --priority-low: 66 82 110; /* #42526E */
+    --priority-low-soft: 226 232 242;
 
     /* ── Feedback ─────────────────────────────────────────────── */
-    --danger: 163 45 45;
+    --danger: 165 32 26;
     --danger-fg: 255 255 255;
-    --warning: 138 90 22;
-    --success: 30 77 59;
+    --warning: 133 86 8;
+    --success: 13 92 62; /* #0D5C3E */
+
+    /* ── Account tints ────────────────────────────────────────────
+       One stable hue per mailbox, always shown with its name beside
+       it. Four, because a fifth account is rarer than the confusion a
+       fifth barely-distinguishable hue would cause — see
+       src/lib/mail/account-colour.ts, which wraps and says so. */
+    --account-1: 22 48 92; /* navy   — theonefor.ai */
+    --account-2: 154 74 8; /* rust   — encountive.com */
+    --account-3: 91 33 132; /* purple — proton.me */
+    --account-4: 13 92 62; /* green  — spare */
+
+    /* ── Elevation ────────────────────────────────────────────────
+       Navy-tinted rather than neutral black. A grey shadow over a blue
+       page reads as dirt; a blue one reads as depth. */
+    --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 1px rgb(15 23 42 / 0.04);
+    --shadow-md:
+      0 2px 4px rgb(15 23 42 / 0.06), 0 4px 12px rgb(15 23 42 / 0.08);
+    --shadow-lg:
+      0 4px 8px rgb(15 23 42 / 0.08), 0 12px 32px rgb(15 23 42 / 0.12);
 
     /* ── Motion ───────────────────────────────────────────────── */
     --motion-fast: 120ms;
@@ -84,86 +151,134 @@
    */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: 20 19 17; /* #141311 */
-      --surface: 28 27 25; /* #1C1B19 */
-      --surface-muted: 38 36 33; /* #262421 */
-      --surface-raised: 38 36 33;
+      --bg: 8 14 26; /* #080E1A */
+      --surface: 16 26 44; /* #101A2C */
+      --surface-muted: 24 37 59; /* #18253B */
+      --surface-raised: 30 45 71; /* #1E2D47 — genuinely lifted, not a hairline */
 
-      --border: 51 48 44; /* #33302C */
-      --border-strong: 69 66 60; /* #45423C */
+      --border: 34 52 82; /* #223452 */
+      --border-strong: 51 72 107; /* #33486B */
 
-      --fg: 242 240 236; /* ~16:1 on --bg */
-      --fg-muted: 161 156 144; /* ~7.6:1 */
-      --fg-subtle: 139 133 122; /* ~5.4:1 */
+      --fg: 232 238 248; /* ~16.5:1 on --bg */
+      --fg-muted: 165 180 205; /* ~8.2:1 */
+      /* ~5.3:1 on --surface-raised, which is the pairing that matters: this
+         is card text, and the raised surface is the lightest thing it ever
+         sits on. At 128 145 173 it measured 4.32:1 there — under AA — while
+         still passing against the page itself, so the scans on --bg said
+         nothing. Both halves of the palette made the same mistake in the
+         same week, which is a good argument for calculating these rather
+         than choosing them. */
+      --fg-subtle: 145 161 187;
 
-      --primary: 63 122 96; /* #3F7A60  5.1:1 with white */
-      --primary-hover: 74 143 112;
-      --primary-fg: 255 255 255;
-      --primary-soft: 26 47 38;
-      --primary-soft-fg: 168 208 188;
+      /* Amber leads in the dark. Its foreground is near-black, which is
+         the only way an amber fill carries text at AA. */
+      --primary: 232 163 61; /* #E8A33D  ~7.9:1 with --primary-fg */
+      --primary-hover: 243 182 92;
+      --primary-fg: 12 20 36;
+      --primary-soft: 56 43 18; /* #382B12 */
+      --primary-soft-fg: 244 200 124; /* ~7.7:1 on --primary-soft */
 
-      --accent: 201 169 110; /* #C9A96E  ~8.3:1 on --bg */
-      --accent-bright: 214 188 140;
-      --accent-soft: 43 37 26;
+      --accent: 124 168 255; /* #7CA8FF  ~7.4:1 on --bg */
+      --accent-bright: 154 190 255;
+      --accent-soft: 21 36 63;
 
-      --ring: 92 145 121;
+      --chrome: 12 22 41; /* #0C1629 — a shade off --bg so the frame reads */
+      --chrome-raised: 22 38 66;
+      --chrome-fg: 233 238 248;
+      --chrome-fg-muted: 163 180 208;
+      --chrome-line: 33 54 90;
 
-      --priority-critical: 240 154 147;
-      --priority-critical-soft: 56 30 28;
-      --priority-high: 224 176 106;
-      --priority-high-soft: 51 39 21;
-      --priority-normal: 141 181 162;
-      --priority-normal-soft: 26 43 35;
-      --priority-low: 161 156 144;
-      --priority-low-soft: 38 36 33;
+      --ring: 138 182 255; /* bright enough to find on any surface here */
 
-      --danger: 240 154 147;
-      --danger-fg: 28 27 25;
-      --warning: 224 176 106;
-      --success: 141 181 162;
+      --priority-critical: 255 141 133;
+      --priority-critical-soft: 58 27 27;
+      --priority-high: 240 178 88;
+      --priority-high-soft: 56 40 16;
+      --priority-normal: 143 176 216;
+      --priority-normal-soft: 26 39 60;
+      --priority-low: 148 163 187;
+      --priority-low-soft: 27 38 57;
+
+      --danger: 255 141 133;
+      --danger-fg: 12 20 36;
+      --warning: 240 178 88;
+      --success: 88 208 155;
+
+      /* Lighter hues than the light theme's: a tint has to out-shout a dark
+         surface here, where in daylight it has to survive against paper. */
+      --account-1: 122 166 255; /* blue   — theonefor.ai */
+      --account-2: 232 163 61; /* amber  — encountive.com */
+      --account-3: 194 148 255; /* purple — proton.me */
+      --account-4: 88 208 155; /* green  — spare */
+
+      /* Shadow alone is nearly invisible on a dark page, so elevation here
+         leans on --surface-raised and uses shadow only to seat the edge. */
+      --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+      --shadow-md: 0 2px 6px rgb(0 0 0 / 0.45), 0 8px 20px rgb(0 0 0 / 0.35);
+      --shadow-lg: 0 4px 12px rgb(0 0 0 / 0.5), 0 16px 40px rgb(0 0 0 / 0.45);
 
       color-scheme: dark;
     }
   }
 
+  /* Verbatim repeat of the block above. Plain CSS has no way to share a
+     custom-property set between a media query and an attribute selector, and
+     the alternative — one block keyed on `[data-theme]` with JS always
+     stamping it — puts the first paint at the mercy of a script. Keep the two
+     in step; there is a unit test that reads this file and diffs them. */
   :root[data-theme="dark"] {
-    --bg: 20 19 17;
-    --surface: 28 27 25;
-    --surface-muted: 38 36 33;
-    --surface-raised: 38 36 33;
+    --bg: 8 14 26;
+    --surface: 16 26 44;
+    --surface-muted: 24 37 59;
+    --surface-raised: 30 45 71;
 
-    --border: 51 48 44;
-    --border-strong: 69 66 60;
+    --border: 34 52 82;
+    --border-strong: 51 72 107;
 
-    --fg: 242 240 236;
-    --fg-muted: 161 156 144;
-    --fg-subtle: 139 133 122;
+    --fg: 232 238 248;
+    --fg-muted: 165 180 205;
+    --fg-subtle: 145 161 187;
 
-    --primary: 63 122 96;
-    --primary-hover: 74 143 112;
-    --primary-fg: 255 255 255;
-    --primary-soft: 26 47 38;
-    --primary-soft-fg: 168 208 188;
+    --primary: 232 163 61;
+    --primary-hover: 243 182 92;
+    --primary-fg: 12 20 36;
+    --primary-soft: 56 43 18;
+    --primary-soft-fg: 244 200 124;
 
-    --accent: 201 169 110;
-    --accent-bright: 214 188 140;
-    --accent-soft: 43 37 26;
+    --accent: 124 168 255;
+    --accent-bright: 154 190 255;
+    --accent-soft: 21 36 63;
 
-    --ring: 92 145 121;
+    --chrome: 12 22 41;
+    --chrome-raised: 22 38 66;
+    --chrome-fg: 233 238 248;
+    --chrome-fg-muted: 163 180 208;
+    --chrome-line: 33 54 90;
 
-    --priority-critical: 240 154 147;
-    --priority-critical-soft: 56 30 28;
-    --priority-high: 224 176 106;
-    --priority-high-soft: 51 39 21;
-    --priority-normal: 141 181 162;
-    --priority-normal-soft: 26 43 35;
-    --priority-low: 161 156 144;
-    --priority-low-soft: 38 36 33;
+    --ring: 138 182 255;
 
-    --danger: 240 154 147;
-    --danger-fg: 28 27 25;
-    --warning: 224 176 106;
-    --success: 141 181 162;
+    --priority-critical: 255 141 133;
+    --priority-critical-soft: 58 27 27;
+    --priority-high: 240 178 88;
+    --priority-high-soft: 56 40 16;
+    --priority-normal: 143 176 216;
+    --priority-normal-soft: 26 39 60;
+    --priority-low: 148 163 187;
+    --priority-low-soft: 27 38 57;
+
+    --danger: 255 141 133;
+    --danger-fg: 12 20 36;
+    --warning: 240 178 88;
+    --success: 88 208 155;
+
+    --account-1: 122 166 255;
+    --account-2: 232 163 61;
+    --account-3: 194 148 255;
+    --account-4: 88 208 155;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 2px 6px rgb(0 0 0 / 0.45), 0 8px 20px rgb(0 0 0 / 0.35);
+    --shadow-lg: 0 4px 12px rgb(0 0 0 / 0.5), 0 16px 40px rgb(0 0 0 / 0.45);
 
     color-scheme: dark;
   }

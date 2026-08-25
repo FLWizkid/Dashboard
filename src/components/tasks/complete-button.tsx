@@ -23,6 +23,7 @@ export function CompleteButton({
   label,
   size = "md",
   className,
+  disabled = false,
 }: {
   completed: boolean;
   onToggle: (next: boolean) => void;
@@ -30,6 +31,8 @@ export function CompleteButton({
   label: string;
   size?: "sm" | "md";
   className?: string;
+  /** For rows the server has not confirmed yet — nothing to complete. */
+  disabled?: boolean;
 }) {
   const reduced = useReducedMotion();
   const [celebrating, setCelebrating] = React.useState(false);
@@ -51,6 +54,7 @@ export function CompleteButton({
       role="checkbox"
       aria-checked={completed}
       aria-label={completed ? `Reopen ${label}` : `Complete ${label}`}
+      disabled={disabled}
       onClick={handleToggle}
       className={cn(
         "relative flex shrink-0 items-center justify-center rounded-full",

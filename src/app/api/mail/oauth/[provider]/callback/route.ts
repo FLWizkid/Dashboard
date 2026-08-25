@@ -109,6 +109,17 @@ export async function GET(
           status: "connected",
           status_detail: null,
           last_error: null,
+          // A newly connected mailbox caches headers only.
+          //
+          // The documented behaviour is that a corporate account starts at
+          // Off and a personal one may go to Full, but nothing in the connect
+          // path ever set either, so every account silently took the column
+          // default. Metadata is the honest starting point for a mailbox
+          // whose status nobody has stated yet: enough for the product to be
+          // useful, no bodies at rest until the owner says which kind of
+          // mailbox this is. Marking it corporate moves it to Off; the
+          // database trigger refuses corporate + Full regardless.
+          caching_policy: "metadata",
         },
         { onConflict: "user_id,provider,remote_id" },
       )

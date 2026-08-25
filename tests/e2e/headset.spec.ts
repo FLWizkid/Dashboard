@@ -132,39 +132,61 @@ test.describe("headset legibility", () => {
     await page.goto("/dashboard/tasks");
     await quickAdd(page, "Big enough to point at");
 
-    const tooSmall = await page.evaluate((minimum) => {
-      const offenders: string[] = [];
+    // ── Polled, because this is a steady-state property ──────────────────
+    //
+    // "No interactive target is too small to point at" is a fact about the
+    // layout once it has settled, not about every frame on the way there.
+    // A single measurement can land mid-flight — a row growing into place is
+    // briefly 20px tall, a control inside a layout animation is briefly a
+    // fraction under its final size, and an optimistic row being replaced by
+    // its confirmed self is collapsing as it goes. Earlier versions of this
+    // test chased those one at a time with waits, which is a losing game:
+    // each wait fixes the transient it was written for and the next one
+    // shows up on a slower machine.
+    //
+    // Retrying the measurement gets it right by construction. A transient
+    // reading clears on the next poll; a genuine violation persists and
+    // fails, which is the assertion that was always meant.
+    await expect
+      .poll(
+        async () =>
+          page.evaluate((minimum) => {
+            const offenders: string[] = [];
 
-      const selector = "button, a[href], input, select, textarea, [tabindex]";
-      for (const element of document.querySelectorAll<HTMLElement>(
-        `main ${selector}`,
-      )) {
-        const box = element.getBoundingClientRect();
-        if (box.width === 0 || box.height === 0) continue;
+            const selector =
+              "button, a[href], input, select, textarea, [tabindex]";
+            for (const element of document.querySelectorAll<HTMLElement>(
+              `main ${selector}`,
+            )) {
+              const box = element.getBoundingClientRect();
+              if (box.width === 0 || box.height === 0) continue;
 
-        // Skip-links and other screen-reader affordances are clipped to
-        // nothing until focused, and expand to a full-size control when they
-        // are. Measuring them at rest reports the collapsed box and flags a
-        // target that is never pointed at in that state.
-        if (getComputedStyle(element).clip === "rect(0px, 0px, 0px, 0px)") {
-          continue;
-        }
+              // Skip-links and other screen-reader affordances are clipped to
+              // nothing until focused, and expand to a full-size control when
+              // they are. Measuring them at rest reports the collapsed box and
+              // flags a target that is never pointed at in that state.
+              if (
+                getComputedStyle(element).clip === "rect(0px, 0px, 0px, 0px)"
+              ) {
+                continue;
+              }
 
-        if (box.height < minimum || box.width < minimum) {
-          const label =
-            element.getAttribute("aria-label") ??
-            element.textContent?.trim().slice(0, 30) ??
-            element.tagName;
-          offenders.push(
-            `${Math.round(box.width)}×${Math.round(box.height)} — ${label}`,
-          );
-        }
-      }
+              if (box.height < minimum || box.width < minimum) {
+                const label =
+                  element.getAttribute("aria-label") ??
+                  element.textContent?.trim().slice(0, 30) ??
+                  element.tagName;
+                offenders.push(
+                  `${Math.round(box.width)}×${Math.round(box.height)} — ${label}`,
+                );
+              }
+            }
 
-      return offenders;
-    }, MINIMUM_TARGET_PX);
-
-    expect(tooSmall).toEqual([]);
+            return offenders;
+          }, MINIMUM_TARGET_PX),
+        { timeout: 20_000 },
+      )
+      .toEqual([]);
   });
 });
 

@@ -74,6 +74,35 @@ function getStore(): MemoryStore {
   return globalStore[STORE_KEY];
 }
 
+/**
+ * Seeds tasks wholesale.
+ *
+ * Takes finished `Task` rows rather than create payloads so a demo can set
+ * what the create path deliberately will not: a completion timestamp in the
+ * past, a manual rank, a draft awaiting an owner. Those are the states worth
+ * looking at, and none of them can be reached by capturing a task now.
+ */
+export function seedMemoryTasks(tasks: Task[]): void {
+  getStore().tasks = [...tasks];
+}
+
+export class CategoryNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Category ${id} was not found`);
+    this.name = "CategoryNotFoundError";
+  }
+}
+
+/** A name to the slug the database's check constraint expects. */
+function slugify(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "category"
+  );
+}
+
 /** Test-only reset hook, exposed through the E2E route handler. */
 export function resetMemoryStore(): void {
   const store = getStore();
@@ -88,6 +117,45 @@ function withDerived(task: Task): Task {
 }
 
 export const memoryTaskRepository: TaskRepository = {
+  async createCategory(input) {
+    const store = getStore();
+    const now = new Date().toISOString();
+
+    const category = {
+      id: randomUUID(),
+      slug: slugify(input.name),
+      name: input.name,
+      description: input.description,
+      color: input.color,
+      position: Math.max(0, ...store.categories.map((c) => c.position), -1) + 1,
+      isDefault: false,
+      isArchived: false,
+      createdAt: now,
+      updatedAt: now,
+    } as ActivityCategory;
+
+    store.categories.push(category);
+    return category;
+  },
+
+  async updateCategory(id, patch) {
+    const store = getStore();
+    const category = store.categories.find((c) => c.id === id);
+    if (!category) throw new CategoryNotFoundError(id);
+
+    if (patch.name !== undefined) {
+      category.name = patch.name;
+      category.slug = slugify(patch.name);
+    }
+    if (patch.description !== undefined)
+      category.description = patch.description;
+    if (patch.color !== undefined) category.color = patch.color;
+    if (patch.position !== undefined) category.position = patch.position;
+    if (patch.isArchived !== undefined) category.isArchived = patch.isArchived;
+
+    return { ...category };
+  },
+
   async listCategories() {
     return getStore().categories.filter((category) => !category.isArchived);
   },
@@ -153,7 +221,7 @@ export const memoryTaskRepository: TaskRepository = {
       sourceLink: input.sourceLink,
       owner: input.owner,
       isReady: false,
-      isDraft: false,
+      isDraft: input.isDraft ?? false,
       canActivate: Boolean(input.owner && input.dueAt && input.priority),
       // A new task is never manually placed — only an explicit act sets this.
       manualRank: null,

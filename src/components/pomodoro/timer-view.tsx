@@ -1,9 +1,18 @@
 "use client";
 
 import { m, useReducedMotion } from "framer-motion";
-import { Coffee, Pause, Play, SkipForward, Square, Timer } from "lucide-react";
+import {
+  Coffee,
+  Pause,
+  Play,
+  Plus,
+  SkipForward,
+  Square,
+  Timer,
+} from "lucide-react";
 import * as React from "react";
 
+import { FocusSetup } from "@/components/pomodoro/focus-setup";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,17 +22,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Kbd } from "@/components/ui/kbd";
+import { useToast } from "@/components/ui/toast";
 import { formatMinutes } from "@/lib/hours/aggregate";
 import { usePomodoro } from "@/lib/hours/client";
 import {
+  effectivePlannedMinutes,
   formatRemaining,
   POMODORO_KIND_LABELS,
-  plannedMinutes,
   type PomodoroKind,
 } from "@/lib/hours/pomodoro";
 import { upNext, usePomodoroTimer } from "@/lib/hours/use-pomodoro";
 import { pick } from "@/lib/motion";
-import { useTasks } from "@/lib/tasks/client";
+import { useCategories, useCreateTask, useTasks } from "@/lib/tasks/client";
 import type { PomodoroSession } from "@/lib/hours/types";
 
 /**
@@ -44,7 +54,7 @@ export function TimerView() {
   const reduced = useReducedMotion();
 
   const kindLabel = POMODORO_KIND_LABELS[timer.state.kind];
-  const total = plannedMinutes(timer.state.kind, timer.settings) * 60;
+  const total = effectivePlannedMinutes(timer.state, timer.settings) * 60;
 
   /* ── Keyboard ─────────────────────────────────────────────────────── */
 
@@ -207,6 +217,15 @@ export function TimerView() {
         </CardContent>
       </Card>
 
+      <FocusSetup
+        categoryId={timer.state.categoryId}
+        onCategoryChange={timer.setCategory}
+        plannedOverrideMinutes={timer.state.plannedOverrideMinutes}
+        onLengthChange={timer.setPlannedOverride}
+        defaultMinutes={timer.settings.focusMinutes}
+        disabled={timer.running || timer.state.paused}
+      />
+
       <TaskPicker
         value={timer.state.taskId}
         onChange={timer.setTask}
@@ -350,6 +369,21 @@ function TaskPicker({
             </option>
           ))}
         </select>
+
+        {/* Capture, not just selection.
+            A picker whose only entry is "No task" is a dead end, and it is
+            worst exactly when it matters most: the thing you are about to
+            spend twenty-five minutes on is usually the thing you have not
+            written down yet. Sending someone to another module to create it
+            is how the timer ends up unlinked and the hours view ends up
+            unable to answer what it exists to answer. */}
+        {!disabled && (
+          <NewTaskInline
+            onCreated={(taskId) => onChange(taskId)}
+            emptyList={tasks.length === 0}
+          />
+        )}
+
         {disabled && (
           <p className="mt-2 text-xs text-fg-subtle">
             The task is fixed while a session is running — changing it midway
@@ -358,6 +392,160 @@ function TaskPicker({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Create a task without leaving the timer.
+ *
+ * Deliberately minimal: a title, and the category the focus block is already
+ * filed under. Priority and due date are the fields that make a task *Ready*,
+ * and they are exactly the ones you cannot answer honestly ten seconds before
+ * starting work — so the row lands in the inbox to be triaged later, which is
+ * the same contract quick-add uses everywhere else.
+ */
+function NewTaskInline({
+  onCreated,
+  emptyList,
+}: {
+  onCreated: (taskId: string) => void;
+  emptyList: boolean;
+}) {
+  const createTask = useCreateTask();
+  const categories = useCategories();
+  const { toast } = useToast();
+
+  const [open, setOpen] = React.useState(false);
+  const [title, setTitle] = React.useState("");
+  const [categoryId, setCategoryId] = React.useState("");
+  const inputId = React.useId();
+  const categoryFieldId = React.useId();
+
+  if (!open) {
+    return (
+      <div className="mt-2">
+        <Button
+          type="button"
+          size="sm"
+          variant={emptyList ? "secondary" : "ghost"}
+          onClick={() => setOpen(true)}
+        >
+          <Plus />
+          {emptyList ? "Create your first task" : "New task"}
+        </Button>
+      </div>
+    );
+  }
+
+  function submit() {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+
+    createTask.mutate(
+      {
+        title: trimmed,
+        notes: null,
+        priority: null,
+        dueAt: null,
+        categoryId: categoryId || null,
+        status: "inbox",
+        pinned: false,
+        sourceLink: null,
+        owner: null,
+        isDraft: false,
+        clientKey: null,
+        links: [],
+      },
+      {
+        onSuccess: (task) => {
+          onCreated(task.id);
+          setTitle("");
+          setOpen(false);
+          toast({
+            title: "Task created",
+            description: `“${task.title}” is in your inbox and linked to this session.`,
+            tone: "success",
+          });
+        },
+        onError: (error) =>
+          toast({
+            title: "Couldn't create that task",
+            description: error.message,
+            tone: "danger",
+          }),
+      },
+    );
+  }
+
+  return (
+    <div className="mt-3 space-y-3 rounded-md border border-line bg-surface-muted p-3">
+      <div className="space-y-1">
+        <label htmlFor={inputId} className="text-xs font-medium text-fg">
+          What is it?
+        </label>
+        <input
+          id={inputId}
+          autoFocus
+          className="h-10 w-full rounded-md border border-line bg-surface px-3 text-sm"
+          placeholder="Draft the board summary"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              submit();
+            }
+            if (event.key === "Escape") setOpen(false);
+          }}
+        />
+      </div>
+
+      <div className="space-y-1">
+        <label
+          htmlFor={categoryFieldId}
+          className="text-xs font-medium text-fg"
+        >
+          Category
+        </label>
+        <select
+          id={categoryFieldId}
+          className="h-10 w-full rounded-md border border-line bg-surface px-3 text-sm"
+          value={categoryId}
+          onChange={(event) => setCategoryId(event.target.value)}
+        >
+          <option value="">Unfiled</option>
+          {(categories.data ?? []).map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <p className="text-xs text-fg-subtle">
+        Lands in your inbox with no priority or due date — triage it when you
+        are not about to start a timer.
+      </p>
+
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          onClick={submit}
+          disabled={!title.trim() || createTask.isPending}
+        >
+          {createTask.isPending ? "Creating…" : "Create and link"}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => setOpen(false)}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
   );
 }
 

@@ -9,6 +9,8 @@ import { FocusIndicator } from "@/components/pomodoro/focus-indicator";
 import { SignOutButton } from "@/components/sign-out-button";
 import { cn } from "@/lib/utils";
 
+import { ThemeToggle } from "./theme-toggle";
+
 import {
   MOBILE_NAV_ITEMS,
   MOBILE_OVERFLOW_ITEMS,
@@ -61,20 +63,36 @@ export function AppShell({
   );
 }
 
+/**
+ * The navy frame.
+ *
+ * The sidebar draws from the `chrome` tokens rather than the page tokens, so
+ * it stays navy in both themes. That is what stops the light theme reading as
+ * a white page with lines on it: the eye gets a constant saturated edge to
+ * orient against, and the content area is the only thing the theme changes.
+ */
 function Sidebar({ email }: { email: string | null }) {
   return (
     <aside
       className={cn(
-        "no-print sticky top-0 hidden h-screen shrink-0 flex-col border-r border-line bg-surface lg:flex",
+        "no-print sticky top-0 hidden h-screen shrink-0 flex-col border-r border-chrome-line bg-chrome lg:flex",
         "w-60",
       )}
     >
-      <div className="border-b border-line px-5 py-4">
-        <p className="text-sm font-semibold tracking-tight text-fg">
+      <div className="border-b border-chrome-line px-5 py-4">
+        <p className="flex items-center gap-2 text-sm font-semibold tracking-tight text-chrome-fg">
+          {/* The amber mark. One saturated thing at the top of the frame,
+              which is most of what an accent colour is for. */}
+          <span
+            aria-hidden="true"
+            className="h-4 w-1 shrink-0 rounded-full bg-accent-bright"
+          />
           Executive Dashboard
         </p>
         {email ? (
-          <p className="mt-0.5 truncate text-xs text-fg-subtle">{email}</p>
+          <p className="mt-1 truncate pl-3 text-xs text-chrome-fg-muted">
+            {email}
+          </p>
         ) : null}
       </div>
 
@@ -88,7 +106,8 @@ function Sidebar({ email }: { email: string | null }) {
         </ul>
       </nav>
 
-      <div className="border-t border-line p-3">
+      <div className="space-y-2 border-t border-chrome-line p-3">
+        <ThemeToggle />
         <SignOutButton />
       </div>
     </aside>
@@ -110,9 +129,10 @@ function SidebarLink({ item }: { item: NavItem }) {
       <Icon aria-hidden="true" className="size-4 shrink-0" />
       <span className="flex-1 truncate">{item.label}</span>
       {item.phase ? (
-        // `fg-muted`, not `fg-subtle`: at 10px this is small text and needs
-        // the full 4.5:1. The axe scan in tests/e2e/a11y.spec.ts enforces it.
-        <span className="rounded-full bg-surface-muted px-1.5 py-0.5 text-[0.625rem] font-medium text-fg-muted">
+        // `chrome-fg-muted`, not a dimmer shade: at 10px this is small text
+        // and needs the full 4.5:1 against the navy. The axe scan in
+        // tests/e2e/a11y.spec.ts enforces it.
+        <span className="rounded-full bg-chrome-raised px-1.5 py-0.5 text-[0.625rem] font-medium text-chrome-fg-muted">
           {item.phase}
         </span>
       ) : null}
@@ -126,7 +146,7 @@ function SidebarLink({ item }: { item: NavItem }) {
   if (item.phase) {
     return (
       <span
-        className={cn(base, "cursor-default text-fg-subtle")}
+        className={cn(base, "cursor-default text-chrome-fg-muted")}
         title={`Arrives in phase ${item.phase}`}
       >
         {inner}
@@ -141,9 +161,11 @@ function SidebarLink({ item }: { item: NavItem }) {
       aria-current={active ? "page" : undefined}
       className={cn(
         base,
+        // The active module is marked by an amber rail as well as a lift, so
+        // it survives being read at a glance or in greyscale.
         active
-          ? "bg-primary-soft font-medium text-primary-soft-fg"
-          : "text-fg-muted hover:bg-surface-muted hover:text-fg",
+          ? "bg-chrome-raised font-medium text-chrome-fg shadow-[inset_2px_0_0_rgb(var(--accent-bright))]"
+          : "text-chrome-fg-muted hover:bg-chrome-raised/60 hover:text-chrome-fg",
       )}
     >
       {inner}
@@ -169,7 +191,10 @@ function MobileNav() {
     <nav
       aria-label="Modules"
       className={cn(
-        "no-print fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur lg:hidden",
+        // Navy here too: on a phone this bar is the frame, and matching it to
+        // the sidebar is what makes the installed PWA read as one app rather
+        // than as a page with a toolbar stuck to the bottom.
+        "no-print fixed inset-x-0 bottom-0 z-40 border-t border-chrome-line bg-chrome/95 backdrop-blur lg:hidden",
         "pb-[env(safe-area-inset-bottom)]",
       )}
     >
@@ -188,7 +213,7 @@ function MobileNav() {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex flex-col items-center gap-1 py-2.5 text-[0.6875rem] font-medium transition-colors duration-fast",
-                  active ? "text-primary" : "text-fg-subtle",
+                  active ? "text-accent-bright" : "text-chrome-fg-muted",
                 )}
               >
                 <Icon aria-hidden="true" className="size-5" />
@@ -206,7 +231,9 @@ function MobileNav() {
             aria-controls="mobile-more"
             className={cn(
               "flex w-full flex-col items-center gap-1 py-2.5 text-[0.6875rem] font-medium transition-colors duration-fast",
-              moreOpen || inOverflow ? "text-primary" : "text-fg-subtle",
+              moreOpen || inOverflow
+                ? "text-accent-bright"
+                : "text-chrome-fg-muted",
             )}
           >
             <Menu aria-hidden="true" className="size-5" />
@@ -218,7 +245,7 @@ function MobileNav() {
       {moreOpen && (
         <ul
           id="mobile-more"
-          className="absolute bottom-full left-0 right-0 mb-px grid grid-cols-2 gap-1 border-t border-line bg-surface p-2 shadow-lg"
+          className="absolute bottom-full left-0 right-0 mb-px grid grid-cols-2 gap-1 border-t border-chrome-line bg-chrome p-2 shadow-lg"
         >
           {MOBILE_OVERFLOW_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -234,8 +261,8 @@ function MobileNav() {
                     // headset checklist holds the same floor for a raycast.
                     "flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium",
                     active
-                      ? "bg-primary-soft text-primary-soft-fg"
-                      : "text-fg hover:bg-surface-muted",
+                      ? "bg-chrome-raised text-chrome-fg"
+                      : "text-chrome-fg-muted hover:bg-chrome-raised/60 hover:text-chrome-fg",
                   )}
                 >
                   <Icon aria-hidden="true" className="size-4" />
@@ -244,6 +271,14 @@ function MobileNav() {
               </li>
             );
           })}
+
+          {/* The theme control is desktop-sidebar furniture, and a phone has
+              no sidebar. Without this the setting is unreachable on the one
+              device most likely to be carried between a dark room and
+              daylight. */}
+          <li className="col-span-2">
+            <ThemeToggle />
+          </li>
         </ul>
       )}
     </nav>

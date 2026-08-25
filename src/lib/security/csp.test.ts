@@ -44,6 +44,16 @@ describe("the production policy", () => {
     expect(directive(policy, "script-src")).toContain("'strict-dynamic'");
   });
 
+  it("drops strict-dynamic in development, where it breaks chunk loading", () => {
+    // Browsers that understand strict-dynamic ignore 'self', and the dev
+    // server serves lazy chunks by a route the nonce does not cover. The
+    // deployed box runs a production build, so it keeps the directive.
+    const dev = buildCsp("N", { development: true });
+
+    expect(directive(dev, "script-src")).not.toContain("'strict-dynamic'");
+    expect(directive(dev, "script-src")).toContain("'self'");
+  });
+
   it("keeps 'self' as the fallback for browsers without strict-dynamic", () => {
     // Where strict-dynamic is understood this is ignored; where it is not,
     // this is the only thing standing between the page and any origin.

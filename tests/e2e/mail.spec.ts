@@ -20,11 +20,42 @@ test.describe("the unified inbox", () => {
   }) => {
     await page.goto("/dashboard/email");
 
+    // The rows identify their account by short name rather than by full
+    // address: every one of these addresses starts with "doug", so the local
+    // part carries nothing, and at this column width the address truncates
+    // from the right — which is where the part that distinguishes them lives.
+    // The full address is still shown, in the reading pane, where there is
+    // room for it and where it matters because that is what you reply from.
     const rows = page.getByTestId("thread-row");
-    await expect(rows.filter({ hasText: "doug@theonefor.ai" })).not.toHaveCount(
-      0,
-    );
-    await expect(rows.filter({ hasText: "doug@proton.me" })).not.toHaveCount(0);
+    await expect(rows.filter({ hasText: "theonefor" })).not.toHaveCount(0);
+    await expect(rows.filter({ hasText: "encountive" })).not.toHaveCount(0);
+    await expect(rows.filter({ hasText: "proton" })).not.toHaveCount(0);
+  });
+
+  test("names the full account on the thread you are about to reply from", async ({
+    page,
+  }) => {
+    // The short name is enough to scan a list by and not enough to send from.
+    // Three mailboxes belonging to one person is exactly the setup where
+    // replying from the wrong identity is easy and embarrassing.
+    await page.goto("/dashboard/email");
+    await page.getByTestId("thread-row").first().click();
+
+    await expect(page.getByTestId("thread-account")).toContainText("@");
+  });
+
+  test("narrows to one account and back", async ({ page }) => {
+    await page.goto("/dashboard/email");
+
+    const rows = page.getByTestId("thread-row");
+    await expect(rows.filter({ hasText: "encountive" })).not.toHaveCount(0);
+
+    await page.getByTestId("account-filter-acc-proton").click();
+    await expect(rows.filter({ hasText: "encountive" })).toHaveCount(0);
+    await expect(rows.filter({ hasText: "proton" })).not.toHaveCount(0);
+
+    await page.getByTestId("account-filter-all").click();
+    await expect(rows.filter({ hasText: "encountive" })).not.toHaveCount(0);
   });
 
   test("puts a critical sender above newer ordinary mail", async ({ page }) => {
@@ -200,5 +231,44 @@ test.describe("the dashboard cards", () => {
     const card = page.getByTestId("needs-attention");
     await expect(card).toContainText("Priya Raman");
     await expect(card).not.toContainText("Vendor Sales");
+  });
+
+  test("the next two days card is on the dashboard", async ({ page }) => {
+    // The header has promised "your next two days" since P1 while the rollup
+    // lived only in reports. This is the assertion that keeps the promise
+    // honest — a card that exists rather than a sentence about one.
+    await page.goto("/dashboard");
+
+    await expect(page.getByTestId("next-two-days")).toBeVisible();
+  });
+});
+
+test.describe("the two-day calendar", () => {
+  test("shows meetings and what is due together", async ({ page }) => {
+    await page.goto("/dashboard/calendar");
+    await page.getByRole("button", { name: "Two days", exact: true }).click();
+
+    const agenda = page.getByTestId("two-day-agenda");
+    await expect(agenda).toBeVisible();
+    await expect(agenda.getByTestId("two-day-event").first()).toBeVisible();
+  });
+
+  test("a task due today appears beside the meetings", async ({ page }) => {
+    // The whole reason for this view: a deadline and a meeting compete for
+    // the same two days, and seeing them apart is how one of them is missed.
+    const dueToday = new Date();
+    dueToday.setHours(17, 0, 0, 0);
+
+    const created = await page.request.post("/api/tasks", {
+      data: { title: "Sign the renewal", dueAt: dueToday.toISOString() },
+    });
+    expect(created.ok()).toBe(true);
+
+    await page.goto("/dashboard/calendar");
+    await page.getByRole("button", { name: "Two days", exact: true }).click();
+
+    await expect(page.getByTestId("two-day-agenda")).toContainText(
+      "Sign the renewal",
+    );
   });
 });

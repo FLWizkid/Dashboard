@@ -33,6 +33,8 @@
  * docs/threat-model.md rather than quietly accepted.
  */
 
+import { THEME_BOOT_SCRIPT_HASH } from "@/lib/theme";
+
 /** Directives that never vary. */
 const STATIC_DIRECTIVES = [
   "default-src 'self'",
@@ -104,7 +106,26 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
   const scriptSrc = [
     "'self'",
     `'nonce-${nonce}'`,
-    "'strict-dynamic'",
+    // The theme boot script, authorised by its digest.
+    //
+    // It could carry the nonce instead. A hash is narrower — it names this
+    // exact script rather than whichever one holds the token — and it keeps
+    // the root layout free of `headers()`, which would otherwise tie every
+    // route's rendering mode to one nine-line script. `strict-dynamic`
+    // honours hashes as well as nonces.
+    //
+    // src/lib/theme.test.ts recomputes the digest from the script itself and
+    // fails if the two have drifted.
+    `'${THEME_BOOT_SCRIPT_HASH}'`,
+    // Production only.
+    //
+    // `strict-dynamic` makes browsers that understand it ignore `'self'`, and
+    // Next's development server loads lazy chunks and HMR updates through
+    // paths the nonce does not reach — so in dev the effect is a card that
+    // silently never arrives, with the reason buried in the console. That is
+    // a bad trade for a policy whose job is to harden the deployed box, which
+    // runs a production build and keeps the directive.
+    ...(development ? [] : ["'strict-dynamic'"]),
     ...(development ? ["'unsafe-eval'"] : []),
   ];
 

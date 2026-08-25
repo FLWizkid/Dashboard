@@ -44,6 +44,18 @@ function getStore(): MemoryStore {
 }
 
 /** Test-only reset hook, exposed through the E2E route handler. */
+/** Seeds external context — references and what they are attached to. */
+export function seedMemoryConnectors(input: {
+  accounts?: ExternalAccount[];
+  refs?: ExternalRef[];
+  links?: ExternalLink[];
+}): void {
+  const store = getStore();
+  if (input.accounts) store.accounts = [...input.accounts];
+  if (input.refs) store.refs = [...input.refs];
+  if (input.links) store.links = [...input.links];
+}
+
 export function resetMemoryConnectorStore(): void {
   const store = getStore();
   store.accounts = [];

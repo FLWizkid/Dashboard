@@ -32,31 +32,52 @@ import {
  */
 
 /*
- * Fixture ids are UUIDs, not slugs.
+ * The three real mailboxes, each reached through the provider that actually
+ * hosts it. Getting this wrong is not cosmetic: the provider decides which
+ * API is called, which consent screen appears, and which scopes are asked
+ * for, so a mailbox pointed at the wrong one fails at authorisation with an
+ * error that reads like a permissions problem.
  *
- * The API schemas validate ids as UUIDs (`markReadSchema.messageIds`,
- * `threadQuerySchema.accountId`, `eventQuerySchema.calendarId`), and this
- * fake must satisfy the same contract the real store does. With slug ids,
- * every mark-as-read call in memory mode failed schema validation with a 400
- * — while the E2E suite stayed green, because it asserted on a row's absence
- * rather than on the call succeeding.
+ *   theonefor.ai   GoDaddy resells Microsoft 365, so the mailbox is M365 and
+ *                  Graph is the right API despite the domain being bought
+ *                  somewhere else entirely.
+ *   encountive.com Domain and website at SiteGround, which forwards mail on
+ *                  to Google Workspace. Google is where the mailbox lives, so
+ *                  Google is what this connects to. It was Microsoft here
+ *                  until the owner corrected it; it never was one.
+ *   proton.me      Personal. Proton has no sync API, so this goes through
+ *                  Bridge over local IMAP — see adapters/proton.ts.
  *
- * The block prefix says what kind of thing each id is in a trace; the tail
- * byte says which one. Remote ids stay provider-shaped ("INBOX", "primary")
- * because that is what the real providers send.
+ * Nothing is migrated by any of this. Each provider stays the system of
+ * record for its own mail; the app is a client, and the local mirror is a
+ * cache governed by the per-account policy below.
+ *
+ * Fixture ids are UUIDs, not slugs. The API schemas validate ids as UUIDs
+ * (`markReadSchema.messageIds`, `threadQuerySchema.accountId`,
+ * `eventQuerySchema.calendarId`), and this fake must satisfy the same
+ * contract the real store does. With slug ids, every mark-as-read call in
+ * memory mode failed schema validation with a 400 — while the E2E suite
+ * stayed green, because it asserted on a row's absence rather than on the
+ * call succeeding. The block prefix says what kind of thing each id is in a
+ * trace; the tail byte says which one. Remote ids stay provider-shaped
+ * ("INBOX", "primary") because that is what the real providers send.
  */
-const ACCOUNT_ID = "acc00000-0000-4000-8000-000000000001"; // Google
-const SECOND_ACCOUNT_ID = "acc00000-0000-4000-8000-000000000002"; // Proton
+const ACCOUNT_ID = "acc00000-0000-4000-8000-000000000001"; // M365, theonefor.ai
+const SECOND_ACCOUNT_ID = "acc00000-0000-4000-8000-000000000002"; // Proton, personal
+const THIRD_ACCOUNT_ID = "acc00000-0000-4000-8000-000000000003"; // Google, encountive.com
 const MB_INBOX = "ba000000-0000-4000-8000-000000000001";
 const MB_SENT = "ba000000-0000-4000-8000-000000000002";
 const MB_PROTON_INBOX = "ba000000-0000-4000-8000-000000000003";
+const MB_ENCOUNTIVE_INBOX = "ba000000-0000-4000-8000-000000000004";
 const MSG_BOARD = "ee000000-0000-4000-8000-000000000001";
 const MSG_VENDOR = "ee000000-0000-4000-8000-000000000002";
 const MSG_REPLY = "ee000000-0000-4000-8000-000000000003";
 const MSG_PROTON = "ee000000-0000-4000-8000-000000000004";
+const MSG_ENCOUNTIVE = "ee000000-0000-4000-8000-000000000005";
 const THR_BOARD = "dd000000-0000-4000-8000-000000000001";
 const THR_VENDOR = "dd000000-0000-4000-8000-000000000002";
 const THR_PROTON = "dd000000-0000-4000-8000-000000000003";
+const THR_ENCOUNTIVE = "dd000000-0000-4000-8000-000000000004";
 const CAL_PRIMARY = "ca000000-0000-4000-8000-000000000001";
 const EVT_BOARD = "ef000000-0000-4000-8000-000000000001";
 const EVT_ONETOONE = "ef000000-0000-4000-8000-000000000002";
@@ -79,10 +100,10 @@ function seed(): State {
   const accounts: MailAccount[] = [
     {
       id: ACCOUNT_ID,
-      provider: "gmail",
-      remoteId: "google-1",
+      provider: "microsoft",
+      remoteId: "m365-theonefor",
       emailAddress: "doug@theonefor.ai",
-      displayName: "Doug",
+      displayName: "Doug — theonefor.ai (primary)",
       status: "connected",
       statusDetail: null,
       cachingPolicy: "full",
@@ -99,11 +120,36 @@ function seed(): State {
       createdAt: at(60 * 24 * 30),
     },
     {
+      id: THIRD_ACCOUNT_ID,
+      provider: "gmail",
+      remoteId: "google-encountive",
+      emailAddress: "doug@encountive.com",
+      displayName: "Doug — encountive.com",
+      status: "connected",
+      statusDetail: null,
+      // Full, and not corporate: this is the owner's own Workspace, so there
+      // is no second organisation's policy to respect and no reason to give
+      // up local search over it. Compare the Proton account below, which is
+      // Metadata for a reason that actually applies to it.
+      cachingPolicy: "full",
+      isCorporate: false,
+      adminConsent: "not_required",
+      retentionMonths: 24,
+      syncMailEnabled: true,
+      syncCalendarEnabled: true,
+      hasCredentials: true,
+      lastSyncAt: at(11),
+      lastSuccessAt: at(11),
+      lastError: null,
+      lastErrorAt: null,
+      createdAt: at(60 * 24 * 21),
+    },
+    {
       id: SECOND_ACCOUNT_ID,
       provider: "proton_bridge",
       remoteId: "proton-1",
-      emailAddress: "doug@proton.me",
-      displayName: null,
+      emailAddress: "dougtully@proton.me",
+      displayName: "Doug — personal",
       status: "connected",
       statusDetail: null,
       // Deliberately Metadata, so the E2E suite exercises the refusal path.
@@ -144,6 +190,17 @@ function seed(): State {
       totalCount: 1,
       syncEnabled: true,
       position: 1,
+    },
+    {
+      id: MB_ENCOUNTIVE_INBOX,
+      accountId: THIRD_ACCOUNT_ID,
+      remoteId: "INBOX",
+      name: "Inbox",
+      kind: "inbox",
+      unreadCount: 1,
+      totalCount: 2,
+      syncEnabled: true,
+      position: 0,
     },
     {
       id: MB_PROTON_INBOX,
@@ -237,6 +294,32 @@ function seed(): State {
       bodyFormat: null,
       receivedAt: at(300),
       sentAt: at(300),
+    }),
+    // The Google mailbox.
+    //
+    // This account had a mailbox and no mail, so the fixture had three
+    // accounts and threads from two of them — and the unified-inbox test
+    // could only ever assert two. That was invisible while rows showed a bare
+    // address; it stopped being invisible the moment each row had to carry
+    // its account's tint, because a tint that nothing renders is a tint
+    // nothing tests.
+    message({
+      id: MSG_ENCOUNTIVE,
+      threadKey: THR_ENCOUNTIVE,
+      accountId: THIRD_ACCOUNT_ID,
+      mailboxId: MB_ENCOUNTIVE_INBOX,
+      subject: "Encountive — platform review",
+      snippet: "The migration slide needs your call before Thursday.",
+      from: { address: "maya@encountive.com", name: "Maya Okafor" },
+      to: ["doug@encountive.com"],
+      // A body, because this account caches in full. Sitting next to the
+      // Proton thread above, which has none, the pair is what proves the
+      // per-account policy is real rather than described.
+      body: "The migration slide needs your call before Thursday.",
+      bodyFormat: "text",
+      senderImportance: "high",
+      receivedAt: at(90),
+      sentAt: at(90),
     }),
   ];
 
@@ -334,14 +417,59 @@ function seed(): State {
   return { accounts, mailboxes, messages, senders, calendars, events };
 }
 
-let state = seed();
+/**
+ * The store lives on `globalThis`, like every other memory repository here.
+ *
+ * A module-level `let` looked equivalent and is not: in development Next
+ * hands server components and route handlers their own module instances, so
+ * a seed applied through one was invisible to the other — the demo week
+ * wrote its mail into a copy that nothing read. The symbol is what makes it
+ * one store rather than several that agree by luck.
+ */
+const STATE_KEY = Symbol.for("dashboard.memoryMailState");
+
+function stateStore(): { current: State } {
+  const globalStore = globalThis as typeof globalThis & {
+    [STATE_KEY]?: { current: State };
+  };
+  globalStore[STATE_KEY] ??= { current: seed() };
+  return globalStore[STATE_KEY];
+}
+
+/**
+ * Adds to the seeded mailbox rather than replacing it.
+ *
+ * Merging, not overwriting: the built-in fixtures are what the end-to-end
+ * suite asserts against, and a demo that swapped them out would quietly move
+ * the ground under every mail test. The demo week appends its own threads to
+ * the same accounts.
+ */
+export function seedMemoryMail(extra: Partial<State>): void {
+  const current = stateStore().current;
+  stateStore().current = {
+    accounts: extra.accounts ?? current.accounts,
+    mailboxes: extra.mailboxes ?? current.mailboxes,
+    // Deduplicated by id: seeding twice must not double the mailbox. The
+    // caller is supposed to run once, and "supposed to" is not a guarantee
+    // worth betting a duplicate-key warning on.
+    messages: byId([...current.messages, ...(extra.messages ?? [])]),
+    senders: byId([...current.senders, ...(extra.senders ?? [])]),
+    calendars: byId([...current.calendars, ...(extra.calendars ?? [])]),
+    events: byId([...current.events, ...(extra.events ?? [])]),
+  };
+}
+
+/** Last write wins, order preserved. */
+function byId<T extends { id: string }>(rows: T[]): T[] {
+  return [...new Map(rows.map((row) => [row.id, row])).values()];
+}
 
 export function resetMemoryMail(): void {
-  state = seed();
+  stateStore().current = seed();
 }
 
 function accountFor(id: string): MailAccount {
-  const account = state.accounts.find((a) => a.id === id);
+  const account = stateStore().current.accounts.find((a) => a.id === id);
   if (!account) throw new MailAccountNotFoundError(id);
   return account;
 }
@@ -354,7 +482,9 @@ function accountFor(id: string): MailAccount {
  * a seeded fixture cannot smuggle one past it.
  */
 function visible(message: Message & { threadKey: string }): Message {
-  const account = state.accounts.find((a) => a.id === message.accountId);
+  const account = stateStore().current.accounts.find(
+    (a) => a.id === message.accountId,
+  );
   const allowed =
     account !== undefined &&
     policyAllowsStorage(account.cachingPolicy) &&
@@ -367,8 +497,8 @@ function visible(message: Message & { threadKey: string }): Message {
 }
 
 function summarise(threadKey: string): ThreadSummary | null {
-  const inThread = state.messages
-    .filter((m) => m.threadKey === threadKey)
+  const inThread = stateStore()
+    .current.messages.filter((m) => m.threadKey === threadKey)
     .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
 
   if (inThread.length === 0) return null;
@@ -416,11 +546,11 @@ function summarise(threadKey: string): ThreadSummary | null {
 
 export const memoryMailRepository: MailRepository = {
   async listAccounts() {
-    return state.accounts.map((a) => ({ ...a }));
+    return stateStore().current.accounts.map((a) => ({ ...a }));
   },
 
   async getAccount(id) {
-    const account = state.accounts.find((a) => a.id === id);
+    const account = stateStore().current.accounts.find((a) => a.id === id);
     return account ? { ...account } : null;
   },
 
@@ -438,7 +568,7 @@ export const memoryMailRepository: MailRepository = {
     // immediately. Leaving bodies behind under Metadata would make the setting
     // a label rather than a rule.
     if (!policyAllowsBodies(account.cachingPolicy)) {
-      for (const message of state.messages) {
+      for (const message of stateStore().current.messages) {
         if (message.accountId === id) {
           message.body = null;
           message.bodyFormat = null;
@@ -446,7 +576,9 @@ export const memoryMailRepository: MailRepository = {
       }
     }
     if (!policyAllowsStorage(account.cachingPolicy)) {
-      state.messages = state.messages.filter((m) => m.accountId !== id);
+      stateStore().current.messages = stateStore().current.messages.filter(
+        (m) => m.accountId !== id,
+      );
     }
 
     return { ...account };
@@ -454,27 +586,37 @@ export const memoryMailRepository: MailRepository = {
 
   async disconnectAccount(id) {
     accountFor(id);
-    state.accounts = state.accounts.filter((a) => a.id !== id);
-    state.messages = state.messages.filter((m) => m.accountId !== id);
-    state.mailboxes = state.mailboxes.filter((m) => m.accountId !== id);
-    const calendarIds = state.calendars
-      .filter((c) => c.accountId === id)
+    stateStore().current.accounts = stateStore().current.accounts.filter(
+      (a) => a.id !== id,
+    );
+    stateStore().current.messages = stateStore().current.messages.filter(
+      (m) => m.accountId !== id,
+    );
+    stateStore().current.mailboxes = stateStore().current.mailboxes.filter(
+      (m) => m.accountId !== id,
+    );
+    const calendarIds = stateStore()
+      .current.calendars.filter((c) => c.accountId === id)
       .map((c) => c.id);
-    state.calendars = state.calendars.filter((c) => c.accountId !== id);
-    state.events = state.events.filter(
+    stateStore().current.calendars = stateStore().current.calendars.filter(
+      (c) => c.accountId !== id,
+    );
+    stateStore().current.events = stateStore().current.events.filter(
       (e) => !calendarIds.includes(e.calendarId),
     );
   },
 
   async listMailboxes(accountId) {
-    return state.mailboxes
-      .filter((m) => m.accountId === accountId)
+    return stateStore()
+      .current.mailboxes.filter((m) => m.accountId === accountId)
       .sort((a, b) => a.position - b.position)
       .map((m) => ({ ...m }));
   },
 
   async listThreads(query: ThreadQuery) {
-    const keys = [...new Set(state.messages.map((m) => m.threadKey))];
+    const keys = [
+      ...new Set(stateStore().current.messages.map((m) => m.threadKey)),
+    ];
     const needle = query.q?.trim().toLowerCase();
 
     return keys
@@ -484,12 +626,13 @@ export const memoryMailRepository: MailRepository = {
       .filter((t) => !query.unreadOnly || t.unreadCount > 0)
       .filter((t) => {
         if (!query.mailboxKind) return true;
-        const kinds = state.messages
-          .filter((m) => m.threadKey === t.id)
+        const kinds = stateStore()
+          .current.messages.filter((m) => m.threadKey === t.id)
           .map(
             (m) =>
-              state.mailboxes.find((box) => box.id === m.mailboxId)?.kind ??
-              "other",
+              stateStore().current.mailboxes.find(
+                (box) => box.id === m.mailboxId,
+              )?.kind ?? "other",
           );
         return kinds.includes(query.mailboxKind);
       })
@@ -518,8 +661,8 @@ export const memoryMailRepository: MailRepository = {
     const thread = summarise(id);
     if (!thread) return null;
 
-    const messages = state.messages
-      .filter((m) => m.threadKey === id)
+    const messages = stateStore()
+      .current.messages.filter((m) => m.threadKey === id)
       .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))
       .map(visible);
 
@@ -527,7 +670,7 @@ export const memoryMailRepository: MailRepository = {
   },
 
   async getMessage(id) {
-    const message = state.messages.find((m) => m.id === id);
+    const message = stateStore().current.messages.find((m) => m.id === id);
     if (!message) return null;
 
     const account = accountFor(message.accountId);
@@ -539,25 +682,29 @@ export const memoryMailRepository: MailRepository = {
   },
 
   async markRead(messageIds, read) {
-    for (const message of state.messages) {
+    for (const message of stateStore().current.messages) {
       if (messageIds.includes(message.id)) message.isRead = read;
     }
   },
 
   async setFlag(messageId, flagged) {
-    const message = state.messages.find((m) => m.id === messageId);
+    const message = stateStore().current.messages.find(
+      (m) => m.id === messageId,
+    );
     if (!message) throw new MessageNotFoundError(messageId);
     message.isFlagged = flagged;
     return visible(message);
   },
 
   async listSenders() {
-    return state.senders.map((s) => ({ ...s }));
+    return stateStore().current.senders.map((s) => ({ ...s }));
   },
 
   async rateSender(address, importance, notes) {
     const normalized = address.trim().toLowerCase();
-    let sender = state.senders.find((s) => s.address === normalized);
+    let sender = stateStore().current.senders.find(
+      (s) => s.address === normalized,
+    );
 
     if (!sender) {
       sender = {
@@ -568,7 +715,7 @@ export const memoryMailRepository: MailRepository = {
         notes: notes ?? null,
         updatedAt: new Date().toISOString(),
       };
-      state.senders.push(sender);
+      stateStore().current.senders.push(sender);
     } else {
       sender.importance = importance;
       if (notes !== undefined) sender.notes = notes;
@@ -578,7 +725,7 @@ export const memoryMailRepository: MailRepository = {
     // A rating applies to mail already received, not only to what arrives
     // next — otherwise marking someone critical does nothing until they write
     // again, which is the opposite of what the owner meant.
-    for (const message of state.messages) {
+    for (const message of stateStore().current.messages) {
       if (message.from.address.toLowerCase() === normalized) {
         message.senderImportance = importance;
       }
@@ -588,16 +735,18 @@ export const memoryMailRepository: MailRepository = {
   },
 
   async listCalendars() {
-    return state.calendars.map((c) => ({ ...c }));
+    return stateStore().current.calendars.map((c) => ({ ...c }));
   },
 
   async listEvents(query: EventQuery) {
     const visibleCalendars = new Set(
-      state.calendars.filter((c) => c.isVisible).map((c) => c.id),
+      stateStore()
+        .current.calendars.filter((c) => c.isVisible)
+        .map((c) => c.id),
     );
 
-    return state.events
-      .filter((e) => visibleCalendars.has(e.calendarId))
+    return stateStore()
+      .current.events.filter((e) => visibleCalendars.has(e.calendarId))
       .filter((e) => !query.calendarId || e.calendarId === query.calendarId)
       .filter((e) => e.endsAt >= query.from && e.startsAt <= query.to)
       .filter((e) =>
@@ -608,7 +757,7 @@ export const memoryMailRepository: MailRepository = {
   },
 
   async setCalendarVisible(id, visible_) {
-    const calendar = state.calendars.find((c) => c.id === id);
+    const calendar = stateStore().current.calendars.find((c) => c.id === id);
     if (!calendar) throw new Error(`Calendar ${id} was not found`);
     calendar.isVisible = visible_;
     return { ...calendar };

@@ -85,6 +85,8 @@ export interface MailRepository {
     id: string,
     patch: {
       cachingPolicy?: CachingPolicy;
+      /** Policy statement, not a label: corporate refuses the Full policy. */
+      isCorporate?: boolean;
       syncMailEnabled?: boolean;
       syncCalendarEnabled?: boolean;
       retentionMonths?: number;
