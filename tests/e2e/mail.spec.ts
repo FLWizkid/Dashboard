@@ -50,7 +50,11 @@ test.describe("the unified inbox", () => {
     const rows = page.getByTestId("thread-row");
     await expect(rows.filter({ hasText: "encountive" })).not.toHaveCount(0);
 
-    await page.getByTestId("account-filter-acc-proton").click();
+    // Target the Proton chip by its label, not by an id embedded in the
+    // test-id: account ids are UUIDs, so `account-filter-<id>` is not a value
+    // a test can hard-code. The label is the stable, meaningful handle.
+    const filter = page.getByTestId("account-filter");
+    await filter.getByRole("button", { name: /proton/i }).click();
     await expect(rows.filter({ hasText: "encountive" })).toHaveCount(0);
     await expect(rows.filter({ hasText: "proton" })).not.toHaveCount(0);
 
