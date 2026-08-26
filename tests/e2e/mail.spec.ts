@@ -317,12 +317,27 @@ test.describe("connecting Proton", () => {
   }) => {
     await page.goto("/dashboard/email");
 
-    // Bridge's defaults are 1143/1025 but it takes the next free port without
+    // Pre-filled with the ports this Bridge is actually on, not Proton's
+    // documented 1143/1025: Bridge takes the next free port without
     // announcing it, and a wrong port fails later at sync rather than here.
+    // The warning stays regardless, because a restart can move them again.
     const form = page.getByTestId("connect-proton");
     await expect(form).toContainText("must match Bridge exactly");
-    await expect(form.getByLabel("IMAP port")).toHaveValue("1143");
-    await expect(form.getByLabel("SMTP port")).toHaveValue("1025");
+    await expect(form.getByLabel("IMAP port")).toHaveValue("1144");
+    await expect(form.getByLabel("SMTP port")).toHaveValue("1026");
+  });
+
+  test("pre-fills the account, but never the password", async ({ page }) => {
+    await page.goto("/dashboard/email");
+
+    // Typing the address twice is friction with no upside; the password is
+    // the one value that must never be in source — this repository is public.
+    const form = page.getByTestId("connect-proton");
+    await expect(form.getByLabel("Username", { exact: true })).toHaveValue(
+      /proton\.me$/,
+    );
+    await expect(form.getByLabel("Email address")).toHaveValue(/proton\.me$/);
+    await expect(form.getByLabel("Password", { exact: true })).toHaveValue("");
   });
 
   test("refuses a host that is not this machine", async ({ page }) => {
