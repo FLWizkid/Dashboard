@@ -63,8 +63,9 @@ That's it — the dashboard is now on your screen.
   `Review the security section tomorrow 4pm` and watch it pull out the date and
   priority as little chips — and keep the whole word "section" (that was one of
   the bugs just fixed).
-- **Email**, **Calendar**, **Notes**, **Board**, **Pomodoro**, **Hours**,
-  **Reports** — all down the left side.
+- **Tasks**, **Email**, **Calendar**, **Kanban**, **Pomodoro**, **Hours**,
+  **Reports** and **Digest** — all down the left side, with **Dashboard** at the
+  top as home.
 - On a narrow window it turns into the phone layout, with a **More** button for
   the rest.
 
