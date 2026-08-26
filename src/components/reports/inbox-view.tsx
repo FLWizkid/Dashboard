@@ -96,7 +96,7 @@ export function InboxView() {
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-fg">
-            Inbox
+            Digest
           </h1>
           <p className="mt-1 text-sm text-fg-muted">
             Delivered briefs and rollups. Written here first, before any email

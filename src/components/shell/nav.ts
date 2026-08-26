@@ -7,7 +7,6 @@ import {
   Hourglass,
   LayoutDashboard,
   Mail,
-  NotebookPen,
   SquareKanban,
   Timer,
 } from "lucide-react";
@@ -33,12 +32,29 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard/email", label: "Email", icon: Mail },
   { href: "/dashboard/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/dashboard/kanban", label: "Kanban", icon: SquareKanban },
-  { href: "/dashboard/notes", label: "Notes", icon: NotebookPen },
   { href: "/dashboard/pomodoro", label: "Pomodoro", icon: Timer },
   { href: "/dashboard/hours", label: "Hours", icon: Hourglass },
   { href: "/dashboard/reports", label: "Reports", icon: FileBarChart },
-  { href: "/dashboard/inbox", label: "Inbox", icon: Inbox },
+  // "Digest", not "Inbox". Two things called Inbox — this and the board's
+  // first lane, where untriaged tasks land — is an ambiguity in a product
+  // whose whole job is telling you where a thing is. This one is where
+  // scheduled briefs and agent notices arrive, which is what a digest is.
+  { href: "/dashboard/inbox", label: "Digest", icon: Inbox },
 ];
+
+/**
+ * Notes is deliberately absent.
+ *
+ * The owner does not want it as a destination, so it is not in the menu. The
+ * route and the Obsidian vault sync are untouched: notes still round-trip to
+ * Markdown on disk, which was a founding requirement, and anything that
+ * writes one still works. What is gone is the claim that browsing them is a
+ * thing you do here — you do it in Obsidian.
+ *
+ * Because this list is the single source for both the sidebar and the phone's
+ * overflow sheet, dropping it here removes it everywhere at once rather than
+ * leaving a half-hidden entry on one surface.
+ */
 
 /**
  * The subset that fits a phone's bottom bar.

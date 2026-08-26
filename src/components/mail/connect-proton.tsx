@@ -28,24 +28,35 @@ import { Input, Label } from "@/components/ui/field";
  */
 
 /**
- * Bridge's documented defaults.
+ * This installation's Bridge values.
  *
- * Pre-filled because they are right for most installations — but Bridge
- * silently picks the next free port when something else holds these, so a
- * real installation can be on 1144/1026 or higher. That is exactly the
- * mistake this form has to make hard, which is why the ports sit in their own
- * bordered block with "must match Bridge exactly" attached to them rather
- * than being quietly correct-looking.
+ * Not Proton's documented defaults (1143/1025) — **the ports this Bridge is
+ * actually on**. Bridge takes the next free port without announcing it when
+ * something else holds the documented one, which is how an installation ends
+ * up on 1144/1026, and a wrong port does not fail at this form: it fails
+ * later at sync, with a connection error that reads like Bridge being down.
+ *
+ * Pre-filling the real values removes that whole class of mistake for the
+ * ordinary case. They stay editable, and the ports keep their own bordered
+ * block, because Bridge can move them again on any restart that finds the
+ * port taken — so this is a good default, never a guarantee.
+ *
+ * The password is deliberately absent. It is the one value that never goes
+ * in source: this repository is public, and Bridge regenerates it on demand.
  */
 const BRIDGE_DEFAULTS = {
   host: "127.0.0.1",
-  imapPort: 1143,
-  smtpPort: 1025,
+  imapPort: 1144,
+  smtpPort: 1026,
+  username: "DougTully@proton.me",
+  emailAddress: "DougTully@proton.me",
 };
 
 export function ConnectProton({ onConnected }: { onConnected?: () => void }) {
-  const [emailAddress, setEmailAddress] = React.useState("");
-  const [username, setUsername] = React.useState("");
+  const [emailAddress, setEmailAddress] = React.useState(
+    BRIDGE_DEFAULTS.emailAddress,
+  );
+  const [username, setUsername] = React.useState(BRIDGE_DEFAULTS.username);
   const [password, setPassword] = React.useState("");
   const [host, setHost] = React.useState(BRIDGE_DEFAULTS.host);
   const [imapPort, setImapPort] = React.useState(
