@@ -40,12 +40,15 @@ export async function POST(request: NextRequest) {
   resetMemoryPriorityStore();
   resetMemoryReportStore();
   resetMemoryConnectorStore();
-  resetMemoryMail();
-
   const body = (await request.json().catch(() => null)) as {
     events?: MemoryEvent[];
     calendar?: EventContext[];
+    mailAccounts?: "seeded" | "none";
   } | null;
+
+  // `mailAccounts: "none"` is how a spec reaches the connect screen, which
+  // the Email page shows only when nothing is connected.
+  resetMemoryMail({ accounts: body?.mailAccounts ?? "seeded" });
 
   if (body?.events) {
     seedMemoryEvents(body.events);
