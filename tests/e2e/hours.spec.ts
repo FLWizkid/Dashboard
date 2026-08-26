@@ -184,6 +184,73 @@ test.describe("hours", () => {
     // existed rather than inserting another.
     await expect(page.getByTestId("hours-manual")).toHaveText("30m");
   });
+
+  test("the hours page mounts the log card once, not once per breakpoint", async ({
+    page,
+  }) => {
+    // It used to render twice, hiding one with `lg:hidden` and the other with
+    // `hidden lg:block`. Visually identical, and wrong the moment the card
+    // held state: two mounts meant two independent descriptions on one page,
+    // and which one you had typed into depended on the window width.
+    //
+    // Asserted at both widths, because a duplicate-by-breakpoint bug is
+    // exactly the kind that hides at whichever width the suite happens to run.
+    await page.goto("/dashboard/hours");
+    await expect(page.getByTestId("quick-log-note")).toHaveCount(1);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByTestId("quick-log-note")).toHaveCount(1);
+  });
+
+  test("the description is logged, then carried to the next entry", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard");
+
+    const note = page.getByTestId("quick-log-note");
+    await expect(note).toHaveValue("");
+    await note.fill("Board pack review");
+
+    // Assert on the request body, not just on the confirmation. A toast that
+    // quotes the description proves the component's own state and nothing
+    // about what reached the server.
+    const posted = page.waitForRequest(
+      (request) =>
+        request.url().includes("/api/hours") && request.method() === "POST",
+    );
+
+    await page
+      .getByTestId("quick-log")
+      .getByRole("button", { name: "30m", exact: true })
+      .first()
+      .click();
+
+    expect((await posted).postDataJSON()).toMatchObject({
+      note: "Board pack review",
+    });
+    await expect(page.getByText("“Board pack review”")).toBeVisible();
+
+    // Still in the box afterwards, and now labelled as carried over — the
+    // whole point: a second block on the same work is one tap.
+    await expect(note).toHaveValue("Board pack review");
+    await expect(page.getByTestId("quick-log-note-carried")).toBeVisible();
+
+    // And it survives a reload, because "my last entry" does not mean "my
+    // last entry in this tab".
+    await page.reload();
+    await expect(page.getByTestId("quick-log-note")).toHaveValue(
+      "Board pack review",
+    );
+    await expect(page.getByTestId("quick-log-note-carried")).toBeVisible();
+
+    // Clearing it is a decision that sticks, not one undone by the next load.
+    await page.getByRole("button", { name: "Clear it" }).click();
+    await expect(page.getByTestId("quick-log-note")).toHaveValue("");
+
+    await page.reload();
+    await expect(page.getByTestId("quick-log-note")).toHaveValue("");
+    await expect(page.getByTestId("quick-log-note-carried")).toHaveCount(0);
+  });
 });
 
 test.describe("pomodoro", () => {

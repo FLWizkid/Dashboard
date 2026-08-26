@@ -155,17 +155,13 @@ test.describe("accessibility", () => {
     expect(describeViolations(results)).toBe("");
   });
 
-  test("the rule editor has no violations", async ({ page }) => {
-    await page.goto("/dashboard/hours");
-
-    await page.getByLabel("Field to match").selectOption("title");
-    await page.getByLabel("When the").fill("board");
-    await page.getByRole("button", { name: "Add rule" }).click();
-    await expect(page.getByTestId("rule-list")).toContainText("board");
-
-    const results = await scan(page);
-    expect(describeViolations(results)).toBe("");
-  });
+  /*
+   * The rule-editor scan is gone with the editor itself, removed at the
+   * owner's request. Deleted rather than skipped: a skipped test reads as
+   * temporarily broken and invites someone to "fix" it by rebuilding a
+   * surface that was deliberately taken out. The classification engine it
+   * exercised is untouched and still has its own unit suite.
+   */
 
   test("the Pomodoro timer has no violations, running or idle", async ({
     page,
