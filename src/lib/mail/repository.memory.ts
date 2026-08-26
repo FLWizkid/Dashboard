@@ -464,8 +464,27 @@ function byId<T extends { id: string }>(rows: T[]): T[] {
   return [...new Map(rows.map((row) => [row.id, row])).values()];
 }
 
-export function resetMemoryMail(): void {
-  stateStore().current = seed();
+/**
+ * Resets the in-process mail store.
+ *
+ * `{ accounts: "none" }` seeds a store with no accounts at all, which is the
+ * only way to reach the connect screen: the Email page shows it precisely
+ * when nothing is connected, so with the usual three-account seed the Proton
+ * form is unreachable and therefore untestable.
+ */
+export function resetMemoryMail(
+  options: { accounts?: "seeded" | "none" } = {},
+): void {
+  const next = seed();
+  if (options.accounts === "none") {
+    next.accounts = [];
+    next.mailboxes = [];
+    next.messages = [];
+    next.senders = [];
+    next.calendars = [];
+    next.events = [];
+  }
+  stateStore().current = next;
 }
 
 function accountFor(id: string): MailAccount {

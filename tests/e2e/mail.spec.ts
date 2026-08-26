@@ -276,3 +276,70 @@ test.describe("the two-day calendar", () => {
     );
   });
 });
+
+/**
+ * The Proton connect form.
+ *
+ * Proton cannot be connected by pressing a button: the owner copies a
+ * hostname, two ports, a username and a generated password out of Proton
+ * Bridge. These tests pin the thing that makes that survivable — that every
+ * field is named with **Bridge's own word for it**, so the two windows can be
+ * read side by side without translating.
+ */
+test.describe("connecting Proton", () => {
+  test.beforeEach(async ({ page }) => {
+    // The connect screen only appears when nothing is connected.
+    await page.request.post("/api/e2e/reset", {
+      data: { mailAccounts: "none" },
+    });
+  });
+
+  test("names every field the way Proton Bridge names it", async ({ page }) => {
+    await page.goto("/dashboard/email");
+
+    const form = page.getByTestId("connect-proton");
+    await expect(form).toBeVisible();
+
+    // Bridge's Mailbox details panel labels these exactly so.
+    for (const label of ["Username", "Password", "Hostname"]) {
+      await expect(form.getByLabel(label, { exact: true })).toBeVisible();
+    }
+    await expect(form.getByLabel("IMAP port")).toBeVisible();
+    await expect(form.getByLabel("SMTP port")).toBeVisible();
+
+    // Security is shown rather than asked — a dropdown with one correct
+    // answer is a way to get it wrong.
+    await expect(form.getByTestId("proton-security")).toContainText("STARTTLS");
+  });
+
+  test("says the ports must match Bridge, because Bridge moves them", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard/email");
+
+    // Bridge's defaults are 1143/1025 but it takes the next free port without
+    // announcing it, and a wrong port fails later at sync rather than here.
+    const form = page.getByTestId("connect-proton");
+    await expect(form).toContainText("must match Bridge exactly");
+    await expect(form.getByLabel("IMAP port")).toHaveValue("1143");
+    await expect(form.getByLabel("SMTP port")).toHaveValue("1025");
+  });
+
+  test("refuses a host that is not this machine", async ({ page }) => {
+    // Bridge speaks unencrypted IMAP on the assumption it never leaves the
+    // box, so a remote host would put the password on a network in the clear.
+    const response = await page.request.post("/api/mail/connect/proton", {
+      data: {
+        emailAddress: "someone@proton.me",
+        username: "someone@proton.me",
+        password: "irrelevant",
+        host: "mail.example.com",
+        imapPort: 1143,
+        smtpPort: 1025,
+      },
+    });
+
+    expect(response.status()).toBe(400);
+    expect(await response.text()).toContain("only reachable on this machine");
+  });
+});
