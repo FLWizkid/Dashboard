@@ -184,6 +184,59 @@ test.describe("hours", () => {
     // existed rather than inserting another.
     await expect(page.getByTestId("hours-manual")).toHaveText("30m");
   });
+
+  test("the description is logged, then carried to the next entry", async ({
+    page,
+  }) => {
+    // The dashboard, not the hours page: that page renders the card twice —
+    // once for phones, once for desktops, with the other hidden by CSS — so
+    // every test-id in it matches two nodes. Here there is exactly one.
+    await page.goto("/dashboard");
+
+    const note = page.getByTestId("quick-log-note");
+    await expect(note).toHaveValue("");
+    await note.fill("Board pack review");
+
+    // Assert on the request body, not just on the confirmation. A toast that
+    // quotes the description proves the component's own state and nothing
+    // about what reached the server.
+    const posted = page.waitForRequest(
+      (request) =>
+        request.url().includes("/api/hours") && request.method() === "POST",
+    );
+
+    await page
+      .getByTestId("quick-log")
+      .getByRole("button", { name: "30m", exact: true })
+      .first()
+      .click();
+
+    expect((await posted).postDataJSON()).toMatchObject({
+      note: "Board pack review",
+    });
+    await expect(page.getByText("“Board pack review”")).toBeVisible();
+
+    // Still in the box afterwards, and now labelled as carried over — the
+    // whole point: a second block on the same work is one tap.
+    await expect(note).toHaveValue("Board pack review");
+    await expect(page.getByTestId("quick-log-note-carried")).toBeVisible();
+
+    // And it survives a reload, because "my last entry" does not mean "my
+    // last entry in this tab".
+    await page.reload();
+    await expect(page.getByTestId("quick-log-note")).toHaveValue(
+      "Board pack review",
+    );
+    await expect(page.getByTestId("quick-log-note-carried")).toBeVisible();
+
+    // Clearing it is a decision that sticks, not one undone by the next load.
+    await page.getByRole("button", { name: "Clear it" }).click();
+    await expect(page.getByTestId("quick-log-note")).toHaveValue("");
+
+    await page.reload();
+    await expect(page.getByTestId("quick-log-note")).toHaveValue("");
+    await expect(page.getByTestId("quick-log-note-carried")).toHaveCount(0);
+  });
 });
 
 test.describe("pomodoro", () => {

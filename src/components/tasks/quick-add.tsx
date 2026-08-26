@@ -593,7 +593,9 @@ export function QuickAdd({
                     update("categoryId", event.target.value || null);
                   }}
                 >
-                  <option value="">No category</option>
+                  {/* "Unfiled", the same word the hours card and the timer
+                      use. One state, one name. */}
+                  <option value="">Unfiled</option>
                   {categories.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.name}

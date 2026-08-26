@@ -123,7 +123,7 @@ function pickTop(
 
 export interface ActivitySplit {
   categoryId: string | null;
-  /** "Uncategorised" when `categoryId` is null. */
+  /** "Unfiled" when `categoryId` is null. */
   name: string;
   openTasks: number;
   completed: number;
@@ -145,9 +145,9 @@ export interface SplitOptions {
 /**
  * Where the work went, by activity category.
  *
- * Uncategorised is **always included**, and never quietly dropped. It is the
- * single most useful row in this table: a large uncategorised share means the
- * taxonomy isn't being used, which makes every other row less meaningful.
+ * Unfiled is **always included**, and never quietly dropped. It is the single
+ * most useful row in this table: a large unfiled share means the taxonomy
+ * isn't being used, which makes every other row less meaningful.
  */
 export function activitySplits(options: SplitOptions): ActivitySplit[] {
   const names = new Map(options.categories.map((c) => [c.id, c.name] as const));
@@ -162,7 +162,10 @@ export function activitySplits(options: SplitOptions): ActivitySplit[] {
 
     const row: ActivitySplit = {
       categoryId,
-      name: categoryId ? (names.get(categoryId) ?? "Unknown") : "Uncategorised",
+      // "Unfiled" — the same word every category control in the app uses for
+      // this state. A report row that names it differently reads as a
+      // different thing entirely.
+      name: categoryId ? (names.get(categoryId) ?? "Unknown") : "Unfiled",
       openTasks: 0,
       completed: 0,
       minutes: null,

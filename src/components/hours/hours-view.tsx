@@ -6,7 +6,6 @@ import * as React from "react";
 
 import { ManualEntryForm } from "@/components/hours/manual-entry-form";
 import { OutboxBanner } from "@/components/hours/outbox-banner";
-import { RuleEditorLazy } from "@/components/hours/rule-editor-lazy";
 import { ScheduledList } from "@/components/hours/scheduled-list";
 import { useSettings } from "@/components/settings-provider";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,6 @@ import {
   formatMinutes,
   HOURS_SOURCE_DESCRIPTIONS,
   HOURS_SOURCE_LABELS,
-  type Bucket,
   type HoursSource,
   type HoursTotals,
 } from "@/lib/hours/aggregate";
@@ -35,6 +33,22 @@ import { addZonedDays, startOfZonedWeek } from "@/lib/time/zone";
  * The layout follows the one decision this module actually had to make: the
  * three sources are shown **separately** and the combined total is shown
  * **once**, with the overlap stated rather than hidden. See `docs/hours.md`.
+ *
+ * ── The classification-rule editor is gone, by the owner's decision ──────
+ * It was the most jargon-heavy surface in the product — "when the title
+ * contains…, then categorise as…" — and it sat empty, which is the worst of
+ * both: obscure *and* uninformative. The rule engine itself is untouched and
+ * still applies whatever rules exist; what is gone is the place to author
+ * them by hand. Meetings fall back to the calendar's default category, and a
+ * category set on an individual event still beats everything, which was
+ * always the precedence anyway.
+ *
+ * ── The per-day bar chart is gone, by the owner's decision ───────────────
+ * It rendered one bar per day at week scale and per month at month scale.
+ * The API still returns `days` and `months`, and the aggregation and its
+ * tests are untouched — the rollups feed the reports and the digest, so
+ * nothing about them depended on this card. Restoring it is a matter of
+ * rendering those two arrays again, not of recomputing anything.
  */
 export function HoursView() {
   const { timeZone, ready } = useSettings();
@@ -113,12 +127,6 @@ export function HoursView() {
 
       <Totals totals={totals} loading={hours.isLoading} reduced={reduced} />
 
-      <Breakdown
-        days={hours.data?.days ?? []}
-        months={hours.data?.months ?? []}
-        loading={hours.isLoading}
-      />
-
       <div className="grid gap-4 lg:grid-cols-2">
         <ManualEntryForm />
         <ScheduledList
@@ -126,8 +134,6 @@ export function HoursView() {
           loading={hours.isLoading}
         />
       </div>
-
-      <RuleEditorLazy />
     </div>
   );
 }
@@ -229,107 +235,5 @@ function Totals({
         </m.div>
       </div>
     </section>
-  );
-}
-
-/* ── Daily breakdown ──────────────────────────────────────────────────── */
-
-/**
- * The breakdown, at either scale.
- *
- * The specification asks for weekly *and* monthly, and the monthly rollup has
- * been computed since P4 while being returned to nobody — so the view could
- * answer "how did this week go" and not "how did this month go", which is the
- * question that actually gets asked in a quarterly review.
- *
- * One card with a toggle rather than two stacked charts: they answer the same
- * question at different zoom levels, and showing both at once invites reading
- * one for the other.
- */
-function Breakdown({
-  days,
-  months,
-  loading,
-}: {
-  days: Bucket[];
-  months: Bucket[];
-  loading: boolean;
-}) {
-  const [scale, setScale] = React.useState<"week" | "month">("week");
-  const buckets = scale === "week" ? days : months;
-  const peak = Math.max(1, ...buckets.map((bucket) => bucket.totals.combined));
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="min-w-0">
-          <CardTitle>
-            {scale === "week" ? "Across the week" : "Across the months"}
-          </CardTitle>
-          <CardDescription className="mt-1">
-            {scale === "week"
-              ? "Combined hours per day. A block that crosses midnight is split between the two days it actually occupied."
-              : "Combined hours per month, over the last six."}
-          </CardDescription>
-        </div>
-
-        <div
-          role="group"
-          aria-label="Breakdown scale"
-          className="flex shrink-0 items-center gap-1"
-        >
-          <Button
-            type="button"
-            size="sm"
-            variant={scale === "week" ? "primary" : "ghost"}
-            aria-pressed={scale === "week"}
-            onClick={() => setScale("week")}
-          >
-            Week
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={scale === "month" ? "primary" : "ghost"}
-            aria-pressed={scale === "month"}
-            onClick={() => setScale("month")}
-          >
-            Month
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <p className="text-sm text-fg-muted">Loading…</p>
-        ) : (
-          <ul className="space-y-2" data-testid="hours-breakdown">
-            {buckets.map((bucket) => (
-              <li
-                key={bucket.start}
-                className="flex items-center gap-3 text-sm"
-              >
-                <span className="w-24 shrink-0 text-xs text-fg-muted">
-                  {bucket.label}
-                </span>
-                <span
-                  className="h-3 min-w-px flex-1 overflow-hidden rounded-full bg-surface-muted"
-                  aria-hidden="true"
-                >
-                  <span
-                    className="block h-full rounded-full bg-primary transition-[width] duration-base ease-standard"
-                    style={{
-                      width: `${(bucket.totals.combined / peak) * 100}%`,
-                    }}
-                  />
-                </span>
-                <span className="w-16 shrink-0 text-right tabular-nums text-fg-muted">
-                  {formatMinutes(bucket.totals.combined)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
   );
 }

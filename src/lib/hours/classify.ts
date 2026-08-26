@@ -224,7 +224,7 @@ export function classifyEvent(options: ClassifyOptions): Classification {
       source: "unclassified",
       countsTowardHours: false,
       reason:
-        "No category yet, so it isn't counted. Set one, or add a rule, to include it.",
+        "Unfiled, so it isn't counted. Set a category, or add a rule, to include it.",
     },
     event,
   );

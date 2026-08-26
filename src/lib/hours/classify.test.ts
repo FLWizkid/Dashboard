@@ -361,7 +361,7 @@ describe("nothing matched", () => {
     expect(result.source).toBe("unclassified");
     expect(result.categoryId).toBeNull();
     expect(result.countsTowardHours).toBe(false);
-    expect(result.reason).toMatch(/Set one, or add a rule/);
+    expect(result.reason).toMatch(/Set a category, or add a rule/);
   });
 });
 

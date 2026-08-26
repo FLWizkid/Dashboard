@@ -330,7 +330,7 @@ export const TaskRow = React.forwardRef<HTMLLIElement, TaskRowProps>(
                       })
                     }
                   >
-                    <option value="">No category</option>
+                    <option value="">Unfiled</option>
                     {categories.map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.name}
