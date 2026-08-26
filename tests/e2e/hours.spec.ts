@@ -185,12 +185,26 @@ test.describe("hours", () => {
     await expect(page.getByTestId("hours-manual")).toHaveText("30m");
   });
 
+  test("the hours page mounts the log card once, not once per breakpoint", async ({
+    page,
+  }) => {
+    // It used to render twice, hiding one with `lg:hidden` and the other with
+    // `hidden lg:block`. Visually identical, and wrong the moment the card
+    // held state: two mounts meant two independent descriptions on one page,
+    // and which one you had typed into depended on the window width.
+    //
+    // Asserted at both widths, because a duplicate-by-breakpoint bug is
+    // exactly the kind that hides at whichever width the suite happens to run.
+    await page.goto("/dashboard/hours");
+    await expect(page.getByTestId("quick-log-note")).toHaveCount(1);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByTestId("quick-log-note")).toHaveCount(1);
+  });
+
   test("the description is logged, then carried to the next entry", async ({
     page,
   }) => {
-    // The dashboard, not the hours page: that page renders the card twice —
-    // once for phones, once for desktops, with the other hidden by CSS — so
-    // every test-id in it matches two nodes. Here there is exactly one.
     await page.goto("/dashboard");
 
     const note = page.getByTestId("quick-log-note");
