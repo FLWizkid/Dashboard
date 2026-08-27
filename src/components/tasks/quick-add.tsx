@@ -22,6 +22,7 @@ import { Kbd } from "@/components/ui/kbd";
 import { DURATION, EASE } from "@/lib/motion";
 import { parseQuickAdd, type EventReference } from "@/lib/quick-add/parse";
 import type { CreateTaskPayload } from "@/lib/tasks/schema";
+import { DEFAULT_OWNER, readOwners, rememberOwner } from "@/lib/tasks/owners";
 import { describeMissingReadyFields } from "@/lib/tasks/ready";
 import {
   LINK_RELATION_LABELS,
@@ -70,7 +71,10 @@ const EMPTY_DRAFT: Draft = {
   dueAt: null,
   priority: null,
   categoryId: null,
-  owner: null,
+  // Pre-filled with the dashboard owner's own name. Almost every task here is
+  // theirs, so the common case should cost nothing; the field stays free text
+  // and clears like any other. See `lib/tasks/owners.ts`.
+  owner: DEFAULT_OWNER,
   status: "inbox",
   notes: "",
   eventRef: null,
@@ -142,6 +146,21 @@ export function QuickAdd({
   const [detailsOpen, setDetailsOpen] = React.useState(true);
   const [now, setNow] = React.useState<Date | null>(null);
 
+  /**
+   * Names offered beside the owner box.
+   *
+   * Read after mount, not during render: storage is not available on the
+   * server, and a list that differs between the two renders is a hydration
+   * mismatch. Until it arrives the box still works — it is free text, and the
+   * suggestions only ever save typing.
+   */
+  const [ownerSuggestions, setOwnerSuggestions] = React.useState<string[]>([
+    DEFAULT_OWNER,
+  ]);
+  React.useEffect(() => {
+    setOwnerSuggestions(readOwners());
+  }, []);
+
   const inputRef = React.useRef<HTMLInputElement>(null);
   const dueRef = React.useRef<HTMLInputElement>(null);
   const priorityRef = React.useRef<HTMLSelectElement>(null);
@@ -196,7 +215,11 @@ export function QuickAdd({
             : null;
         }
         if (!pinnedFields.has("owner")) {
-          next.owner = parsed.owner?.value ?? null;
+          // Falls back to the default rather than to null: an `@name` in the
+          // text is a *different* owner, and its absence means the ordinary
+          // case, not "nobody". Clearing the chip pins the field, so an
+          // explicit "unassigned" still survives the next keystroke.
+          next.owner = parsed.owner?.value ?? DEFAULT_OWNER;
         }
 
         const label = parsed.eventRef?.value.label ?? null;
@@ -295,6 +318,10 @@ export function QuickAdd({
           : [],
     });
 
+    // Recorded on submit, not on every keystroke, so a half-typed name never
+    // ends up in the suggestions.
+    if (draft.owner) setOwnerSuggestions(rememberOwner(draft.owner));
+
     reset();
     inputRef.current?.focus();
   }
@@ -343,7 +370,12 @@ export function QuickAdd({
           value={raw}
           onChange={(event) => handleChange(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Add a task — try “Draft board deck !high friday 3pm #strategic”"
+          // No worked example. It taught the syntax, and it also meant the
+          // first thing on the page was a sentence about a board deck that
+          // was not the owner's board deck — read as content, not as a hint.
+          // The syntax lives in the shortcuts dialog and in the chips that
+          // appear as you type, both of which arrive when they are relevant.
+          placeholder="Add a task"
           aria-label="Add a task"
           aria-describedby="quick-add-hint"
           autoComplete="off"
@@ -625,18 +657,29 @@ export function QuickAdd({
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="quick-add-owner">Owner (optional)</Label>
+                <Label htmlFor="quick-add-owner">Owner</Label>
                 <Input
                   ref={ownerRef}
                   id="quick-add-owner"
                   value={draft.owner ?? ""}
                   maxLength={120}
-                  placeholder="You"
+                  placeholder="Anyone — type a name"
+                  // Free text with a suggestion list, not a picker. There is
+                  // no directory behind this, and requiring someone to be
+                  // "added" before a task can be theirs would be a worse
+                  // product than typing four letters.
+                  list="quick-add-owner-options"
+                  autoComplete="off"
                   onChange={(event) => {
                     pin("owner");
                     update("owner", event.target.value || null);
                   }}
                 />
+                <datalist id="quick-add-owner-options">
+                  {ownerSuggestions.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
               </div>
 
               <div className="space-y-1 sm:col-span-2">

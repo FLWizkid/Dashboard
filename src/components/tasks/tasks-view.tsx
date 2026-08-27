@@ -5,6 +5,7 @@ import { Inbox, Keyboard } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 
+import { LogTimeDialogLazy } from "@/components/hours/log-time-dialog-lazy";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { useToast } from "@/components/ui/toast";
@@ -15,6 +16,11 @@ import {
   useTasks,
   useUpdateTask,
 } from "@/lib/tasks/client";
+import {
+  ARCHIVE_AFTER_DAYS,
+  countArchived,
+  withoutArchived,
+} from "@/lib/tasks/archive";
 import type { CreateTaskPayload, UpdateTaskPayload } from "@/lib/tasks/schema";
 import { useCaptureQueue } from "@/lib/tasks/use-capture-queue";
 import { sortTasks } from "@/lib/tasks/sort";
@@ -85,14 +91,37 @@ export function TasksView() {
       ?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [requested, allTasks]);
 
+  /**
+   * "Now" for the archive rule, resolved after mount.
+   *
+   * The server and the first client render must agree, and a clock read
+   * during render cannot promise that. Until it lands nothing is archived,
+   * which errs towards showing a task rather than hiding one.
+   */
+  const [now, setNow] = React.useState<Date | null>(null);
+  React.useEffect(() => {
+    setNow(new Date());
+  }, []);
+
+  /** The task whose time is being logged, or null when the dialog is closed. */
+  const [loggingFor, setLoggingFor] = React.useState<Task | null>(null);
+
   const visible = React.useMemo(() => {
     const filtered = allTasks.filter((task) => {
       if (filter === "open") return task.status !== "done";
       if (filter === "done") return task.status === "done";
       return true;
     });
-    return sortTasks(filtered);
-  }, [allTasks, filter]);
+    // Finished work ages out of the list after a month. Nothing is deleted —
+    // see `lib/tasks/archive.ts` for why this is a view rule and not a column.
+    return sortTasks(now ? withoutArchived(filtered, now) : filtered);
+  }, [allTasks, filter, now]);
+
+  /** Hidden by the archive rule, so the list can say so rather than just be short. */
+  const archivedCount = React.useMemo(
+    () => (now ? countArchived(allTasks, now) : 0),
+    [allTasks, now],
+  );
 
   const openCount = allTasks.filter((task) => task.status !== "done").length;
 
@@ -165,14 +194,23 @@ export function TasksView() {
           title: "Task completed",
           description: task.title,
           tone: "success",
-          action: {
-            label: "Undo",
-            shortcut: "U",
-            onAction: () =>
-              handleUpdate(task.id, {
-                status: previousStatus === "done" ? "inbox" : previousStatus,
-              }),
-          },
+          actions: [
+            // The offer comes first because this is the only moment it is
+            // cheap: you have just finished the thing and still know how long
+            // it took. Declining costs nothing — the task is already done.
+            {
+              label: "Log time",
+              onAction: () => setLoggingFor(task),
+            },
+            {
+              label: "Undo",
+              shortcut: "U",
+              onAction: () =>
+                handleUpdate(task.id, {
+                  status: previousStatus === "done" ? "inbox" : previousStatus,
+                }),
+            },
+          ],
         });
       }
     },
@@ -348,9 +386,31 @@ export function TasksView() {
             </AnimatePresence>
           </ul>
         )}
+
+        {/* Said out loud rather than left as a mysteriously short list. A
+            filter that silently removes rows is indistinguishable from data
+            loss, which is the one thing a task list must never look like. */}
+        {archivedCount > 0 && filter !== "open" ? (
+          <p
+            className="mt-3 text-xs text-fg-muted"
+            data-testid="tasks-archived-note"
+          >
+            {archivedCount} completed{" "}
+            {archivedCount === 1 ? "task is" : "tasks are"} archived — finished
+            more than {ARCHIVE_AFTER_DAYS} days ago. Nothing is deleted; they
+            still count in your reports.
+          </p>
+        ) : null}
       </div>
 
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+
+      <LogTimeDialogLazy
+        task={loggingFor}
+        onOpenChange={(open) => {
+          if (!open) setLoggingFor(null);
+        }}
+      />
     </div>
   );
 }

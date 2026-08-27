@@ -185,6 +185,83 @@ test.describe("hours", () => {
     await expect(page.getByTestId("hours-manual")).toHaveText("30m");
   });
 
+  test("completing a task offers to log the time against it", async ({
+    page,
+  }) => {
+    // The gap this closes: ticking a task recorded that it was done and
+    // nothing about how long it took, so the task list and the hours module
+    // were two ledgers that never agreed.
+    await page.goto("/dashboard/tasks");
+    await page.getByTestId("quick-add-input").fill("Write the board pack");
+    await page.getByTestId("quick-add-submit").click();
+
+    const row = page
+      .getByTestId("task-row")
+      .filter({ hasText: "Write the board pack" });
+    await expect(row).toBeVisible();
+    await row.getByRole("checkbox", { name: /^Complete / }).click();
+
+    // Undo stays reachable — the offer must not have displaced the safety net.
+    await expect(page.getByRole("button", { name: /^Undo/ })).toBeVisible();
+
+    await page.getByRole("button", { name: "Log time" }).click();
+
+    const dialog = page.getByTestId("log-time-dialog");
+    await expect(dialog).toBeVisible();
+
+    // Pre-filled with the task's own title: the likeliest answer to "what
+    // were you doing", already on screen, and better than a description
+    // carried over from unrelated work.
+    await expect(dialog.getByTestId("log-time-note")).toHaveValue(
+      "Write the board pack",
+    );
+
+    // Assert on the request, not the toast. A toast naming the task proves
+    // the component's own state and nothing about what reached the server —
+    // and the task id is the whole point of this feature.
+    const posted = page.waitForRequest(
+      (request) =>
+        request.url().includes("/api/hours") && request.method() === "POST",
+    );
+
+    await dialog.getByRole("button", { name: "45m", exact: true }).click();
+
+    const body = (await posted).postDataJSON();
+    expect(body).toMatchObject({ note: "Write the board pack" });
+    expect(body.taskId).toEqual(expect.any(String));
+
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText("45m logged")).toBeVisible();
+  });
+
+  test("declining to log time leaves the task completed anyway", async ({
+    page,
+  }) => {
+    // Completing stays one tap. Time tracking that can get in the way of
+    // finishing work is time tracking that gets switched off.
+    await page.goto("/dashboard/tasks");
+    await page.getByTestId("quick-add-input").fill("Ship it");
+    await page.getByTestId("quick-add-submit").click();
+
+    await page
+      .getByTestId("task-row")
+      .filter({ hasText: "Ship it" })
+      .getByRole("checkbox", { name: /^Complete / })
+      .click();
+
+    await expect(page.getByText("Task completed")).toBeVisible();
+
+    await page.getByRole("button", { name: "Log time" }).click();
+    await expect(page.getByTestId("log-time-dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("log-time-dialog")).toBeHidden();
+
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    await expect(
+      page.getByTestId("task-row").filter({ hasText: "Ship it" }),
+    ).toBeVisible();
+  });
+
   test("the hours page mounts the log card once, not once per breakpoint", async ({
     page,
   }) => {

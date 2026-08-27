@@ -31,7 +31,16 @@ export interface ToastAction {
 export interface ToastOptions {
   title: string;
   description?: string;
-  action?: ToastAction;
+  /**
+   * Up to two, rendered left to right.
+   *
+   * Two, because completing a task wants to offer both "log the time against
+   * this" and "undo" — and an offer that only exists until the toast fades is
+   * the only moment either is cheap. More than two turns a confirmation into
+   * a menu, which is not what a thing that disappears in eight seconds should
+   * be; anything beyond that belongs on the row itself.
+   */
+  actions?: ToastAction[];
   /** Milliseconds before auto-dismiss. `0` keeps it until dismissed. */
   duration?: number;
   tone?: "neutral" | "success" | "danger";
@@ -93,13 +102,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const triggerShortcut = React.useCallback(
     (key: string) => {
-      const match = [...toastsRef.current]
-        .reverse()
-        .find((item) => item.action?.shortcut === key);
-      if (!match?.action) return false;
-      void match.action.onAction();
-      dismiss(match.id);
-      return true;
+      for (const item of [...toastsRef.current].reverse()) {
+        const action = item.actions?.find((entry) => entry.shortcut === key);
+        if (!action) continue;
+        void action.onAction();
+        dismiss(item.id);
+        return true;
+      }
+      return false;
     },
     [dismiss],
   );
@@ -178,21 +188,23 @@ function ToastViewport({
               ) : null}
             </div>
 
-            {item.action ? (
+            {item.actions?.slice(0, 2).map((action) => (
               <Button
+                key={action.label}
                 variant="secondary"
                 size="sm"
+                className="shrink-0"
                 onClick={() => {
-                  void item.action?.onAction();
+                  void action.onAction();
                   onDismiss(item.id);
                 }}
               >
-                {item.action.label}
-                {item.action.shortcut ? (
-                  <Kbd aria-hidden="true">{item.action.shortcut}</Kbd>
+                {action.label}
+                {action.shortcut ? (
+                  <Kbd aria-hidden="true">{action.shortcut}</Kbd>
                 ) : null}
               </Button>
-            ) : null}
+            ))}
 
             <button
               type="button"
