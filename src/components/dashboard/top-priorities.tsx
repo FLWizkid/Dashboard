@@ -5,7 +5,7 @@ import { ArrowRight, ListChecks } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
-import { LogTimeDialog } from "@/components/hours/log-time-dialog";
+import { LogTimeDialogLazy } from "@/components/hours/log-time-dialog-lazy";
 import { CompleteButton } from "@/components/tasks/complete-button";
 import {
   DueDate,
@@ -244,7 +244,7 @@ export function TopPriorities({ limit = 5 }: { limit?: number }) {
         )}
       </CardContent>
 
-      <LogTimeDialog
+      <LogTimeDialogLazy
         task={loggingFor}
         onOpenChange={(open) => {
           if (!open) setLoggingFor(null);

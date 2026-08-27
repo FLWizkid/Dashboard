@@ -5,7 +5,7 @@ import { Inbox, Keyboard } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 
-import { LogTimeDialog } from "@/components/hours/log-time-dialog";
+import { LogTimeDialogLazy } from "@/components/hours/log-time-dialog-lazy";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { useToast } from "@/components/ui/toast";
@@ -405,7 +405,7 @@ export function TasksView() {
 
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
-      <LogTimeDialog
+      <LogTimeDialogLazy
         task={loggingFor}
         onOpenChange={(open) => {
           if (!open) setLoggingFor(null);
