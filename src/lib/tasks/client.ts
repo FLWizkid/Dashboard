@@ -67,7 +67,14 @@ export function useCategories(): UseQueryResult<ActivityCategory[]> {
       const data = await request<{ categories: ActivityCategory[] }>(
         "/api/categories",
       );
-      return data.categories;
+
+      // Sorted by name, here rather than in each of the six controls that
+      // list them. The server orders by `position`, which is the order the
+      // taxonomy editor arranges them in — meaningful when you are editing
+      // the taxonomy, and arbitrary when you are hunting for one name in a
+      // dropdown. `localeCompare` so accented names sort where a reader
+      // expects rather than after Z.
+      return [...data.categories].sort((a, b) => a.name.localeCompare(b.name));
     },
     // The taxonomy changes about once a quarter.
     staleTime: 5 * 60_000,
