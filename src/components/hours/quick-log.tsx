@@ -13,6 +13,7 @@ import {
 import { Input, Label, Select } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import { formatMinutes } from "@/lib/hours/aggregate";
+import { LOG_PRESETS, presetLabel } from "@/lib/hours/presets";
 import { readRemembered, writeRemembered } from "@/lib/hours/remembered";
 import { useOutbox } from "@/lib/hours/use-outbox";
 import { useCategories, useTasks } from "@/lib/tasks/client";
@@ -38,18 +39,15 @@ import { useCategories, useTasks } from "@/lib/tasks/client";
  * exists to produce — quietly degrades. Every one of them carries over between
  * logs, so the common case stays one tap.
  *
- * ── Thirty minutes is the floor ──────────────────────────────────────────
- * A quarter of an hour is below the resolution anyone reconstructs
- * accurately after the fact, and offering it invites a precision the memory
- * cannot supply.
+ * ── The durations live in `lib/hours/presets` ────────────────────────────
+ * Shared with the log-on-complete dialog, so the two can never drift into
+ * offering different blocks of time for the same action.
  *
  * ── Why the fields sit in two columns ────────────────────────────────────
  * The selects are narrow by nature and left the right half of the card empty,
  * which is exactly where the one field that wants room — the description —
  * belongs. On a phone the grid collapses and the order is unchanged.
  */
-
-const PRESETS = [30, 45, 60, 90] as const;
 
 export function QuickLog() {
   const outbox = useOutbox();
@@ -283,7 +281,7 @@ export function QuickLog() {
         </div>
 
         <div className="flex flex-wrap gap-2" data-testid="quick-log">
-          {PRESETS.map((minutes) => (
+          {LOG_PRESETS.map((minutes) => (
             <Button
               key={minutes}
               // Comfortably above the 44px touch target minimum: this is the
@@ -294,7 +292,7 @@ export function QuickLog() {
               disabled={busy !== null}
               onClick={() => void log(minutes)}
             >
-              {minutes >= 60 ? `${minutes / 60}h` : `${minutes}m`}
+              {presetLabel(minutes)}
             </Button>
           ))}
         </div>

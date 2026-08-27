@@ -5,6 +5,7 @@ import { ArrowRight, ListChecks } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
+import { LogTimeDialog } from "@/components/hours/log-time-dialog";
 import { CompleteButton } from "@/components/tasks/complete-button";
 import {
   DueDate,
@@ -111,6 +112,9 @@ export function TopPriorities({ limit = 5 }: { limit?: number }) {
 
   const openCount = (tasksQuery.data ?? []).length;
 
+  /** The task whose time is being logged, or null when the dialog is closed. */
+  const [loggingFor, setLoggingFor] = React.useState<Task | null>(null);
+
   function complete(task: Task) {
     const previousStatus = task.status;
     updateTask.mutate({ id: task.id, patch: { status: "done" } });
@@ -118,12 +122,21 @@ export function TopPriorities({ limit = 5 }: { limit?: number }) {
       title: "Task completed",
       description: task.title,
       tone: "success",
-      action: {
-        label: "Undo",
-        shortcut: "U",
-        onAction: () =>
-          updateTask.mutate({ id: task.id, patch: { status: previousStatus } }),
-      },
+      // The same two offers as the task list. Completing from the dashboard
+      // is completing, and an offer that only appears on one of the two
+      // places you can tick something is one people learn not to rely on.
+      actions: [
+        { label: "Log time", onAction: () => setLoggingFor(task) },
+        {
+          label: "Undo",
+          shortcut: "U",
+          onAction: () =>
+            updateTask.mutate({
+              id: task.id,
+              patch: { status: previousStatus },
+            }),
+        },
+      ],
     });
   }
 
@@ -230,6 +243,13 @@ export function TopPriorities({ limit = 5 }: { limit?: number }) {
           </m.ul>
         )}
       </CardContent>
+
+      <LogTimeDialog
+        task={loggingFor}
+        onOpenChange={(open) => {
+          if (!open) setLoggingFor(null);
+        }}
+      />
     </Card>
   );
 }

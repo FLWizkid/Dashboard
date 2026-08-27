@@ -5,6 +5,7 @@ import { Inbox, Keyboard } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 
+import { LogTimeDialog } from "@/components/hours/log-time-dialog";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { useToast } from "@/components/ui/toast";
@@ -102,6 +103,9 @@ export function TasksView() {
     setNow(new Date());
   }, []);
 
+  /** The task whose time is being logged, or null when the dialog is closed. */
+  const [loggingFor, setLoggingFor] = React.useState<Task | null>(null);
+
   const visible = React.useMemo(() => {
     const filtered = allTasks.filter((task) => {
       if (filter === "open") return task.status !== "done";
@@ -190,14 +194,23 @@ export function TasksView() {
           title: "Task completed",
           description: task.title,
           tone: "success",
-          action: {
-            label: "Undo",
-            shortcut: "U",
-            onAction: () =>
-              handleUpdate(task.id, {
-                status: previousStatus === "done" ? "inbox" : previousStatus,
-              }),
-          },
+          actions: [
+            // The offer comes first because this is the only moment it is
+            // cheap: you have just finished the thing and still know how long
+            // it took. Declining costs nothing — the task is already done.
+            {
+              label: "Log time",
+              onAction: () => setLoggingFor(task),
+            },
+            {
+              label: "Undo",
+              shortcut: "U",
+              onAction: () =>
+                handleUpdate(task.id, {
+                  status: previousStatus === "done" ? "inbox" : previousStatus,
+                }),
+            },
+          ],
         });
       }
     },
@@ -391,6 +404,13 @@ export function TasksView() {
       </div>
 
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+
+      <LogTimeDialog
+        task={loggingFor}
+        onOpenChange={(open) => {
+          if (!open) setLoggingFor(null);
+        }}
+      />
     </div>
   );
 }
