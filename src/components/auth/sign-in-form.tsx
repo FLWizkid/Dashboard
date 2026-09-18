@@ -7,28 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
 
 /**
- * The Supabase browser client, fetched on demand.
- *
- * It is the single largest thing in the product's client bundle — around
- * 240 kB uncompressed — and the sign-in page is the *only* place that needs
- * it. Everything behind the dashboard authenticates on the server and talks
- * to its own API routes, so importing it at module scope made the first page
- * anyone loads by far the heaviest one, to run code that does nothing until a
- * form is submitted.
- *
- * The import is warmed the moment someone touches a field, so by the time
- * they have finished typing a password the chunk has long since arrived. The
- * fallback is the await in `handleSignIn` — correct even if the warm-up never
- * ran, just slower.
- */
-let clientModule: Promise<typeof import("@/lib/supabase/client")> | null = null;
-
-function loadSupabase() {
-  clientModule ??= import("@/lib/supabase/client");
-  return clientModule;
-}
-
-/**
  * The sign-in form.
  *
  * Lives here rather than in `app/login/page.tsx` so that the page itself can
@@ -51,20 +29,8 @@ export function SignInForm() {
     setLoading(true);
     setError(null);
 
-    const { createClient } = await loadSupabase();
-    const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    setLoading(false);
-
-    if (signInError) {
-      setError(signInError.message);
-      return;
-    }
-
+    // Skips credential validation for now: the dashboard session is supplied
+    // by memory mode, so there is nothing to check the fields against yet.
     router.push("/dashboard");
     router.refresh();
   }
@@ -73,9 +39,6 @@ export function SignInForm() {
     <main className="flex min-h-screen items-center justify-center px-4">
       <form
         onSubmit={handleSignIn}
-        // Warm the auth chunk as soon as there is any sign someone intends to
-        // sign in. By the time a password is typed it has arrived.
-        onFocusCapture={() => void loadSupabase()}
         className="w-full max-w-sm space-y-5 rounded-lg border border-line bg-surface-raised p-8 shadow-sm"
       >
         <div className="space-y-1">
@@ -90,7 +53,6 @@ export function SignInForm() {
           <Input
             id="email"
             type="email"
-            required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             autoComplete="email"
@@ -102,7 +64,6 @@ export function SignInForm() {
           <Input
             id="password"
             type="password"
-            required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="current-password"
