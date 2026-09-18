@@ -480,7 +480,7 @@ export const KIND_FOLDER: Record<NoteKind, string> = {
  */
 export function safeFileName(title: string): string {
   const cleaned = title
-    .replace(/[<>:"/\\|?* -]/g, " ")
+    .replace(/[<>:"/\\|?*-]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .replace(/[. ]+$/, "");
