@@ -1,10 +1,14 @@
-import { redirect } from "next/navigation";
+"use client";
 
-import { getSessionUser } from "@/lib/auth";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export const dynamic = "force-dynamic";
+export default function Home() {
+  const router = useRouter();
 
-export default async function Home() {
-  const user = await getSessionUser();
-  redirect(user ? "/dashboard" : "/login");
+  useEffect(() => {
+    router.replace("/login");
+  }, [router]);
+
+  return null;
 }

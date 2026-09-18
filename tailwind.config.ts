@@ -120,7 +120,7 @@ const config: Config = {
         "rise-in": "rise-in var(--motion-base) var(--ease-out) both",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
       },
     },
   },

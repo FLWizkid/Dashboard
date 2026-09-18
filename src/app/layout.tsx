@@ -1,16 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 
 import { ServiceWorkerRegistrar } from "@/components/pwa/service-worker-registrar";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-sans",
-});
 
 export const metadata: Metadata = {
   title: {
@@ -59,7 +52,7 @@ export default function RootLayout({
     // on this element before React arrives, so the server's markup and the
     // client's genuinely differ by that one attribute. Scoped to <html>, so
     // it hides nothing else.
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* No nonce: the CSP authorises this script by its hash instead, so
             that the root layout does not have to read `headers()` and drag
