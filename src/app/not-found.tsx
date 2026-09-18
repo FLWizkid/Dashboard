@@ -18,9 +18,19 @@ import Link from "next/link";
  * There is no `export const dynamic` here on purpose — route segment config is
  * ignored on the root not-found page, and a line that looks like it works but
  * does nothing is worse than the call above.
+ *
+ * The `try/catch` guards against a Next.js dev-server bug where the async
+ * storage context is missing when the not-found boundary renders as part of
+ * a redirect flow. If the call fails the page still renders — it just loses
+ * the per-request nonce opt-out in that one edge case.
  */
 export default async function NotFound() {
-  await headers();
+  try {
+    await headers();
+  } catch {
+    // No workUnitAsyncStorage store — a known Next.js dev-server issue.
+    // The page renders without the dynamic opt-out; CSP is still enforced.
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
