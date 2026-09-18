@@ -20,7 +20,11 @@ import Link from "next/link";
  * does nothing is worse than the call above.
  */
 export default async function NotFound() {
-  await headers();
+  try {
+    await headers();
+  } catch {
+    // Webcontainer dev-server may lack the async storage context.
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">

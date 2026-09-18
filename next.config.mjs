@@ -48,7 +48,7 @@ const nextConfig = {
    *
    * Development only; the built server ignores it.
    */
-  allowedDevOrigins: ["127.0.0.1", "localhost"],
+  allowedDevOrigins: ["127.0.0.1", "localhost", ".webcontainer-api.io"],
 
   poweredByHeader: false,
 
