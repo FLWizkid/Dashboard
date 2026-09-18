@@ -1,6 +1,6 @@
 "use client";
 
-import { Link2, X } from "lucide-react";
+import { Link2 } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+// The No button borrows the same text strength as the chosen buttons on
+// purpose: an unselected answer that looks disabled reads as already
+// dismissed, and the question gets answered with a guess.
 import { useToast } from "@/components/ui/toast";
 import { useAnswerSuggestion, useRanking } from "@/lib/priority/client";
 import { describeConfidence, phraseQuestion } from "@/lib/priority/suggest";
@@ -78,11 +81,18 @@ function SuggestionPrompt({ suggestion }: { suggestion: StoredSuggestion }) {
     <Card data-testid="suggestion-prompt">
       <CardHeader>
         <div className="min-w-0">
-          <CardTitle className="flex items-center gap-2">
-            <span className="text-fg-subtle [&_svg]:size-4">
+          {/* The eyebrow says what kind of thing this is; the question is the
+              headline, because the question is the one thing the card exists
+              to ask. The reason is evidence, and evidence reads below the
+              question it supports, not above it. */}
+          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-fg-subtle">
+            <span className="[&_svg]:size-3.5">
               <Link2 />
             </span>
             {describeConfidence(suggestion.confidence)}
+          </p>
+          <CardTitle className="mt-1.5 text-base">
+            {phraseQuestion(suggestion)}
           </CardTitle>
           <CardDescription className="mt-1">
             {suggestion.reason}
@@ -117,12 +127,11 @@ function SuggestionPrompt({ suggestion }: { suggestion: StoredSuggestion }) {
 
           <Button
             size="sm"
-            variant="ghost"
+            variant="secondary"
             disabled={answer.isPending}
             onClick={() => void respond("dismiss")}
           >
-            <X />
-            No
+            No, they&rsquo;re not
           </Button>
         </div>
 

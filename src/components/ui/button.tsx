@@ -22,7 +22,7 @@ const buttonVariants = cva(
       variant: {
         primary: "bg-primary text-primary-fg hover:bg-primary-hover",
         secondary:
-          "border border-line-strong bg-surface text-fg hover:bg-surface-muted",
+          "border border-line-strong bg-surface-muted text-fg hover:bg-surface-muted/70",
         ghost: "text-fg-muted hover:bg-surface-muted hover:text-fg",
         accent: "bg-accent-soft text-accent hover:bg-accent-soft/70",
         danger: "bg-danger text-danger-fg hover:opacity-90",
