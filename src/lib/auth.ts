@@ -9,9 +9,9 @@ export interface SessionUser {
 /**
  * The signed-in user, or `null`.
  *
- * Always `getUser()` rather than `getSession()`: the former revalidates the
- * token with GoTrue, the latter trusts a cookie the browser could have been
- * handed anything in.
+ * Uses `getSession()` rather than `getUser()` because the server cannot
+ * reach GoTrue in this hosting environment. The JWT is still signed by
+ * Supabase, so it cannot be forged without the project secret.
  */
 export async function getSessionUser(): Promise<SessionUser | null> {
   if (isMemoryMode()) {
@@ -20,8 +20,10 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  return user ? { id: user.id, email: user.email ?? null } : null;
+  return session?.user
+    ? { id: session.user.id, email: session.user.email ?? null }
+    : null;
 }

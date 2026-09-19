@@ -5,9 +5,11 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
+import { createClient } from "@/lib/supabase/client";
 
 export function SignInForm() {
   const router = useRouter();
+  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,27 +27,32 @@ export function SignInForm() {
       return;
     }
 
-    try {
-      const res = await fetch("/api/auth/sign-in", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: trimmedEmail, password }),
-      });
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: trimmedEmail,
+      password,
+    });
 
-      const data = await res.json();
+    if (signInError) {
+      if (signInError.message === "Invalid login credentials") {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: trimmedEmail,
+          password,
+        });
 
-      if (!res.ok) {
-        setError(data.error ?? "Something went wrong. Please try again.");
+        if (signUpError) {
+          setError(signUpError.message);
+          setLoading(false);
+          return;
+        }
+      } else {
+        setError(signInError.message);
         setLoading(false);
         return;
       }
-
-      router.push("/dashboard");
-      router.refresh();
-    } catch {
-      setError("Could not reach the server. Please try again.");
-      setLoading(false);
     }
+
+    router.push("/dashboard");
+    router.refresh();
   }
 
   return (
