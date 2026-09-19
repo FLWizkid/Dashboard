@@ -27,32 +27,51 @@ export function SignInForm() {
       return;
     }
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: trimmedEmail,
-      password,
-    });
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password,
+      });
 
-    if (signInError) {
-      if (signInError.message === "Invalid login credentials") {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: trimmedEmail,
-          password,
-        });
+      if (signInError) {
+        if (signInError.message === "Invalid login credentials") {
+          const { error: signUpError } = await supabase.auth.signUp({
+            email: trimmedEmail,
+            password,
+          });
 
-        if (signUpError) {
-          setError(signUpError.message);
+          if (signUpError) {
+            setError(signUpError.message);
+            setLoading(false);
+            return;
+          }
+        } else {
+          setError(signInError.message);
           setLoading(false);
           return;
         }
-      } else {
-        setError(signInError.message);
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError(
+          "Signed in but no session was created. " +
+          "Please try again or check your connection."
+        );
         setLoading(false);
         return;
       }
-    }
 
-    router.push("/dashboard");
-    router.refresh();
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again."
+      );
+      setLoading(false);
+    }
   }
 
   return (
