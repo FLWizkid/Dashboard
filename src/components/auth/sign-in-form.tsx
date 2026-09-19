@@ -5,20 +5,11 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/field";
+import { createClient } from "@/lib/supabase/client";
 
-/**
- * The sign-in form.
- *
- * Lives here rather than in `app/login/page.tsx` so that the page itself can
- * be a server component. That is not tidiness: route segment config is only
- * read from server components, and the login route has to be `force-dynamic`
- * so it is rendered per request and can carry a CSP nonce. Prerendered, its
- * bootstrap script would have no nonce, the policy would block it, and the
- * form would render without ever hydrating — a sign-in button that looks
- * perfectly normal and does nothing.
- */
 export function SignInForm() {
   const router = useRouter();
+  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +20,39 @@ export function SignInForm() {
     setLoading(true);
     setError(null);
 
-    // Skips credential validation for now: the dashboard session is supplied
-    // by memory mode, so there is nothing to check the fields against yet.
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      setError("Please enter both your email and password.");
+      setLoading(false);
+      return;
+    }
+
+    const { error: signInError } =
+      await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password,
+      });
+
+    if (signInError) {
+      if (signInError.message === "Invalid login credentials") {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: trimmedEmail,
+          password,
+          options: { data: { created_via: "dashboard" } },
+        });
+
+        if (signUpError) {
+          setError(signUpError.message);
+          setLoading(false);
+          return;
+        }
+      } else {
+        setError(signInError.message);
+        setLoading(false);
+        return;
+      }
+    }
+
     router.push("/dashboard");
     router.refresh();
   }
@@ -45,7 +67,10 @@ export function SignInForm() {
           <h1 className="text-lg font-semibold tracking-tight text-fg">
             Executive Dashboard
           </h1>
-          <p className="text-sm text-fg-muted">Sign in to continue.</p>
+          <p className="text-sm text-fg-muted">
+            Sign in to continue, or enter a new email and password to
+            create your account.
+          </p>
         </div>
 
         <div className="space-y-1.5">
@@ -53,6 +78,7 @@ export function SignInForm() {
           <Input
             id="email"
             type="email"
+            required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             autoComplete="email"
@@ -64,6 +90,8 @@ export function SignInForm() {
           <Input
             id="password"
             type="password"
+            required
+            minLength={6}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="current-password"
@@ -77,12 +105,8 @@ export function SignInForm() {
         ) : null}
 
         <Button type="submit" disabled={loading} className="w-full">
-          {loading ? "Signing in…" : "Sign in"}
+          {loading ? "Signing in..." : "Sign in"}
         </Button>
-
-        <p className="text-center text-xs text-fg-subtle">
-          Access is restricted. Accounts are provisioned by the administrator.
-        </p>
       </form>
     </main>
   );
