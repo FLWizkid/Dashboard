@@ -11,6 +11,12 @@ import { taskKeys } from "@/lib/tasks/client";
 
 import type { Explanation } from "./rank";
 import type { StoredSuggestion } from "./repository";
+
+export interface EnrichedSuggestion extends StoredSuggestion {
+  taskTitle: string | null;
+  eventTitle: string | null;
+  eventStartsAt: string | null;
+}
 import type { TaskLinkRelation } from "@/lib/tasks/types";
 
 /** Client data access for the priority engine. */
@@ -34,7 +40,7 @@ export interface RankedRow {
 
 export interface RankingResponse {
   ranked: RankedRow[];
-  suggestions: StoredSuggestion[];
+  suggestions: EnrichedSuggestion[];
   pendingCount: number;
   computedAt: string;
 }

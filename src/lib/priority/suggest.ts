@@ -318,15 +318,6 @@ export function describeConfidence(confidence: number): string {
   return "This could be related";
 }
 
-/** The question, phrased so the answer is obvious. */
-export function phraseQuestion(suggestion: LinkSuggestion): string {
-  return suggestion.kind === "prep"
-    ? "Is this preparation for that meeting?"
-    : suggestion.kind === "follow_up"
-      ? "Did this come out of that meeting?"
-      : "Are these related?";
-}
-
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }

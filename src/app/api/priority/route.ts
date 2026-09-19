@@ -95,7 +95,20 @@ export async function GET(request: NextRequest) {
       })),
       suggestions: await priority
         .listSuggestions()
-        .then((all) => all.filter((s) => s.state === "pending")),
+        .then((all) =>
+          all
+            .filter((s) => s.state === "pending")
+            .map((s) => {
+              const task = tasks.find((t) => t.id === s.taskId);
+              const event = events.get(s.eventId);
+              return {
+                ...s,
+                taskTitle: task?.title ?? null,
+                eventTitle: event?.title ?? null,
+                eventStartsAt: event?.startsAt ?? null,
+              };
+            }),
+        ),
       pendingCount: pending.length,
       computedAt: now.toISOString(),
     });
