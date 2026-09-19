@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getSessionUser } from "@/lib/auth";
+import { isMemoryMode } from "@/lib/data-mode";
 import { detectSuggestions } from "@/lib/priority/suggest";
 import { explain, rankTasks } from "@/lib/priority/rank";
 import {
@@ -51,35 +52,41 @@ export async function GET(request: NextRequest) {
 
     const ranked = rankTasks({ tasks, events, now, includeDone });
 
-    const fresh = detectSuggestions({
-      tasks,
-      events: [...events.values()],
-      now,
-      decided: decidedKeys(existing),
-    });
+    // Detection is skipped in memory/demo mode: the demo seed fills tasks and
+    // events with synthetic data, and asking the user to confirm links between
+    // items they never created is confusing rather than helpful.
+    let pending: typeof existing = [];
 
-    // Only ones we haven't already asked about.
-    const asked = new Set(
-      existing.map((s) => `${s.taskId}:${s.eventId}:${s.kind}`),
-    );
-    const unasked = fresh.filter(
-      (s) => !asked.has(`${s.taskId}:${s.eventId}:${s.kind}`),
-    );
+    if (!isMemoryMode()) {
+      const fresh = detectSuggestions({
+        tasks,
+        events: [...events.values()],
+        now,
+        decided: decidedKeys(existing),
+      });
 
-    if (unasked.length > 0) {
-      await priority.recordSuggestions(unasked);
+      const asked = new Set(
+        existing.map((s) => `${s.taskId}:${s.eventId}:${s.kind}`),
+      );
+      const unasked = fresh.filter(
+        (s) => !asked.has(`${s.taskId}:${s.eventId}:${s.kind}`),
+      );
+
+      if (unasked.length > 0) {
+        await priority.recordSuggestions(unasked);
+      }
+
+      pending = [
+        ...existing,
+        ...unasked.map((s) => ({
+          ...s,
+          id: "",
+          state: "pending" as const,
+          createdAt: now.toISOString(),
+          createdNoteId: null,
+        })),
+      ].filter((s) => s.state === "pending");
     }
-
-    const pending = [
-      ...existing,
-      ...unasked.map((s) => ({
-        ...s,
-        id: "",
-        state: "pending" as const,
-        createdAt: now.toISOString(),
-        createdNoteId: null,
-      })),
-    ].filter((s) => s.state === "pending");
 
     return NextResponse.json({
       ranked: ranked.map((item) => ({
@@ -93,22 +100,24 @@ export async function GET(request: NextRequest) {
         drivingEventTitle: item.drivingEvent?.title ?? null,
         drivingRelation: item.drivingRelation,
       })),
-      suggestions: await priority
-        .listSuggestions()
-        .then((all) =>
-          all
-            .filter((s) => s.state === "pending")
-            .map((s) => {
-              const task = tasks.find((t) => t.id === s.taskId);
-              const event = events.get(s.eventId);
-              return {
-                ...s,
-                taskTitle: task?.title ?? null,
-                eventTitle: event?.title ?? null,
-                eventStartsAt: event?.startsAt ?? null,
-              };
-            }),
-        ),
+      suggestions: isMemoryMode()
+        ? []
+        : await priority
+            .listSuggestions()
+            .then((all) =>
+              all
+                .filter((s) => s.state === "pending")
+                .map((s) => {
+                  const task = tasks.find((t) => t.id === s.taskId);
+                  const event = events.get(s.eventId);
+                  return {
+                    ...s,
+                    taskTitle: task?.title ?? null,
+                    eventTitle: event?.title ?? null,
+                    eventStartsAt: event?.startsAt ?? null,
+                  };
+                }),
+            ),
       pendingCount: pending.length,
       computedAt: now.toISOString(),
     });
