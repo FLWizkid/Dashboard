@@ -5,7 +5,7 @@ import { TimerView } from "@/components/pomodoro/timer-view";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Pomodoro",
+  title: "Focus Timer",
 };
 
 /**

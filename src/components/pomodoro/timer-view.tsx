@@ -104,7 +104,7 @@ export function TimerView() {
     <div className="space-y-6">
       <header>
         <h1 className="text-xl font-semibold tracking-tight text-fg">
-          Pomodoro
+          Focus Timer
         </h1>
         <p className="mt-1 text-sm text-fg-muted">
           {timer.settings.focusMinutes} minutes of focus,{" "}

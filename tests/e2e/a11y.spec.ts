@@ -417,13 +417,10 @@ const MODULES = [
   { path: "/dashboard/tasks", ready: "Tasks" },
   { path: "/dashboard/kanban", ready: "Board" },
   { path: "/dashboard/notes", ready: "Notes" },
-  { path: "/dashboard/pomodoro", ready: "Pomodoro" },
+  { path: "/dashboard/pomodoro", ready: "Focus Timer" },
   { path: "/dashboard/hours", ready: "Hours" },
   { path: "/dashboard/reports", ready: "Reports" },
-  // The route stays /dashboard/inbox so nothing bookmarked breaks, but the
-  // heading is "Digest" — the board's first lane is the Inbox now, and only
-  // one of them gets that name.
-  { path: "/dashboard/inbox", ready: "Digest" },
+  { path: "/dashboard/inbox", ready: "Briefings" },
 ];
 
 test.describe("accessibility, every module", () => {

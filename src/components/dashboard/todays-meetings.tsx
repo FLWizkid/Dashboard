@@ -137,7 +137,9 @@ export function NeedsAttention({ className }: { className?: string }) {
     <Card className={cn("p-5", className)} data-testid="needs-attention">
       <header className="flex items-center gap-2">
         <Mail aria-hidden className="size-4 text-fg-muted" />
-        <h2 className="text-sm font-semibold text-fg">Needs attention</h2>
+        <h2 className="text-sm font-semibold text-fg">
+          Needs your reply
+        </h2>
         {all.length > 0 && (
           // The count is the point of the card: "four things" is a decision
           // you can make from the dashboard, a list of names is not.
@@ -164,7 +166,8 @@ export function NeedsAttention({ className }: { className?: string }) {
         // claiming an empty inbox when forty newsletters are unread would be
         // a lie the owner would catch within a day.
         <p className="mt-3 text-sm text-fg-muted">
-          Nothing unread from anyone you rated important.
+          No unread messages from people you marked as important. You
+          can rate senders on the Email page.
         </p>
       ) : (
         <ol role="list" className="mt-3 space-y-2">

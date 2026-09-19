@@ -5,7 +5,7 @@ import { BoardView } from "@/components/kanban/board-view";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Kanban",
+  title: "Board",
 };
 
 /**

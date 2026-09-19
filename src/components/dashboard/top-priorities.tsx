@@ -71,11 +71,11 @@ function ManualRankButton({
       onClick={() => onSet(forced ? null : 0)}
       title={
         forced
-          ? "Hand this back to the priority engine"
-          : "Keep this first, whatever the engine says"
+          ? "Let the system decide where this ranks again"
+          : "Pin this task to the top of your list, no matter what"
       }
     >
-      {forced ? "Release" : "Force to top"}
+      {forced ? "Unpin from top" : "Pin to top"}
     </Button>
   );
 }
@@ -150,16 +150,17 @@ export function TopPriorities({ limit = 5 }: { limit?: number }) {
           </CardTitle>
           <CardDescription className="mt-1">
             {tasksQuery.isPending
-              ? "Loading…"
+              ? "Loading your tasks..."
               : openCount === 0
-                ? "Nothing open."
-                : `${openCount} open · showing the top ${Math.min(limit, openCount)}`}
+                ? "You have no open tasks yet."
+                : `${openCount} open task${openCount === 1 ? "" : "s"} — here are the most important`}
           </CardDescription>
         </div>
         <Button asChild variant="ghost" size="sm">
           <Link href="/dashboard/tasks">
             All tasks
             <ArrowRight aria-hidden="true" />
+            <span className="sr-only">&mdash; see your full task list</span>
           </Link>
         </Button>
       </CardHeader>
@@ -180,9 +181,11 @@ export function TopPriorities({ limit = 5 }: { limit?: number }) {
           </p>
         ) : tasks.length === 0 ? (
           <div className="rounded-md border border-dashed border-line-strong px-4 py-6 text-center">
-            <p className="text-sm text-fg-muted">Your list is clear.</p>
+            <p className="text-sm text-fg-muted">
+              No tasks yet. Add one to start tracking your work.
+            </p>
             <Button asChild variant="link" size="sm" className="mt-1">
-              <Link href="/dashboard/tasks">Capture something</Link>
+              <Link href="/dashboard/tasks">Add your first task</Link>
             </Button>
           </div>
         ) : (

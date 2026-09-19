@@ -127,11 +127,13 @@ function SidebarLink({ item }: { item: NavItem }) {
   const inner = (
     <>
       <Icon aria-hidden="true" className="size-4 shrink-0" />
-      <span className="flex-1 truncate">{item.label}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate">{item.label}</span>
+        <span className="block truncate text-[0.6875rem] font-normal leading-tight opacity-70">
+          {item.description}
+        </span>
+      </span>
       {item.phase ? (
-        // `chrome-fg-muted`, not a dimmer shade: at 10px this is small text
-        // and needs the full 4.5:1 against the navy. The axe scan in
-        // tests/e2e/a11y.spec.ts enforces it.
         <span className="rounded-full bg-chrome-raised px-1.5 py-0.5 text-[0.625rem] font-medium text-chrome-fg-muted">
           {item.phase}
         </span>
@@ -266,7 +268,12 @@ function MobileNav() {
                   )}
                 >
                   <Icon aria-hidden="true" className="size-4" />
-                  {item.label}
+                  <span>
+                    <span className="block">{item.label}</span>
+                    <span className="block text-[0.625rem] opacity-70">
+                      {item.description}
+                    </span>
+                  </span>
                 </Link>
               </li>
             );
