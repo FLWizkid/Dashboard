@@ -60,22 +60,28 @@ function SuggestionPrompt({
 
   const relationVerb =
     suggestion.kind === "prep"
-      ? "Preparation for"
+      ? "may be preparation for"
       : suggestion.kind === "follow_up"
-        ? "Follow-up from"
-        : "Related to";
+        ? "may be a follow-up from"
+        : "may be related to";
 
   return (
     <Card data-testid="suggestion-prompt">
       <CardContent className="space-y-3 pt-5">
+        {/* Task -- from the task list */}
         <div className="flex items-start gap-2">
-          <CheckSquare className="mt-1 size-4 shrink-0 text-fg-subtle" />
-          <Link
-            href={`/dashboard/tasks?task=${suggestion.taskId}`}
-            className="text-base font-semibold text-fg underline decoration-line/50 underline-offset-2 hover:decoration-fg"
-          >
-            {taskName}
-          </Link>
+          <CheckSquare className="mt-0.5 size-4 shrink-0 text-fg-subtle" />
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-fg-subtle">
+              From your task list
+            </p>
+            <Link
+              href={`/dashboard/tasks?task=${suggestion.taskId}`}
+              className="block truncate text-base font-semibold text-fg underline decoration-line/50 underline-offset-2 hover:decoration-fg"
+            >
+              {taskName}
+            </Link>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 pl-6 text-xs font-medium uppercase tracking-wide text-fg-subtle">
@@ -83,12 +89,16 @@ function SuggestionPrompt({
           <span>{relationVerb}</span>
         </div>
 
+        {/* Event -- from the calendar */}
         <div className="flex items-start gap-2">
-          <CalendarDays className="mt-1 size-4 shrink-0 text-fg-subtle" />
-          <div>
+          <CalendarDays className="mt-0.5 size-4 shrink-0 text-fg-subtle" />
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-fg-subtle">
+              From your calendar
+            </p>
             <Link
               href="/dashboard/calendar"
-              className="text-base font-semibold text-fg underline decoration-line/50 underline-offset-2 hover:decoration-fg"
+              className="block truncate text-base font-semibold text-fg underline decoration-line/50 underline-offset-2 hover:decoration-fg"
             >
               {eventName}
             </Link>
