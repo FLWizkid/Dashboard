@@ -27,21 +27,62 @@ export function SignInForm() {
     setNotice(null);
   }
 
+  async function signInWith(emailValue: string, passwordValue: string) {
+    setLoading(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const { data, error: signInError } = await supabase.auth
+        .signInWithPassword({
+          email: emailValue,
+          password: passwordValue,
+        });
+
+      if (signInError) {
+        setError(
+          signInError.message === "Invalid login credentials"
+            ? "The email or password is not correct."
+            : signInError.message,
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (!data.session) {
+        setError(
+          "Sign-in succeeded but no session was returned. Please try again.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.",
+      );
+      setLoading(false);
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    setLoading(true);
     setError(null);
     setNotice(null);
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
       setError("Please enter both your email and password.");
-      setLoading(false);
       return;
     }
 
-    try {
-      if (mode === "sign-up") {
+    if (mode === "sign-up") {
+      setLoading(true);
+      try {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: trimmedEmail,
           password,
@@ -67,45 +108,18 @@ export function SignInForm() {
         router.push("/dashboard");
         router.refresh();
         return;
-      }
-
-      const { data, error: signInError } = await supabase.auth
-        .signInWithPassword({
-          email: trimmedEmail,
-          password,
-        });
-
-      if (signInError) {
+      } catch (err) {
         setError(
-          signInError.message === "Invalid login credentials"
-            ? "The email or password is not correct."
-            : signInError.message,
+          err instanceof Error
+            ? err.message
+            : "Something went wrong. Please try again.",
         );
         setLoading(false);
         return;
       }
-
-      // Use the session from the sign-in response itself — the server in this
-      // hosting environment cannot re-fetch it, and a separate getSession()
-      // round-trip here can race the cookie write.
-      if (!data.session) {
-        setError(
-          "Sign-in succeeded but no session was returned. Please try again.",
-        );
-        setLoading(false);
-        return;
-      }
-
-      router.push("/dashboard");
-      router.refresh();
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again.",
-      );
-      setLoading(false);
     }
+
+    await signInWith(trimmedEmail, password);
   }
 
   return (
@@ -167,19 +181,19 @@ export function SignInForm() {
             onChange={(event) => setPassword(event.target.value)}
             autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
           />
-          {mode === "sign-in" ? (
-            <button
-              type="button"
-              onClick={() => {
-                setEmail("doug@theonefor.ai");
-                setPassword("bolt2026");
-              }}
-              className="text-xs text-fg-muted underline decoration-dotted underline-offset-4 hover:text-fg"
-            >
-              Fill my credentials
-            </button>
-          ) : null}
         </div>
+
+        {mode === "sign-in" ? (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={loading}
+            className="w-full"
+            onClick={() => signInWith("doug@theonefor.ai", "bolt2026")}
+          >
+            {loading ? "Signing in..." : "One-click sign in"}
+          </Button>
+        ) : null}
 
         {error ? (
           <p className="text-sm text-danger" role="alert">
