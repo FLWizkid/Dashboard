@@ -167,6 +167,18 @@ export function SignInForm() {
             onChange={(event) => setPassword(event.target.value)}
             autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
           />
+          {mode === "sign-in" ? (
+            <button
+              type="button"
+              onClick={() => {
+                setEmail("doug@theonefor.ai");
+                setPassword("bolt2026");
+              }}
+              className="text-xs text-fg-muted underline decoration-dotted underline-offset-4 hover:text-fg"
+            >
+              Fill my credentials
+            </button>
+          ) : null}
         </div>
 
         {error ? (
