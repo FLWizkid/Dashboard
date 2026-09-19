@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, CalendarDays, CheckSquare } from "lucide-react";
+import Link from "next/link";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
@@ -67,10 +68,14 @@ function SuggestionPrompt({
   return (
     <Card data-testid="suggestion-prompt">
       <CardContent className="space-y-3 pt-5">
-        {/* The two names are the card. Everything else is secondary. */}
         <div className="flex items-start gap-2">
           <CheckSquare className="mt-1 size-4 shrink-0 text-fg-subtle" />
-          <p className="text-base font-semibold text-fg">{taskName}</p>
+          <Link
+            href={`/dashboard/tasks?task=${suggestion.taskId}`}
+            className="text-base font-semibold text-fg underline decoration-line/50 underline-offset-2 hover:decoration-fg"
+          >
+            {taskName}
+          </Link>
         </div>
 
         <div className="flex items-center gap-2 pl-6 text-xs font-medium uppercase tracking-wide text-fg-subtle">
@@ -81,7 +86,12 @@ function SuggestionPrompt({
         <div className="flex items-start gap-2">
           <CalendarDays className="mt-1 size-4 shrink-0 text-fg-subtle" />
           <div>
-            <p className="text-base font-semibold text-fg">{eventName}</p>
+            <Link
+              href="/dashboard/calendar"
+              className="text-base font-semibold text-fg underline decoration-line/50 underline-offset-2 hover:decoration-fg"
+            >
+              {eventName}
+            </Link>
             {suggestion.eventStartsAt && (
               <p className="text-xs text-fg-subtle">
                 {formatEventTime(suggestion.eventStartsAt)}
