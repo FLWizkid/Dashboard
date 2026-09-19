@@ -1,11 +1,17 @@
 import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import { updateSession } from "@/lib/supabase/middleware";
-
-export async function middleware(request: NextRequest) {
-  const requestHeaders = new Headers(request.headers);
-  return updateSession(request, requestHeaders);
+/**
+ * Passthrough middleware.
+ *
+ * The Supabase session-refresh middleware (`updateSession`) makes a network
+ * call to GoTrue on every request. In this hosting environment the Edge
+ * runtime cannot reach external services, so that call hangs indefinitely
+ * and the page never loads. Auth cookies set by the sign-in server action
+ * are read directly by `getSessionUser` in the dashboard layout instead.
+ */
+export function middleware(_request: NextRequest) {
+  return NextResponse.next();
 }
 
 export const config = {
