@@ -101,8 +101,6 @@ function SuggestionPrompt({ suggestion }: { suggestion: StoredSuggestion }) {
       </CardHeader>
 
       <CardContent className="space-y-3">
-        <p className="text-sm text-fg">{phraseQuestion(suggestion)}</p>
-
         <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
