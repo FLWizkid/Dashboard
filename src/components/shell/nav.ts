@@ -19,31 +19,31 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { to: '/tasks', label: 'Tasks', icon: CheckSquare, phase: 1 },
       { to: '/projects', label: 'Projects', icon: FolderKanban, phase: 1 },
       { to: '/time', label: 'Time & Focus', icon: Clock, phase: 1 },
-      { to: '/inbox', label: 'Unified Inbox', icon: Inbox, phase: 4, summary: 'Triage-only merged view of Outlook, Gmail and Proton with identity badges, VIP senders, IT-signal tags and convert-to-task.' },
-      { to: '/calendar', label: 'Calendar', icon: CalendarDays, phase: 4, summary: 'Merged read-only day and week view of Outlook and Google calendars plus your focus blocks.' },
+      { to: '/inbox', label: 'Unified Inbox', icon: Inbox, phase: 3, summary: 'Triage-only merged view of Outlook and Gmail with source and identity badges and convert-to-task.' },
+      { to: '/calendar', label: 'Calendar', icon: CalendarDays, phase: 3, summary: 'Merged read-only day and week view of Outlook and Google calendars plus your focus blocks.' },
     ],
   },
   {
     label: 'Operations',
     items: [
       { to: '/ops', label: 'IT Operations', icon: Activity, phase: 2, summary: 'Status lights for domains, email authentication, uptime and certificates, Supabase, Resend, agents and manual systems, with history.' },
-      { to: '/assets', label: 'Assets & Access', icon: HardDrive, phase: 3, summary: 'SaaS and hardware registers, access reviews, offboarding and onboarding checklists.' },
-      { to: '/spend', label: 'Renewals & Spend', icon: Receipt, phase: 3, summary: 'Monthly and annual spend by company, renewal timeline with 30/14/7-day alerts, unused-tool flags.' },
-      { to: '/security', label: 'Security', icon: ShieldCheck, phase: 3, summary: 'Security checklist, incident log, change log with rollback steps, customer-readiness and agent governance.' },
-      { to: '/requests', label: 'Partner Requests', icon: LifeBuoy, phase: 3, summary: 'Helpdesk-lite for Melissa plus a plain-English printable status page.' },
+      { to: '/assets', label: 'Assets & Access', icon: HardDrive, phase: 4, summary: 'SaaS and hardware registers, access reviews, offboarding and onboarding checklists.' },
+      { to: '/spend', label: 'Renewals & Spend', icon: Receipt, phase: 4, summary: 'Monthly and annual spend by company, renewal timeline with 30/14/7-day alerts, unused-tool flags.' },
+      { to: '/security', label: 'Security', icon: ShieldCheck, phase: 4, summary: 'Security checklist, incident log, change log with rollback steps, customer-readiness and agent governance.' },
+      { to: '/requests', label: 'Partner Requests', icon: LifeBuoy, phase: 4, summary: 'Helpdesk-lite for Melissa plus a plain-English printable status page.' },
     ],
   },
   {
     label: 'Agents',
     items: [
-      { to: '/agents', label: 'Agent Operations', icon: Bot, phase: 3, summary: 'Registry, run log, reporting endpoint, cost and seats, controls checklists, Notification Routes and Identity audit.' },
-      { to: '/library', label: 'Report Library', icon: Library, phase: 3, summary: 'Every agent output as its own screen with search, source location, and compare-with-previous-run.' },
+      { to: '/agents', label: 'Agent Operations', icon: Bot, phase: 4, summary: 'Registry, run log, reporting endpoint, cost and seats, controls checklists, Notification Routes and Identity audit.' },
+      { to: '/library', label: 'Report Library', icon: Library, phase: 4, summary: 'Every agent output as its own screen with search, source location, and compare-with-previous-run.' },
     ],
   },
   {
     label: 'Knowledge',
     items: [
-      { to: '/notes', label: 'Runbooks & Notes', icon: BookOpen, phase: 3, summary: 'Markdown notes and runbook templates with make-task-from-selection and ZIP export. (Not assigned to a phase in your brief; proposed for Phase 3 alongside agent runbooks.)' },
+      { to: '/notes', label: 'Runbooks & Notes', icon: BookOpen, phase: 4, summary: 'Markdown notes and runbook templates with make-task-from-selection and ZIP export. (Not assigned to a phase in your brief; proposed for Phase 4 alongside agent runbooks.)' },
       { to: '/weekly', label: 'Weekly CIO Report', icon: FileBarChart, phase: 5, summary: 'One-click Monday report with copy-as-Markdown and .docx export.' },
     ],
   },
@@ -55,5 +55,5 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
 
 export const ALL_NAV = NAV_GROUPS.flatMap((g) => g.items);
 
-export const BUILT_THROUGH_PHASE = 2;
+export const BUILT_THROUGH_PHASE = 3;
 export const isBuilt = (n: NavItem) => n.phase <= BUILT_THROUGH_PHASE;

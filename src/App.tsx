@@ -14,6 +14,8 @@ import { TimePage } from '@/pages/TimePage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { PhasePage } from '@/pages/PhasePage';
 import { OpsPage } from '@/pages/OpsPage';
+import { InboxPage } from '@/pages/InboxPage';
+import { CalendarPage } from '@/pages/CalendarPage';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: true } },
@@ -49,6 +51,8 @@ export default function App() {
                   <Route path="time" element={<TimePage />} />
                   <Route path="settings/:section?" element={<SettingsPage />} />
                   <Route path="ops" element={<OpsPage />} />
+                  <Route path="inbox" element={<InboxPage />} />
+                  <Route path="calendar" element={<CalendarPage />} />
                   {ALL_NAV.filter((n) => !isBuilt(n)).map((n) => (
                     <Route key={n.to} path={n.to.slice(1)} element={<PhasePage />} />
                   ))}

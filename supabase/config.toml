@@ -1,2 +1,5 @@
 [functions.ops-check]
 verify_jwt = true
+
+[functions.mail-connect]
+verify_jwt = false

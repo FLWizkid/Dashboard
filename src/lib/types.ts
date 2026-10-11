@@ -225,3 +225,49 @@ export interface CheckResult {
   duration_ms: number | null;
   source: 'auto' | 'manual';
 }
+
+export type MailProvider = 'microsoft' | 'google';
+
+export const MAIL_PROVIDERS: Record<MailProvider, { label: string; app: string; short: string; mark: string }> = {
+  microsoft: { label: 'Microsoft 365 / Outlook', app: 'Outlook', short: 'O', mark: 'bg-primary-600 text-white' },
+  google: { label: 'Google Workspace / Gmail', app: 'Gmail', short: 'G', mark: 'bg-error-600 text-white' },
+};
+
+export interface MailAccount {
+  id: string;
+  provider: MailProvider;
+  email: string;
+  identity: Identity | null;
+  label: string | null;
+  status: 'connected' | 'error';
+  last_synced_at: string | null;
+  last_error: string | null;
+  created_at: string;
+}
+
+export interface MailMessage {
+  id: string;
+  account_id: string;
+  thread_id: string | null;
+  from_name: string | null;
+  from_email: string | null;
+  subject: string | null;
+  snippet: string | null;
+  received_at: string;
+  is_unread: boolean;
+  is_important: boolean;
+  web_link: string | null;
+}
+
+export interface CalendarEvent {
+  id: string;
+  account_id: string;
+  title: string | null;
+  starts_at: string;
+  ends_at: string;
+  all_day: boolean;
+  location: string | null;
+  organizer: string | null;
+  web_link: string | null;
+  is_cancelled: boolean;
+}

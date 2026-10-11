@@ -48,3 +48,5 @@ export function errorMessage(err: unknown) {
   if (typeof err === 'object' && err && 'message' in err) return String((err as { message: unknown }).message);
   return String(err);
 }
+
+export const safeHref = (url: string | null | undefined) => (url && url.startsWith('https://') ? url : undefined);

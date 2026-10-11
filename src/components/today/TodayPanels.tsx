@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, AlertTriangle, BellRing, CircleDashed, Fingerprint, ListTodo } from 'lucide-react';
+import { Activity, AlertTriangle, BellRing, CircleDashed, Fingerprint, ListTodo, Mail } from 'lucide-react';
 import { toDateKey } from '@/lib/utils';
 import { SETUP } from '@/lib/integrations';
 import { useTasks, isOverdue } from '@/data/tasks';
 import { useCompanies } from '@/data/organization';
 import { useOpsHealth } from '@/data/ops';
+import { useMailAccounts, useMailMessages } from '@/data/mail';
 import { Panel, EmptyState } from '@/components/ui/panel';
 import { NotConnected } from '@/components/ui/field';
 import { StatusPill } from '@/components/ui/badge';
@@ -13,11 +14,37 @@ import { TaskRow } from '@/components/tasks/TaskRow';
 import { QuickAdd } from '@/components/tasks/QuickAdd';
 
 const PENDING_SOURCES = [
-  { label: 'Critical unread mail (VIP / flagged)', phase: 4 },
-  { label: 'Renewals due in 14 days or less', phase: 3 },
-  { label: 'Open partner IT requests', phase: 3 },
-  { label: 'Failed or missed agent runs', phase: 3 },
+  { label: 'Renewals due in 14 days or less', phase: 4 },
+  { label: 'Open partner IT requests', phase: 4 },
+  { label: 'Failed or missed agent runs', phase: 4 },
 ];
+
+function ImportantMail() {
+  const accounts = useMailAccounts();
+  const messages = useMailMessages();
+  if (accounts.isLoading) return <span className="skeleton h-6 w-full" aria-label="Loading" />;
+  if (!accounts.data?.length) {
+    return (
+      <Link to="/settings/connections" className="flex items-center gap-2 text-sm text-subtle hover:text-fg">
+        <CircleDashed className="size-3.5" />
+        <span className="flex-1">Important unread mail</span>
+        <span className="text-xs">Not connected · Set up</span>
+      </Link>
+    );
+  }
+  const n = (messages.data ?? []).filter((m) => m.is_unread && m.is_important).length;
+  return (
+    <Link to="/inbox?tab=important" className="flex items-center gap-2 rounded-md text-sm transition-colors hover:bg-raised">
+      <Mail className="size-4 text-warning-600 dark:text-warning-400" />
+      <span className="flex-1 font-medium">Important unread mail</span>
+      {messages.error ? (
+        <StatusPill status="unknown" label="Could not load" />
+      ) : (
+        <StatusPill status={n ? 'attention' : 'healthy'} label={n ? `${n} unread` : 'None waiting'} />
+      )}
+    </Link>
+  );
+}
 
 export function NeedsAttention() {
   const tasks = useTasks();
@@ -74,6 +101,7 @@ export function NeedsAttention() {
             <span className="text-xs font-medium text-warning-800 dark:text-warning-300">Review</span>
           </Link>
         )}
+        <ImportantMail />
         <ul className="space-y-1 border-t border-line pt-3">
           {PENDING_SOURCES.map((s) => (
             <li key={s.label} className="flex items-center gap-2 text-sm text-subtle">

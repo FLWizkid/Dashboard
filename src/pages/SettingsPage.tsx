@@ -17,10 +17,9 @@ import { PageHeader, type PageTab } from '@/components/ui/page-header';
 import { SHORTCUTS } from '@/components/shell/shortcuts';
 import { CompaniesSettings } from '@/components/settings/CompaniesSettings';
 import { AuditLogPanel, DemoDataSettings, ExportSettings } from '@/components/settings/DataSettings';
+import { MailConnections } from '@/components/mail/MailConnections';
 
 const INTEGRATIONS: { key: keyof typeof SETUP; title: string }[] = [
-  { key: 'calendar', title: 'Calendars' },
-  { key: 'mail', title: 'Mailboxes' },
   { key: 'agents', title: 'Agent digest' },
   { key: 'resend', title: 'Email sending (Resend)' },
   { key: 'github', title: 'GitHub' },
@@ -119,7 +118,9 @@ function IdentitiesPanel() {
 
 function ConnectionsPanel() {
   return (
-    <Panel title="Connections" icon={<Plug />} subtitle="Each grey item arrives in a later phase.">
+    <>
+    <MailConnections />
+    <Panel icon={<Plug />} title="Other connections" subtitle="Each grey item arrives in a later phase.">
       <ul className="space-y-2">
         <li className="flex items-center gap-3 rounded-md border border-line p-2">
           <Activity className="size-4 shrink-0 text-subtle" />
@@ -137,6 +138,7 @@ function ConnectionsPanel() {
         ))}
       </ul>
     </Panel>
+    </>
   );
 }
 

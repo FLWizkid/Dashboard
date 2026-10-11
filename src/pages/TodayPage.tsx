@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Bot, CalendarDays } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 import { PageHeader } from '@/components/ui/page-header';
 import { QuickLogStrip } from '@/components/today/QuickLogStrip';
@@ -7,6 +7,7 @@ import { SummaryCards } from '@/components/today/SummaryCards';
 import { TopPriorities } from '@/components/today/TopPriorities';
 import { DueToday, NeedsAttention, NotConnectedPanel } from '@/components/today/TodayPanels';
 import { HealthStrip } from '@/components/today/HealthStrip';
+import { MeetingsPanel } from '@/components/today/MeetingsPanel';
 
 function greeting() {
   const h = new Date().getHours();
@@ -33,7 +34,7 @@ export function TodayPage() {
         </div>
         <div className="space-y-4 lg:col-span-5">
           <NeedsAttention />
-          <NotConnectedPanel title="Today's meetings and next 2 days" icon={<CalendarDays />} setup="calendar" />
+          <MeetingsPanel />
           <NotConnectedPanel title="Agent digest" icon={<Bot />} setup="agents" />
         </div>
       </div>
