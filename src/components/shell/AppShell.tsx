@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronsLeft, ChevronsRight, Clock, Menu, Moon, Plus, Search, Sun, Terminal, Unplug, LayoutDashboard, CheckSquare, Settings as SettingsIcon } from 'lucide-react';
+import { Activity, ChevronRight, ChevronsLeft, ChevronsRight, Clock, LogOut, Menu, Moon, Plus, Search, Sun, Terminal, Unplug, LayoutDashboard, CheckSquare, Settings as SettingsIcon } from 'lucide-react';
 import { cn, errorMessage } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useSettings } from '@/data/settings';
 import { seedIfFirstRun } from '@/data/demo';
-import { seedMonitorsIfFirstRun } from '@/data/ops';
+import { seedMonitorsIfFirstRun, useOpsHealth } from '@/data/ops';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
@@ -14,54 +15,137 @@ import { QuickAdd } from '@/components/tasks/QuickAdd';
 import { TaskDrawer } from '@/components/tasks/TaskDrawer';
 import { LogTimeForm } from '@/components/time/LogTimeForm';
 import { FocusIndicator, FocusStartDialog } from '@/components/time/Focus';
-import { NAV_GROUPS, isBuilt } from './nav';
+import { NAV_GROUPS, isBuilt, type NavItem } from './nav';
 import { useUi } from './ui-context';
 import { useGlobalShortcuts } from './shortcuts';
 import { useTheme } from './use-theme';
 import { CommandPalette } from './CommandPalette';
 
-function SidebarNav({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+function NavItemLink({ n, collapsed, onNavigate, badge }: { n: NavItem; collapsed: boolean; onNavigate?: () => void; badge?: ReactNode }) {
+  const built = isBuilt(n);
   return (
-    <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-3" aria-label="Main">
-      {NAV_GROUPS.map((g) => (
+    <NavLink
+      to={n.to}
+      end={n.to === '/'}
+      onClick={onNavigate}
+      title={collapsed ? n.label : undefined}
+      className={({ isActive }) =>
+        cn(
+          'relative flex h-9 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors',
+          isActive
+            ? 'bg-primary-500/10 font-medium text-primary-700 before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-primary-500 dark:text-primary-300'
+            : built
+              ? 'text-muted hover:bg-raised hover:text-fg'
+              : 'text-subtle hover:bg-raised hover:text-muted',
+          collapsed && 'justify-center px-0',
+        )
+      }
+    >
+      <n.icon className="size-4 shrink-0" />
+      {!collapsed && (
+        <>
+          <span className="flex-1 truncate">{n.label}</span>
+          {badge}
+          {!built && <span className="rounded border border-line px-1 text-[10px] text-subtle">P{n.phase}</span>}
+        </>
+      )}
+    </NavLink>
+  );
+}
+
+function OpsBadge() {
+  const { health } = useOpsHealth();
+  const red = health.filter((h) => h.status === 'action').length;
+  if (!red) return null;
+  return <span className="rounded-full bg-error-500/15 px-1.5 text-xs font-medium text-error-700 dark:text-error-300" aria-label={`${red} red health lights`}>{red}</span>;
+}
+
+function SidebarNav({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+  const location = useLocation();
+  const upcoming = NAV_GROUPS.flatMap((g) => g.items).filter((n) => !isBuilt(n));
+  const onUpcoming = upcoming.some((n) => location.pathname.startsWith(n.to));
+  const [showUpcoming, setShowUpcoming] = useState(onUpcoming);
+  const groups = NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((n) => isBuilt(n) && n.to !== '/settings') })).filter((g) => g.items.length);
+
+  return (
+    <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Main">
+      {groups.map((g) => (
         <div key={g.label}>
-          {!collapsed && <p className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wider text-subtle">{g.label}</p>}
+          {!collapsed && <p className="px-2.5 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-subtle">{g.label}</p>}
           <ul className="space-y-0.5">
             {g.items.map((n) => (
               <li key={n.to}>
-                <NavLink
-                  to={n.to}
-                  end={n.to === '/'}
-                  onClick={onNavigate}
-                  title={collapsed ? n.label : undefined}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex h-8 items-center gap-2.5 rounded-md px-2 text-sm transition-colors',
-                      isActive ? 'bg-raised font-medium text-fg' : 'text-muted hover:bg-raised/70 hover:text-fg',
-                      collapsed && 'justify-center',
-                    )
-                  }
-                >
-                  <n.icon className={cn('size-4 shrink-0', !isBuilt(n) && 'opacity-60')} />
-                  {!collapsed && (
-                    <>
-                      <span className={cn('flex-1 truncate', !isBuilt(n) && 'opacity-80')}>{n.label}</span>
-                      {!isBuilt(n) && <span className="rounded border border-line px-1 text-[10px] text-subtle">P{n.phase}</span>}
-                    </>
-                  )}
-                </NavLink>
+                <NavItemLink n={n} collapsed={collapsed} onNavigate={onNavigate} badge={n.to === '/ops' ? <OpsBadge /> : undefined} />
               </li>
             ))}
           </ul>
         </div>
       ))}
+      {upcoming.length > 0 && (
+        <div>
+          {!collapsed ? (
+            <button
+              onClick={() => setShowUpcoming((s) => !s)}
+              aria-expanded={showUpcoming || onUpcoming}
+              className="flex w-full items-center gap-1 px-2.5 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-subtle transition-colors hover:text-muted"
+            >
+              <ChevronRight className={cn('size-3 transition-transform', (showUpcoming || onUpcoming) && 'rotate-90')} />
+              Coming soon
+              <span className="ml-auto normal-case tracking-normal">{upcoming.length}</span>
+            </button>
+          ) : (
+            <div className="mx-2 mb-2 border-t border-line" />
+          )}
+          {(collapsed || showUpcoming || onUpcoming) && (
+            <ul className="space-y-0.5 animate-fade-in">
+              {upcoming.map((n) => (
+                <li key={n.to}>
+                  <NavItemLink n={n} collapsed={collapsed} onNavigate={onNavigate} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </nav>
+  );
+}
+
+function AccountFooter({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+  const { user } = useAuth();
+  const toast = useToast();
+  const initial = (user?.email ?? '?').charAt(0).toUpperCase();
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) toast('Could not sign out. Try again.', 'error');
+  };
+  return (
+    <div className={cn('border-t border-line p-3', collapsed && 'px-2')}>
+      <NavLink
+        to="/settings"
+        onClick={onNavigate}
+        title="Settings"
+        className={({ isActive }) => cn('flex h-9 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors', isActive ? 'bg-primary-500/10 font-medium text-primary-700 dark:text-primary-300' : 'text-muted hover:bg-raised hover:text-fg', collapsed && 'justify-center px-0')}
+      >
+        <SettingsIcon className="size-4 shrink-0" />
+        {!collapsed && 'Settings'}
+      </NavLink>
+      <div className={cn('mt-2 flex items-center gap-2.5 rounded-md px-2.5 py-1.5', collapsed && 'justify-center px-0')}>
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-600 text-xs font-semibold text-white" aria-hidden>{initial}</span>
+        {!collapsed && (
+          <>
+            <span className="min-w-0 flex-1 truncate text-xs text-muted" title={user?.email}>{user?.email}</span>
+            <Button variant="ghost" size="iconSm" onClick={signOut} aria-label="Sign out" title="Sign out"><LogOut /></Button>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
 function Brand({ collapsed }: { collapsed: boolean }) {
   return (
-    <div className={cn('flex h-14 items-center gap-2 border-b border-line px-4', collapsed && 'justify-center px-0')}>
+    <div className={cn('flex h-14 items-center gap-2.5 border-b border-line px-5', collapsed && 'justify-center px-0')}>
       <div className="flex size-7 items-center justify-center rounded-md bg-primary-600 text-white">
         <Terminal className="size-4" />
       </div>
@@ -115,12 +199,13 @@ export function AppShell() {
   return (
     <div className="flex min-h-screen">
       <DemoSeeder />
-      <aside className={cn('sticky top-0 hidden h-screen shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200 lg:flex', collapsed ? 'w-14' : 'w-60')}>
+      <aside className={cn('sticky top-0 hidden h-screen shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200 lg:flex', collapsed ? 'w-16' : 'w-64')}>
         <Brand collapsed={collapsed} />
         <SidebarNav collapsed={collapsed} />
+        <AccountFooter collapsed={collapsed} />
         <button
           onClick={() => setCollapsed((c) => !c)}
-          className="flex h-10 items-center justify-center gap-2 border-t border-line text-xs text-subtle transition-colors hover:text-fg"
+          className="flex h-9 items-center justify-center gap-2 border-t border-line text-xs text-subtle transition-colors hover:text-fg"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? <ChevronsRight className="size-4" /> : <><ChevronsLeft className="size-4" /> Collapse</>}
@@ -128,8 +213,9 @@ export function AppShell() {
       </aside>
 
       <Dialog open={mobileOpen} onOpenChange={setMobileOpen} title="Menu" side="right" className="max-w-[280px]">
-        <div className="-m-4">
+        <div className="-m-4 flex min-h-full flex-col">
           <SidebarNav collapsed={false} onNavigate={() => setMobileOpen(false)} />
+          <AccountFooter collapsed={false} onNavigate={() => setMobileOpen(false)} />
         </div>
       </Dialog>
 
@@ -164,7 +250,7 @@ export function AppShell() {
           </Button>
         </header>
 
-        <main className="flex-1 px-3 pb-24 pt-4 sm:px-6 lg:pb-8">
+        <main className="flex-1 px-4 pb-24 pt-6 sm:px-8 lg:pb-12">
           <Outlet />
         </main>
       </div>
@@ -173,8 +259,8 @@ export function AppShell() {
         {[
           { to: '/', label: 'Today', icon: LayoutDashboard },
           { to: '/tasks', label: 'Tasks', icon: CheckSquare },
+          { to: '/ops', label: 'IT Ops', icon: Activity },
           { to: '/time', label: 'Time', icon: Clock },
-          { to: '/settings', label: 'Settings', icon: SettingsIcon },
         ].map((n) => (
           <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => cn('flex flex-1 flex-col items-center justify-center gap-1 text-[11px]', isActive ? 'text-primary-600 dark:text-primary-400' : 'text-muted')}>
             <n.icon className="size-5" />

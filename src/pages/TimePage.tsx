@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { addWeeks, format, isSameWeek, subWeeks } from 'date-fns';
 import { BarChart3, ChevronLeft, ChevronRight, Clock, ListChecks, Pencil, Play, Timer } from 'lucide-react';
 import { TIME_CATEGORIES, categoryLabel, type TimeEntry } from '@/lib/types';
@@ -6,12 +7,19 @@ import { cn, formatMinutes } from '@/lib/utils';
 import { useCompanies } from '@/data/organization';
 import { useFocusHistory, useTimeEntries, weekRange } from '@/data/time';
 import { Panel, EmptyState } from '@/components/ui/panel';
+import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { Badge, DemoBadge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
 import { LogTimeForm } from '@/components/time/LogTimeForm';
 import { TimeEntryEditor } from '@/components/time/TimeEntryEditor';
 import { useUi } from '@/components/shell/ui-context';
+
+const TABS = [
+  { key: 'overview', label: 'Overview', to: '/time', icon: BarChart3 },
+  { key: 'entries', label: 'Entries', to: '/time?tab=entries', icon: ListChecks },
+  { key: 'focus', label: 'Focus sessions', to: '/time?tab=focus', icon: Timer },
+];
 
 const FOCUS_STATUS = { running: 'Running', completed: 'Completed', cancelled: 'Cancelled' } as const;
 
@@ -24,6 +32,8 @@ export function TimePage() {
   const { openFocus } = useUi();
   const [editing, setEditing] = useState<TimeEntry | null>(null);
   const isThisWeek = isSameWeek(anchor, new Date(), { weekStartsOn: 1 });
+  const [params] = useSearchParams();
+  const tab = TABS.some((t) => t.key === params.get('tab')) ? params.get('tab')! : 'overview';
 
   const rows = entries.data ?? [];
   const total = rows.reduce((s, e) => s + e.minutes, 0);
@@ -41,20 +51,28 @@ export function TimePage() {
   const max = Math.max(1, ...byCategory.map((c) => c.minutes));
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold">Time &amp; Focus</h1>
-        <div className="flex items-center gap-1 rounded-md border border-line bg-surface p-0.5">
-          <Button size="iconSm" variant="ghost" onClick={() => setAnchor((a) => subWeeks(a, 1))} aria-label="Previous week"><ChevronLeft /></Button>
-          <span className="min-w-[150px] text-center text-sm font-medium">{format(start, 'MMM d')} – {format(end, 'MMM d')}</span>
-          <Button size="iconSm" variant="ghost" onClick={() => setAnchor((a) => addWeeks(a, 1))} aria-label="Next week"><ChevronRight /></Button>
-        </div>
-        {!isThisWeek && <Button size="sm" variant="ghost" onClick={() => setAnchor(new Date())}>This week</Button>}
-        <Button variant="primary" size="sm" className="ml-auto" onClick={openFocus}><Play /> Start focus</Button>
-      </div>
+    <div className="mx-auto max-w-[1440px] space-y-6">
+      <PageHeader
+        title="Time & Focus"
+        description={`${formatMinutes(total)} logged ${isThisWeek ? 'this week' : `the week of ${format(start, 'MMM d')}`}.`}
+        tabs={TABS.map((t) => ({ ...t, count: t.key === 'entries' ? rows.length : t.key === 'focus' ? (focus.data ?? []).length : undefined }))}
+        activeTab={tab}
+        actions={
+          <>
+            <div className="flex items-center gap-1 rounded-md border border-line bg-surface p-0.5">
+              <Button size="iconSm" variant="ghost" onClick={() => setAnchor((a) => subWeeks(a, 1))} aria-label="Previous week"><ChevronLeft /></Button>
+              <span className="min-w-[140px] text-center text-sm font-medium">{format(start, 'MMM d')} – {format(end, 'MMM d')}</span>
+              <Button size="iconSm" variant="ghost" onClick={() => setAnchor((a) => addWeeks(a, 1))} aria-label="Next week"><ChevronRight /></Button>
+            </div>
+            {!isThisWeek && <Button size="sm" variant="ghost" onClick={() => setAnchor(new Date())}>This week</Button>}
+            <Button variant="primary" size="sm" onClick={openFocus}><Play /> Start focus</Button>
+          </>
+        }
+      />
 
-      <div className="grid gap-4 lg:grid-cols-12">
-        <div className="space-y-4 lg:col-span-8">
+      {tab === 'overview' && (
+        <div className="grid gap-4 animate-fade-in lg:grid-cols-12">
+          <div className="lg:col-span-8">
           <Panel
             title="Weekly report"
             icon={<BarChart3 />}
@@ -66,7 +84,7 @@ export function TimePage() {
             loading={entries.isLoading}
             error={entries.error}
             empty={rows.length === 0}
-            emptyState={<EmptyState icon={<Clock />} title="No time logged this week" text="Log time on the right, or finish a focus session." />}
+            emptyState={<EmptyState icon={<Clock />} title="No time logged this week" text="Log time with the form beside this, or finish a focus session." />}
           >
             <div className="grid gap-6 md:grid-cols-2">
               <div>
@@ -97,6 +115,15 @@ export function TimePage() {
             </div>
           </Panel>
 
+          </div>
+          <div className="lg:col-span-4">
+          <Panel title="Log time" icon={<Clock />}>
+            <LogTimeForm layout="stack" />
+          </Panel>
+          </div>
+        </div>
+      )}
+      {tab === 'entries' && <div className="animate-fade-in">
           <Panel
             title="Entries"
             icon={<ListChecks />}
@@ -132,12 +159,8 @@ export function TimePage() {
               ))}
             </ul>
           </Panel>
-        </div>
-
-        <div className="space-y-4 lg:col-span-4">
-          <Panel title="Log time" icon={<Clock />}>
-            <LogTimeForm layout="stack" />
-          </Panel>
+      </div>}
+      {tab === 'focus' && <div className="max-w-3xl animate-fade-in">
           <Panel
             title="Focus sessions"
             icon={<Timer />}
@@ -161,8 +184,7 @@ export function TimePage() {
               ))}
             </ul>
           </Panel>
-        </div>
-      </div>
+      </div>}
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)} title="Edit time entry">
         {editing && <TimeEntryEditor key={editing.id} entry={editing} onDone={() => setEditing(null)} />}

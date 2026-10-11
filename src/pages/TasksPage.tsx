@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CalendarDays, Columns3, List, Search } from 'lucide-react';
 import { IDENTITIES, PRIORITIES } from '@/lib/types';
-import { cn } from '@/lib/utils';
 import { useTasks } from '@/data/tasks';
 import { useCompanies, useProjects } from '@/data/organization';
 import { Panel } from '@/components/ui/panel';
+import { PageHeader } from '@/components/ui/page-header';
 import { Select } from '@/components/ui/field';
 import { QuickAdd } from '@/components/tasks/QuickAdd';
 import { TaskListView } from '@/components/tasks/TaskListView';
@@ -51,26 +51,24 @@ export function TasksPage() {
     );
   }, [tasks.data, q, identity, company, project, priority]);
 
+  const viewLink = (v: string) => {
+    const next = new URLSearchParams(params);
+    if (v === 'list') next.delete('view');
+    else next.set('view', v);
+    const qs = next.toString();
+    return qs ? `/tasks?${qs}` : '/tasks';
+  };
+
   const anyFilter = q || identity || company || project || priority;
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold">Tasks</h1>
-        <div className="ml-auto flex rounded-md border border-line bg-surface p-0.5" role="tablist">
-          {VIEWS.map((v) => (
-            <button
-              key={v.value}
-              role="tab"
-              aria-selected={view === v.value}
-              onClick={() => setParam('view', v.value === 'list' ? '' : v.value)}
-              className={cn('flex h-7 items-center gap-1.5 rounded px-3 text-sm transition-colors', view === v.value ? 'bg-raised font-medium text-fg' : 'text-muted hover:text-fg')}
-            >
-              <v.icon className="size-4" /> {v.label}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="mx-auto max-w-[1440px] space-y-6">
+      <PageHeader
+        title="Tasks"
+        description={tasks.isLoading ? 'Loading your tasks' : `${(tasks.data ?? []).filter((t) => t.status !== 'done').length} open across all companies. Press N anywhere to add one.`}
+        tabs={VIEWS.map((v) => ({ key: v.value, label: v.label, icon: v.icon, to: viewLink(v.value) }))}
+        activeTab={view}
+      />
 
       <div className="rounded-lg border border-line bg-surface p-4">
         <QuickAdd />

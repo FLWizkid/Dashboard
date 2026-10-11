@@ -47,7 +47,7 @@ export default function App() {
                   <Route path="tasks" element={<TasksPage />} />
                   <Route path="projects" element={<ProjectsPage />} />
                   <Route path="time" element={<TimePage />} />
-                  <Route path="settings" element={<SettingsPage />} />
+                  <Route path="settings/:section?" element={<SettingsPage />} />
                   <Route path="ops" element={<OpsPage />} />
                   {ALL_NAV.filter((n) => !isBuilt(n)).map((n) => (
                     <Route key={n.to} path={n.to.slice(1)} element={<PhasePage />} />

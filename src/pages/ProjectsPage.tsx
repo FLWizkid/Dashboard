@@ -8,6 +8,7 @@ import { useCompanies, useDeleteProject, useProjects, useSaveProject, type Proje
 import { useTasks } from '@/data/tasks';
 import { Panel, EmptyState } from '@/components/ui/panel';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
 import { Badge, IdentityBadge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
 import { Field, Select } from '@/components/ui/field';
@@ -30,13 +31,12 @@ export function ProjectsPage() {
 
   const rows = projects.data ?? [];
   return (
-    <div className="mx-auto max-w-[1440px] space-y-4">
-      <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-semibold">Projects</h1>
-        <Button variant="primary" size="sm" className="ml-auto" onClick={() => setEditing(EMPTY)}>
-          <Plus /> New project
-        </Button>
-      </div>
+    <div className="mx-auto max-w-[1440px] space-y-6">
+      <PageHeader
+        title="Projects"
+        description="Projects group related tasks and time so you can see progress per company."
+        actions={<Button variant="primary" onClick={() => setEditing(EMPTY)}><Plus /> New project</Button>}
+      />
       <Panel
         title="All projects"
         icon={<FolderKanban />}

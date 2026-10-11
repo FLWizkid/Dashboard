@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Activity, BellRing, Fingerprint, Keyboard, LogOut, Plug, Send, Timer, UserRound } from 'lucide-react';
+import { Link, Navigate, useParams } from 'react-router-dom';
+import { Activity, BellRing, Building2, Database, Fingerprint, Keyboard, LogOut, Plug, Send, SlidersHorizontal, Timer, UserRound } from 'lucide-react';
 import { z } from 'zod';
 import { IDENTITIES } from '@/lib/types';
 import { SETUP } from '@/lib/integrations';
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge, StatusPill } from '@/components/ui/badge';
 import { Field, NotConnected } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
+import { PageHeader, type PageTab } from '@/components/ui/page-header';
 import { SHORTCUTS } from '@/components/shell/shortcuts';
 import { CompaniesSettings } from '@/components/settings/CompaniesSettings';
 import { AuditLogPanel, DemoDataSettings, ExportSettings } from '@/components/settings/DataSettings';
@@ -90,76 +91,115 @@ function GeneralSettings() {
   );
 }
 
-export function SettingsPage() {
+const SECTIONS: (PageTab & { description: string })[] = [
+  { key: 'general', label: 'General', to: '/settings/general', icon: SlidersHorizontal, description: 'Notifications, focus timer and identities.' },
+  { key: 'companies', label: 'Companies', to: '/settings/companies', icon: Building2, description: 'The companies your work is grouped under.' },
+  { key: 'connections', label: 'Connections', to: '/settings/connections', icon: Plug, description: 'Outside services the console reads from.' },
+  { key: 'data', label: 'Data', to: '/settings/data', icon: Database, description: 'Demo data, exports and the activity log.' },
+  { key: 'account', label: 'Account', to: '/settings/account', icon: UserRound, description: 'Sign-in, security and keyboard shortcuts.' },
+];
+
+function IdentitiesPanel() {
+  return (
+    <Panel title="Identities" icon={<Fingerprint />} subtitle="Every task, project and company belongs to one">
+      <ul className="space-y-3">
+        {IDENTITIES.map((i) => (
+          <li key={i.value} className="flex items-start gap-3">
+            <Badge className={i.tone}>{i.label}</Badge>
+            <div className="min-w-0 text-sm">
+              <p className="font-mono text-xs text-muted">{i.address}</p>
+              <p className="text-muted">{i.belongs}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
+function ConnectionsPanel() {
+  return (
+    <Panel title="Connections" icon={<Plug />} subtitle="Each grey item arrives in a later phase.">
+      <ul className="space-y-2">
+        <li className="flex items-center gap-3 rounded-md border border-line p-2">
+          <Activity className="size-4 shrink-0 text-subtle" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">IT health checks</p>
+            <p className="text-xs text-subtle">Public registry and DNS lookups. No account needed.</p>
+          </div>
+          <StatusPill status="healthy" label="Connected" />
+          <Button asChild size="sm"><Link to="/ops">Manage</Link></Button>
+        </li>
+        {INTEGRATIONS.map((i) => (
+          <li key={i.key}>
+            <NotConnected title={i.title} info={SETUP[i.key]} compact />
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
+function AccountPanels() {
   const { user } = useAuth();
   const toast = useToast();
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) toast('Could not sign out. Try again.', 'error');
+  };
+  return (
+    <>
+      <Panel title="Account" icon={<UserRound />}>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="flex-1 truncate text-sm">{user?.email}</span>
+            <Button variant="secondary" onClick={signOut}><LogOut /> Sign out</Button>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <StatusPill status="unknown" label="Two-factor: not set up" />
+            <span>Planned before any connections go live.</span>
+          </div>
+        </div>
+      </Panel>
+      <Panel title="Keyboard shortcuts" icon={<Keyboard />}>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+          {SHORTCUTS.map((s) => (
+            <div key={s.keys} className="contents">
+              <dt><kbd className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-xs">{s.keys}</kbd></dt>
+              <dd className="text-muted">{s.action}</dd>
+            </div>
+          ))}
+        </dl>
+      </Panel>
+    </>
+  );
+}
+
+export function SettingsPage() {
+  const { section } = useParams();
+  const current = SECTIONS.find((s) => s.key === section);
+  if (!current) return <Navigate to="/settings/general" replace />;
 
   return (
-    <div className="mx-auto max-w-[1100px] space-y-4">
-      <h1 className="text-2xl font-semibold">Settings</h1>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-4">
-          <GeneralSettings />
-          <DemoDataSettings />
-          <CompaniesSettings />
-          <Panel title="Identities" icon={<Fingerprint />} subtitle="Every task, project and company belongs to one">
-            <ul className="space-y-3">
-              {IDENTITIES.map((i) => (
-                <li key={i.value} className="flex items-start gap-3">
-                  <Badge className={i.tone}>{i.label}</Badge>
-                  <div className="min-w-0 text-sm">
-                    <p className="font-mono text-xs text-muted">{i.address}</p>
-                    <p className="text-muted">{i.belongs}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-        </div>
-        <div className="space-y-4">
-          <Panel title="Connections" icon={<Plug />} subtitle="Each grey item arrives in a later phase.">
-            <ul className="space-y-2">
-              <li className="flex items-center gap-3 rounded-md border border-line p-2">
-                <Activity className="size-4 shrink-0 text-subtle" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">IT health checks</p>
-                  <p className="text-xs text-subtle">Public registry and DNS lookups. No account needed.</p>
-                </div>
-                <StatusPill status="healthy" label="Connected" />
-                <Button asChild size="sm"><Link to="/ops">Manage</Link></Button>
-              </li>
-              {INTEGRATIONS.map((i) => (
-                <li key={i.key}>
-                  <NotConnected title={i.title} info={SETUP[i.key]} compact />
-                </li>
-              ))}
-            </ul>
-          </Panel>
-          <ExportSettings />
-          <AuditLogPanel />
-          <Panel title="Keyboard shortcuts" icon={<Keyboard />}>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-              {SHORTCUTS.map((s) => (
-                <div key={s.keys} className="contents">
-                  <dt><kbd className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-xs">{s.keys}</kbd></dt>
-                  <dd className="text-muted">{s.action}</dd>
-                </div>
-              ))}
-            </dl>
-          </Panel>
-          <Panel title="Account" icon={<UserRound />}>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <span className="flex-1 truncate text-sm">{user?.email}</span>
-                <Button variant="secondary" onClick={async () => { const { error } = await supabase.auth.signOut(); if (error) toast(errorMessage(error), 'error'); }}><LogOut /> Sign out</Button>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted">
-                <StatusPill status="unknown" label="Two-factor: not set up" />
-                <span>Planned before any connections go live.</span>
-              </div>
-            </div>
-          </Panel>
-        </div>
+    <div className="mx-auto max-w-[960px] space-y-6">
+      <PageHeader title="Settings" description={current.description} tabs={SECTIONS} activeTab={current.key} />
+      <div className="space-y-4 animate-fade-in" key={current.key}>
+        {current.key === 'general' && (
+          <>
+            <GeneralSettings />
+            <IdentitiesPanel />
+          </>
+        )}
+        {current.key === 'companies' && <CompaniesSettings />}
+        {current.key === 'connections' && <ConnectionsPanel />}
+        {current.key === 'data' && (
+          <>
+            <DemoDataSettings />
+            <ExportSettings />
+            <AuditLogPanel />
+          </>
+        )}
+        {current.key === 'account' && <AccountPanels />}
       </div>
     </div>
   );
