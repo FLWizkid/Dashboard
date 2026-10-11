@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { Activity, BellRing, Building2, Database, Fingerprint, Keyboard, LogOut, Plug, Send, SlidersHorizontal, Timer, UserRound } from 'lucide-react';
+import { Activity, BellRing, Building2, Database, Fingerprint, Keyboard, LogOut, Plug, Send, SlidersHorizontal, Timer, UserRound, Wrench } from 'lucide-react';
 import { z } from 'zod';
 import { IDENTITIES } from '@/lib/types';
 import { SETUP } from '@/lib/integrations';
@@ -17,7 +17,6 @@ import { PageHeader, type PageTab } from '@/components/ui/page-header';
 import { SHORTCUTS } from '@/components/shell/shortcuts';
 import { CompaniesSettings } from '@/components/settings/CompaniesSettings';
 import { AuditLogPanel, DemoDataSettings, ExportSettings } from '@/components/settings/DataSettings';
-import { MailConnections } from '@/components/mail/MailConnections';
 
 const INTEGRATIONS: { key: keyof typeof SETUP; title: string }[] = [
   { key: 'agents', title: 'Agent digest' },
@@ -118,10 +117,16 @@ function IdentitiesPanel() {
 
 function ConnectionsPanel() {
   return (
-    <>
-    <MailConnections />
     <Panel icon={<Plug />} title="Other connections" subtitle="Each grey item arrives in a later phase.">
       <ul className="space-y-2">
+        <li className="flex items-center gap-3 rounded-md border border-primary-500/40 p-2">
+          <Wrench className="size-4 shrink-0 text-primary-600 dark:text-primary-400" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Connectors, raw data and reset moved</p>
+            <p className="text-xs text-subtle">Email and calendar setup now lives on the Setup page, along with raw data entry.</p>
+          </div>
+          <Button asChild size="sm" variant="primary"><Link to="/setup">Open Setup</Link></Button>
+        </li>
         <li className="flex items-center gap-3 rounded-md border border-line p-2">
           <Activity className="size-4 shrink-0 text-subtle" />
           <div className="min-w-0 flex-1">
@@ -138,7 +143,6 @@ function ConnectionsPanel() {
         ))}
       </ul>
     </Panel>
-    </>
   );
 }
 

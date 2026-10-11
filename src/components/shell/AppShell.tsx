@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Activity, ChevronRight, ChevronsLeft, ChevronsRight, Clock, LogOut, Menu, Moon, Plus, Search, Sun, Terminal, Unplug, LayoutDashboard, CheckSquare, Settings as SettingsIcon } from 'lucide-react';
+import { Activity, ChevronRight, ChevronsLeft, ChevronsRight, Clock, LogOut, Menu, Moon, Plus, Search, Sun, Terminal, Unplug, Wrench, LayoutDashboard, CheckSquare, Settings as SettingsIcon } from 'lucide-react';
 import { cn, errorMessage } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
@@ -239,9 +239,15 @@ export function AppShell() {
             <span className="hidden md:inline">Log time</span>
           </Button>
           <FocusIndicator />
+          <Button size="sm" variant="ghost" asChild>
+            <Link to="/setup" title="Setup: connectors, raw data, reset" aria-label="Setup">
+              <Wrench />
+              <span className="hidden xl:inline">Setup</span>
+            </Link>
+          </Button>
           <span
             className="hidden h-8 items-center gap-1.5 rounded-md border border-dashed border-line px-2 text-xs text-subtle md:flex"
-            title="IT health checks run against public services. Mail, calendar and agent sources arrive in Phases 3 to 5."
+            title="IT health checks run against public services. Mail and calendar sync once connected in Setup."
           >
             <Unplug className="size-3.5" /> Sync: health checks only
           </span>

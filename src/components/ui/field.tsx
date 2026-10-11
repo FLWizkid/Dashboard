@@ -1,4 +1,4 @@
-import { useState, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
 import { Plug } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
@@ -11,6 +11,18 @@ export function Field({ label, hint, children, className }: { label: string; hin
       {children}
       {hint && <span className="mt-1 block text-xs text-subtle">{hint}</span>}
     </label>
+  );
+}
+
+export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className={cn(
+        'h-9 w-full rounded-md border border-line bg-surface px-3 text-sm transition-colors placeholder:text-subtle hover:border-subtle focus:border-primary-500 focus:outline-none',
+        className,
+      )}
+    />
   );
 }
 

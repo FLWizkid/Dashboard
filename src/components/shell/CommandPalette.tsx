@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Command } from 'cmdk';
 import * as D from '@radix-ui/react-dialog';
-import { CheckSquare, Clock, Mic, MicOff, Moon, Plus, Search, Timer } from 'lucide-react';
+import { CheckSquare, Clock, Mic, MicOff, Moon, Plus, Search, Timer, Wrench } from 'lucide-react';
 import { useTasks } from '@/data/tasks';
 import { cn } from '@/lib/utils';
 import { ALL_NAV, isBuilt } from './nav';
@@ -88,6 +88,7 @@ export function CommandPalette({ onToggleTheme }: { onToggleTheme: () => void })
                 <Command.Item className={itemCls} keywords={['hours', 'track', 'log']} onSelect={() => run(ui.openLogTime)}><Clock /> Log time <Kbd>T</Kbd></Command.Item>
                 <Command.Item className={itemCls} keywords={['pomodoro', 'timer', 'start']} onSelect={() => run(ui.openFocus)}><Timer /> Start focus <Kbd>F</Kbd></Command.Item>
                 <Command.Item className={itemCls} keywords={['dark', 'light', 'mode']} onSelect={() => run(onToggleTheme)}><Moon /> Toggle dark / light</Command.Item>
+                <Command.Item className={itemCls} keywords={['connect', 'accounts', 'keys', 'secrets', 'reset', 'raw']} onSelect={() => run(() => navigate('/setup'))}><Wrench /> Setup: connectors, data, reset</Command.Item>
               </Command.Group>
               <Command.Group heading="Go to" className="text-xs text-subtle [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1">
                 {ALL_NAV.map((n) => (
