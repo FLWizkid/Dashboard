@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, BellRing, CircleDashed, Fingerprint, ListTodo } from 'lucide-react';
+import { Activity, AlertTriangle, BellRing, CircleDashed, Fingerprint, ListTodo } from 'lucide-react';
 import { toDateKey } from '@/lib/utils';
 import { SETUP } from '@/lib/integrations';
 import { useTasks, isOverdue } from '@/data/tasks';
 import { useCompanies } from '@/data/organization';
+import { useOpsHealth } from '@/data/ops';
 import { Panel, EmptyState } from '@/components/ui/panel';
 import { NotConnected } from '@/components/ui/field';
 import { StatusPill } from '@/components/ui/badge';
@@ -14,7 +15,6 @@ import { QuickAdd } from '@/components/tasks/QuickAdd';
 const PENDING_SOURCES = [
   { label: 'Critical unread mail (VIP / flagged)', phase: 4 },
   { label: 'Renewals due in 14 days or less', phase: 3 },
-  { label: 'Red health lights', phase: 2 },
   { label: 'Open partner IT requests', phase: 3 },
   { label: 'Failed or missed agent runs', phase: 3 },
 ];
@@ -25,6 +25,8 @@ export function NeedsAttention() {
   const today = toDateKey(new Date());
   const overdue = (tasks.data ?? []).filter((t) => isOverdue(t, today));
   const unset = (tasks.data ?? []).filter((t) => t.status !== 'done' && !t.identity);
+  const ops = useOpsHealth();
+  const red = ops.health.filter((h) => h.status === 'action');
 
   return (
     <Panel
@@ -46,6 +48,24 @@ export function NeedsAttention() {
           </div>
           {overdue.slice(0, 5).map((t) => <TaskRow key={t.id} task={t} companies={companies} />)}
           {overdue.length > 5 && <Link to="/tasks" className="block px-2 text-xs text-primary-600 hover:underline dark:text-primary-400">+{overdue.length - 5} more in Tasks</Link>}
+        </div>
+        <div>
+          <div className="mb-1 flex items-center gap-2">
+            <Activity className="size-4 text-error-500" />
+            <p className="flex-1 text-sm font-medium">Red health lights</p>
+            {ops.loading ? (
+              <span className="skeleton h-6 w-24" aria-label="Loading" />
+            ) : ops.error ? (
+              <StatusPill status="unknown" label="Could not load" />
+            ) : (
+              <StatusPill status={red.length ? 'action' : 'healthy'} label={red.length ? `${red.length} red` : 'None red'} />
+            )}
+          </div>
+          {red.map((h) => (
+            <Link key={h.monitor.id} to="/ops" className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-raised">
+              <span className="min-w-0 flex-1 truncate"><span className="font-medium">{h.monitor.label}</span> <span className="text-muted">{h.summary}</span></span>
+            </Link>
+          ))}
         </div>
         {unset.length > 0 && (
           <Link to="/tasks?identity=unset" className="flex items-center gap-2 rounded-md border border-warning-500/40 bg-warning-500/10 px-3 py-2 text-sm transition-colors hover:bg-warning-500/15">

@@ -5,7 +5,7 @@ import * as D from '@radix-ui/react-dialog';
 import { CheckSquare, Clock, Mic, MicOff, Moon, Plus, Search, Timer } from 'lucide-react';
 import { useTasks } from '@/data/tasks';
 import { cn } from '@/lib/utils';
-import { ALL_NAV } from './nav';
+import { ALL_NAV, isBuilt } from './nav';
 import { useUi } from './ui-context';
 
 type Recognition = {
@@ -93,7 +93,7 @@ export function CommandPalette({ onToggleTheme }: { onToggleTheme: () => void })
                 {ALL_NAV.map((n) => (
                   <Command.Item key={n.to} className={itemCls} value={`go to ${n.label}`} keywords={['open', 'show']} onSelect={() => run(() => navigate(n.to))}>
                     <n.icon /> {n.label}
-                    {n.phase > 1 && <span className="ml-auto text-xs text-subtle">Phase {n.phase}</span>}
+                    {!isBuilt(n) && <span className="ml-auto text-xs text-subtle">Phase {n.phase}</span>}
                   </Command.Item>
                 ))}
               </Command.Group>

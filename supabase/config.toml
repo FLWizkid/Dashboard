@@ -1,0 +1,2 @@
+[functions.ops-check]
+verify_jwt = true

@@ -54,3 +54,6 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
 ];
 
 export const ALL_NAV = NAV_GROUPS.flatMap((g) => g.items);
+
+export const BUILT_THROUGH_PHASE = 2;
+export const isBuilt = (n: NavItem) => n.phase <= BUILT_THROUGH_PHASE;

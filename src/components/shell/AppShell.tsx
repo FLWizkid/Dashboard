@@ -6,6 +6,7 @@ import { cn, errorMessage } from '@/lib/utils';
 import { useAuth } from '@/auth/AuthProvider';
 import { useSettings } from '@/data/settings';
 import { seedIfFirstRun } from '@/data/demo';
+import { seedMonitorsIfFirstRun } from '@/data/ops';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/toast';
@@ -13,7 +14,7 @@ import { QuickAdd } from '@/components/tasks/QuickAdd';
 import { TaskDrawer } from '@/components/tasks/TaskDrawer';
 import { LogTimeForm } from '@/components/time/LogTimeForm';
 import { FocusIndicator, FocusStartDialog } from '@/components/time/Focus';
-import { NAV_GROUPS } from './nav';
+import { NAV_GROUPS, isBuilt } from './nav';
 import { useUi } from './ui-context';
 import { useGlobalShortcuts } from './shortcuts';
 import { useTheme } from './use-theme';
@@ -41,11 +42,11 @@ function SidebarNav({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?
                     )
                   }
                 >
-                  <n.icon className={cn('size-4 shrink-0', n.phase > 1 && 'opacity-60')} />
+                  <n.icon className={cn('size-4 shrink-0', !isBuilt(n) && 'opacity-60')} />
                   {!collapsed && (
                     <>
-                      <span className={cn('flex-1 truncate', n.phase > 1 && 'opacity-80')}>{n.label}</span>
-                      {n.phase > 1 && <span className="rounded border border-line px-1 text-[10px] text-subtle">P{n.phase}</span>}
+                      <span className={cn('flex-1 truncate', !isBuilt(n) && 'opacity-80')}>{n.label}</span>
+                      {!isBuilt(n) && <span className="rounded border border-line px-1 text-[10px] text-subtle">P{n.phase}</span>}
                     </>
                   )}
                 </NavLink>
@@ -80,6 +81,7 @@ function DemoSeeder() {
   const qc = useQueryClient();
   const toast = useToast();
   const started = useRef(false);
+  const opsStarted = useRef(false);
   useEffect(() => {
     if (!user || !settings || settings.demo_seeded || started.current) return;
     started.current = true;
@@ -89,6 +91,13 @@ function DemoSeeder() {
         qc.invalidateQueries();
       })
       .catch((e) => toast(`Could not set up starter data: ${errorMessage(e)}`, 'error'));
+  }, [user, settings, qc, toast]);
+  useEffect(() => {
+    if (!user || !settings || settings.ops_seeded || opsStarted.current) return;
+    opsStarted.current = true;
+    seedMonitorsIfFirstRun(user.id)
+      .then(() => qc.invalidateQueries({ queryKey: ['monitors'] }))
+      .catch((e) => toast(`Could not set up your default health checks: ${errorMessage(e)}`, 'error'));
   }, [user, settings, qc, toast]);
   return null;
 }
@@ -146,9 +155,9 @@ export function AppShell() {
           <FocusIndicator />
           <span
             className="hidden h-8 items-center gap-1.5 rounded-md border border-dashed border-line px-2 text-xs text-subtle md:flex"
-            title="No mail, calendar or monitoring sources are connected yet. They arrive in Phases 2 to 5."
+            title="IT health checks run against public services. Mail, calendar and agent sources arrive in Phases 3 to 5."
           >
-            <Unplug className="size-3.5" /> Sync: none connected
+            <Unplug className="size-3.5" /> Sync: health checks only
           </span>
           <Button variant="ghost" size="icon" onClick={theme.toggle} aria-label={theme.dark ? 'Switch to light mode' : 'Switch to dark mode'}>
             {theme.dark ? <Sun /> : <Moon />}

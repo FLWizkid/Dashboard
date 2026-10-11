@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { BellRing, Fingerprint, Keyboard, LogOut, Plug, Send, Timer, UserRound } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Activity, BellRing, Fingerprint, Keyboard, LogOut, Plug, Send, Timer, UserRound } from 'lucide-react';
 import { z } from 'zod';
 import { IDENTITIES } from '@/lib/types';
 import { SETUP } from '@/lib/integrations';
@@ -19,7 +20,6 @@ import { AuditLogPanel, DemoDataSettings, ExportSettings } from '@/components/se
 const INTEGRATIONS: { key: keyof typeof SETUP; title: string }[] = [
   { key: 'calendar', title: 'Calendars' },
   { key: 'mail', title: 'Mailboxes' },
-  { key: 'itOps', title: 'IT health checks' },
   { key: 'agents', title: 'Agent digest' },
   { key: 'resend', title: 'Email sending (Resend)' },
   { key: 'github', title: 'GitHub' },
@@ -117,8 +117,17 @@ export function SettingsPage() {
           </Panel>
         </div>
         <div className="space-y-4">
-          <Panel title="Connections" icon={<Plug />} subtitle="Nothing is connected yet. Each one arrives in a later phase.">
+          <Panel title="Connections" icon={<Plug />} subtitle="Each grey item arrives in a later phase.">
             <ul className="space-y-2">
+              <li className="flex items-center gap-3 rounded-md border border-line p-2">
+                <Activity className="size-4 shrink-0 text-subtle" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">IT health checks</p>
+                  <p className="text-xs text-subtle">Public registry and DNS lookups. No account needed.</p>
+                </div>
+                <StatusPill status="healthy" label="Connected" />
+                <Button asChild size="sm"><Link to="/ops">Manage</Link></Button>
+              </li>
               {INTEGRATIONS.map((i) => (
                 <li key={i.key}>
                   <NotConnected title={i.title} info={SETUP[i.key]} compact />

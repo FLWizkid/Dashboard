@@ -6,13 +6,14 @@ import { SignInPage } from '@/auth/SignInPage';
 import { ToastProvider } from '@/components/ui/toast';
 import { UiProvider } from '@/components/shell/ui-context';
 import { AppShell } from '@/components/shell/AppShell';
-import { ALL_NAV } from '@/components/shell/nav';
+import { ALL_NAV, isBuilt } from '@/components/shell/nav';
 import { TodayPage } from '@/pages/TodayPage';
 import { TasksPage } from '@/pages/TasksPage';
 import { ProjectsPage } from '@/pages/ProjectsPage';
 import { TimePage } from '@/pages/TimePage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { PhasePage } from '@/pages/PhasePage';
+import { OpsPage } from '@/pages/OpsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: true } },
@@ -47,7 +48,8 @@ export default function App() {
                   <Route path="projects" element={<ProjectsPage />} />
                   <Route path="time" element={<TimePage />} />
                   <Route path="settings" element={<SettingsPage />} />
-                  {ALL_NAV.filter((n) => n.phase > 1).map((n) => (
+                  <Route path="ops" element={<OpsPage />} />
+                  {ALL_NAV.filter((n) => !isBuilt(n)).map((n) => (
                     <Route key={n.to} path={n.to.slice(1)} element={<PhasePage />} />
                   ))}
                   <Route path="*" element={<PhasePage />} />

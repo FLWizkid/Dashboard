@@ -1,15 +1,6 @@
 import type { SetupInfo } from '@/components/ui/field';
 
 export const SETUP = {
-  itOps: {
-    phase: 2,
-    what: 'Health lights for domains, email authentication, website uptime and manual systems.',
-    steps: [
-      'Approve Phase 1 so Phase 2 can start.',
-      'Phase 2 adds real domain-expiry and DNS checks (free public services) for encountive.com and theonefor.ai.',
-      'You will be able to add websites to watch and set your own warning thresholds in Settings.',
-    ],
-  },
   calendar: {
     phase: 4,
     what: 'Merged Outlook (theonefor.ai) and Google (encountive.com) calendars, read-only.',

@@ -86,6 +86,7 @@ export interface Settings {
   notification_address: string;
   show_demo: boolean;
   demo_seeded: boolean;
+  ops_seeded: boolean;
   last_time_description: string | null;
   last_time_category: TimeCategory | null;
   last_time_company_id: string | null;
@@ -175,4 +176,52 @@ export interface AuditEntry {
   entity: string;
   entity_id: string | null;
   created_at: string;
+}
+
+export type MonitorKind = 'domain' | 'email_auth' | 'website' | 'database' | 'manual';
+export type CheckStatus = 'healthy' | 'attention' | 'action' | 'unknown';
+
+export const MONITOR_KINDS: { value: MonitorKind; label: string; hint: string }[] = [
+  { value: 'domain', label: 'Domain', hint: 'Registration expiry, transfer lock and name servers from the public registry.' },
+  { value: 'email_auth', label: 'Email authentication', hint: 'Mail servers plus SPF, DKIM and DMARC records from public DNS.' },
+  { value: 'website', label: 'Website', hint: 'Whether the site answers, how fast, and when its security certificate expires.' },
+  { value: 'database', label: 'Console database', hint: 'Confirms the database behind this console answers.' },
+  { value: 'manual', label: 'Manual system', hint: 'Something you confirm by hand on a schedule, like a backup restore test.' },
+];
+
+export const monitorKindLabel = (k: MonitorKind) => MONITOR_KINDS.find((m) => m.value === k)?.label ?? k;
+
+export interface Monitor {
+  id: string;
+  kind: MonitorKind;
+  label: string;
+  target: string | null;
+  identity: Identity | null;
+  company_id: string | null;
+  warn_days: number;
+  critical_days: number;
+  slow_ms: number;
+  dkim_selectors: string[];
+  check_every_days: number;
+  enabled: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SubCheck {
+  name: string;
+  status: CheckStatus;
+  message: string;
+}
+
+export interface CheckResult {
+  id: string;
+  monitor_id: string;
+  checked_at: string;
+  status: CheckStatus;
+  summary: string;
+  details: { checks?: SubCheck[]; meta?: Record<string, string> } | null;
+  duration_ms: number | null;
+  source: 'auto' | 'manual';
 }

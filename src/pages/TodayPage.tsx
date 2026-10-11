@@ -1,11 +1,10 @@
 import { format } from 'date-fns';
-import { Activity, Bot, CalendarDays } from 'lucide-react';
+import { Bot, CalendarDays } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 import { QuickLogStrip } from '@/components/today/QuickLogStrip';
 import { TopPriorities } from '@/components/today/TopPriorities';
 import { DueToday, NeedsAttention, NotConnectedPanel } from '@/components/today/TodayPanels';
-import { NotConnected } from '@/components/ui/field';
-import { SETUP } from '@/lib/integrations';
+import { HealthStrip } from '@/components/today/HealthStrip';
 
 function greeting() {
   const h = new Date().getHours();
@@ -26,13 +25,7 @@ export function TodayPage() {
 
       <QuickLogStrip />
 
-      <section className="flex items-center gap-3 rounded-lg border border-line bg-surface px-4 py-2">
-        <Activity className="size-4 text-subtle" />
-        <h2 className="text-sm font-semibold">Health lights</h2>
-        <div className="min-w-0 flex-1">
-          <NotConnected title="IT Operations health lights" info={SETUP.itOps} compact />
-        </div>
-      </section>
+      <HealthStrip />
 
       <div className="grid gap-4 lg:grid-cols-12">
         <div className="lg:col-span-7">

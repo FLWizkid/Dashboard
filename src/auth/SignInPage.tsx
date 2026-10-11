@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
-import { KeyRound, Mail, Terminal } from 'lucide-react';
+import { Eye, EyeOff, KeyRound, Mail, Terminal } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { useAuth } from './AuthProvider';
@@ -22,6 +22,7 @@ export function SignInPage() {
   const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('doug@theonefor.ai');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -76,7 +77,26 @@ export function SignInPage() {
               <input className="input" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </Field>
             <Field label="Password" hint={mode === 'signup' ? 'At least 8 characters' : undefined}>
-              <input className="input" type="password" autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} required value={password} onChange={(e) => setPassword(e.target.value)} />
+              <div className="relative">
+                <input
+                  className="input pr-20"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  aria-pressed={showPassword}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-1 top-1/2 flex h-7 -translate-y-1/2 items-center gap-1 rounded px-2 text-xs font-medium text-muted transition-colors hover:bg-raised hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                >
+                  {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </Field>
             {error && <p className="rounded-md border border-error-500/40 bg-error-500/10 p-2 text-sm text-error-700 dark:text-error-300" role="alert">{error}</p>}
             {notice && <p className="rounded-md border border-success-500/40 bg-success-500/10 p-2 text-sm text-success-700 dark:text-success-300">{notice}</p>}
