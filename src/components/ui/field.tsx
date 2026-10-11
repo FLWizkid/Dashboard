@@ -1,69 +1,59 @@
-"use client";
+import { useState, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { Plug } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from './button';
+import { Dialog } from './dialog';
 
-import * as React from "react";
-
-import { cn } from "@/lib/utils";
-
-const controlClasses = cn(
-  "w-full rounded-md border border-line-strong bg-surface px-3 text-sm text-fg",
-  "placeholder:text-fg-subtle",
-  "transition-colors duration-fast ease-standard",
-  "hover:border-fg-subtle",
-  "disabled:cursor-not-allowed disabled:opacity-60",
-);
-
-export const Input = React.forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->(({ className, ...props }, ref) => (
-  <input
-    ref={ref}
-    className={cn(controlClasses, "h-10", className)}
-    {...props}
-  />
-));
-Input.displayName = "Input";
-
-export const Textarea = React.forwardRef<
-  HTMLTextAreaElement,
-  React.TextareaHTMLAttributes<HTMLTextAreaElement>
->(({ className, ...props }, ref) => (
-  <textarea
-    ref={ref}
-    className={cn(controlClasses, "min-h-20 py-2 leading-relaxed", className)}
-    {...props}
-  />
-));
-Textarea.displayName = "Textarea";
-
-/**
- * A plain native select. Radix's Select is lovely but a native control is
- * faster to operate with the keyboard and is what a "type, tab, done" capture
- * flow actually wants.
- */
-export const Select = React.forwardRef<
-  HTMLSelectElement,
-  React.SelectHTMLAttributes<HTMLSelectElement>
->(({ className, ...props }, ref) => (
-  <select
-    ref={ref}
-    className={cn(controlClasses, "h-10 cursor-pointer pr-8", className)}
-    {...props}
-  />
-));
-Select.displayName = "Select";
-
-export function Label({
-  className,
-  ...props
-}: React.LabelHTMLAttributes<HTMLLabelElement>) {
+export function Field({ label, hint, children, className }: { label: string; hint?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <label
-      className={cn(
-        "text-xs font-medium uppercase tracking-wide text-fg-muted",
-        className,
-      )}
-      {...props}
-    />
+    <label className={cn('block', className)}>
+      <span className="label">{label}</span>
+      {children}
+      {hint && <span className="mt-1 block text-xs text-subtle">{hint}</span>}
+    </label>
+  );
+}
+
+export function Select({ className, children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select className={cn('input appearance-none bg-[length:16px] bg-[right_8px_center] bg-no-repeat pr-8', className)} style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23889' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")" }} {...props}>
+      {children}
+    </select>
+  );
+}
+
+export interface SetupInfo {
+  phase: number;
+  what: string;
+  steps: string[];
+}
+
+export function NotConnected({ title, info, compact }: { title: string; info: SetupInfo; compact?: boolean }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div className={cn('flex items-center gap-3 rounded-md border border-dashed border-line bg-raised/50', compact ? 'p-2' : 'p-4')}>
+        <Plug className="size-4 shrink-0 text-subtle" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-muted">Not connected</p>
+          {!compact && <p className="text-sm text-subtle">{info.what}</p>}
+        </div>
+        <Button size="sm" onClick={() => setOpen(true)}>
+          Set up
+        </Button>
+      </div>
+      <Dialog open={open} onOpenChange={setOpen} title={`Set up: ${title}`} description={`Planned for Phase ${info.phase}`}>
+        <p className="mb-3 text-sm text-muted">{info.what}</p>
+        <p className="label">Next steps</p>
+        <ol className="list-decimal space-y-1 pl-5 text-sm">
+          {info.steps.map((s) => (
+            <li key={s}>{s}</li>
+          ))}
+        </ol>
+        <p className="mt-4 rounded-md bg-raised p-3 text-xs text-muted">
+          This panel stays grey until it is really connected. It will never show a green light from placeholder data.
+        </p>
+      </Dialog>
+    </>
   );
 }

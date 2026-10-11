@@ -1,232 +1,39 @@
-"use client";
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { CheckCircle2, OctagonAlert, Info, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-import { AnimatePresence, m, useReducedMotion } from "framer-motion";
-import * as React from "react";
+type Tone = 'success' | 'error' | 'info';
+interface Toast { id: number; tone: Tone; text: string }
 
-import { riseIn } from "@/lib/motion";
-import { cn } from "@/lib/utils";
+const ToastContext = createContext<(text: string, tone?: Tone) => void>(() => {});
 
-import { Button } from "./button";
-import { Kbd } from "./kbd";
-
-/**
- * Toasts, with a first-class undo.
- *
- * Undo is the safety net that makes one-tap complete safe to make *actually*
- * one tap, so it gets more than a button: the most recent undoable toast is
- * reachable with the `u` key from anywhere (see `useUndoHotkey`).
- *
- * The region is `aria-live="polite"` and the message carries the same words a
- * sighted user reads — an undo the screen reader can't hear about is not an
- * undo.
- */
-
-export interface ToastAction {
-  label: string;
-  onAction: () => void | Promise<void>;
-  /** Shown next to the label; also the key that triggers it globally. */
-  shortcut?: string;
-}
-
-export interface ToastOptions {
-  title: string;
-  description?: string;
-  /**
-   * Up to two, rendered left to right.
-   *
-   * Two, because completing a task wants to offer both "log the time against
-   * this" and "undo" — and an offer that only exists until the toast fades is
-   * the only moment either is cheap. More than two turns a confirmation into
-   * a menu, which is not what a thing that disappears in eight seconds should
-   * be; anything beyond that belongs on the row itself.
-   */
-  actions?: ToastAction[];
-  /** Milliseconds before auto-dismiss. `0` keeps it until dismissed. */
-  duration?: number;
-  tone?: "neutral" | "success" | "danger";
-}
-
-interface ToastRecord extends ToastOptions {
-  id: number;
-}
-
-interface ToastContextValue {
-  toast: (options: ToastOptions) => number;
-  dismiss: (id: number) => void;
-  /** Runs the newest toast action bound to `key`, if there is one. */
-  triggerShortcut: (key: string) => boolean;
-}
-
-const ToastContext = React.createContext<ToastContextValue | null>(null);
-
-const DEFAULT_DURATION = 8000;
-
-export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = React.useState<ToastRecord[]>([]);
-  const nextId = React.useRef(1);
-  const timers = React.useRef(new Map<number, ReturnType<typeof setTimeout>>());
-
-  const dismiss = React.useCallback((id: number) => {
-    const timer = timers.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      timers.current.delete(id);
-    }
-    setToasts((current) => current.filter((item) => item.id !== id));
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const push = useCallback((text: string, tone: Tone = 'success') => {
+    const id = Date.now() + Math.random();
+    setToasts((t) => [...t.slice(-3), { id, tone, text }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), tone === 'error' ? 7000 : 3500);
   }, []);
-
-  const toast = React.useCallback(
-    (options: ToastOptions) => {
-      const id = nextId.current++;
-      setToasts((current) => [...current, { ...options, id }]);
-
-      const duration = options.duration ?? DEFAULT_DURATION;
-      if (duration > 0) {
-        timers.current.set(
-          id,
-          setTimeout(() => dismiss(id), duration),
-        );
-      }
-
-      return id;
-    },
-    [dismiss],
-  );
-
-  // Keep the newest toasts in a ref so the global hotkey reads current state
-  // without re-binding its listener on every toast.
-  const toastsRef = React.useRef<ToastRecord[]>([]);
-  React.useEffect(() => {
-    toastsRef.current = toasts;
-  }, [toasts]);
-
-  const triggerShortcut = React.useCallback(
-    (key: string) => {
-      for (const item of [...toastsRef.current].reverse()) {
-        const action = item.actions?.find((entry) => entry.shortcut === key);
-        if (!action) continue;
-        void action.onAction();
-        dismiss(item.id);
-        return true;
-      }
-      return false;
-    },
-    [dismiss],
-  );
-
-  React.useEffect(() => {
-    const pending = timers.current;
-    return () => {
-      pending.forEach((timer) => clearTimeout(timer));
-      pending.clear();
-    };
-  }, []);
-
-  const value = React.useMemo(
-    () => ({ toast, dismiss, triggerShortcut }),
-    [toast, dismiss, triggerShortcut],
-  );
 
   return (
-    <ToastContext.Provider value={value}>
+    <ToastContext.Provider value={push}>
       {children}
-      <ToastViewport toasts={toasts} onDismiss={dismiss} />
+      <div className="pointer-events-none fixed bottom-20 right-4 z-[60] flex w-[min(380px,calc(100vw-32px))] flex-col gap-2 lg:bottom-4" role="status" aria-live="polite">
+        {toasts.map((t) => {
+          const Icon = t.tone === 'success' ? CheckCircle2 : t.tone === 'error' ? OctagonAlert : Info;
+          return (
+            <div key={t.id} className="pointer-events-auto flex items-start gap-2 rounded-lg border border-line bg-surface p-3 text-sm shadow-xl animate-fade-in">
+              <Icon className={cn('mt-0.5 size-4 shrink-0', t.tone === 'success' && 'text-success-500', t.tone === 'error' && 'text-error-500', t.tone === 'info' && 'text-primary-500')} />
+              <p className="flex-1">{t.text}</p>
+              <button className="text-subtle hover:text-fg" onClick={() => setToasts((all) => all.filter((x) => x.id !== t.id))} aria-label="Dismiss">
+                <X className="size-3.5" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </ToastContext.Provider>
   );
 }
 
-export function useToast(): ToastContextValue {
-  const context = React.useContext(ToastContext);
-  if (!context) {
-    throw new Error("useToast must be used inside a ToastProvider");
-  }
-  return context;
-}
-
-function ToastViewport({
-  toasts,
-  onDismiss,
-}: {
-  toasts: ToastRecord[];
-  onDismiss: (id: number) => void;
-}) {
-  const reduced = useReducedMotion();
-
-  return (
-    <div
-      // `role="status"` + polite: announced without interrupting.
-      role="status"
-      aria-live="polite"
-      aria-atomic="false"
-      className={cn(
-        "no-print pointer-events-none fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 p-4",
-        "sm:bottom-4 sm:left-auto sm:right-4 sm:items-end sm:p-0",
-      )}
-    >
-      <AnimatePresence initial={false}>
-        {toasts.map((item) => (
-          <m.div
-            key={item.id}
-            layout={!reduced}
-            variants={riseIn(reduced, 10)}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className={cn(
-              "pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-lg border px-4 py-3 shadow-lg",
-              item.tone === "danger"
-                ? "border-danger/40 bg-surface-raised"
-                : "border-line bg-surface-raised",
-            )}
-          >
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-fg">{item.title}</p>
-              {item.description ? (
-                <p className="mt-0.5 text-xs text-fg-muted">
-                  {item.description}
-                </p>
-              ) : null}
-            </div>
-
-            {item.actions?.slice(0, 2).map((action) => (
-              <Button
-                key={action.label}
-                variant="secondary"
-                size="sm"
-                className="shrink-0"
-                onClick={() => {
-                  void action.onAction();
-                  onDismiss(item.id);
-                }}
-              >
-                {action.label}
-                {action.shortcut ? (
-                  <Kbd aria-hidden="true">{action.shortcut}</Kbd>
-                ) : null}
-              </Button>
-            ))}
-
-            <button
-              type="button"
-              onClick={() => onDismiss(item.id)}
-              className="rounded-sm p-0.5 text-fg-subtle transition-colors duration-fast hover:text-fg"
-            >
-              <span className="sr-only">Dismiss</span>
-              <svg
-                viewBox="0 0 12 12"
-                className="size-3"
-                aria-hidden="true"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              >
-                <path d="M2 2l8 8M10 2l-8 8" />
-              </svg>
-            </button>
-          </m.div>
-        ))}
-      </AnimatePresence>
-    </div>
-  );
-}
+export const useToast = () => useContext(ToastContext);

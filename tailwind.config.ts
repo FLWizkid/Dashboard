@@ -1,130 +1,49 @@
-import type { Config } from "tailwindcss";
+import type { Config } from 'tailwindcss';
+import colors from 'tailwindcss/colors';
 
-/**
- * Every colour here resolves to a CSS custom property defined in
- * `src/app/globals.css`. Components therefore never hard-code a hex value and
- * both themes come for free — see that file for the palette and its contrast
- * budget.
- */
-const rgb = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
-
-const config: Config = {
-  content: [
-    "./src/app/**/*.{ts,tsx,mdx}",
-    "./src/components/**/*.{ts,tsx,mdx}",
-  ],
-  // Dark mode is driven by CSS variables (media query + `data-theme` override),
-  // so the `dark:` variant is only needed for the rare thing tokens can't
-  // express. Wiring it to the same attribute keeps the two in step.
-  darkMode: ["class", '[data-theme="dark"]'],
+export default {
+  darkMode: 'class',
+  content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+      },
+      fontSize: {
+        xs: ['12px', '18px'],
+        sm: ['13px', '20px'],
+        base: ['14px', '21px'],
+        lg: ['16px', '24px'],
+        xl: ['20px', '24px'],
+        '2xl': ['24px', '29px'],
+      },
       colors: {
-        bg: rgb("bg"),
-        surface: {
-          DEFAULT: rgb("surface"),
-          muted: rgb("surface-muted"),
-          raised: rgb("surface-raised"),
-        },
-        line: {
-          DEFAULT: rgb("border"),
-          strong: rgb("border-strong"),
-        },
-        fg: {
-          DEFAULT: rgb("fg"),
-          muted: rgb("fg-muted"),
-          subtle: rgb("fg-subtle"),
-        },
-        primary: {
-          DEFAULT: rgb("primary"),
-          hover: rgb("primary-hover"),
-          fg: rgb("primary-fg"),
-          soft: rgb("primary-soft"),
-          "soft-fg": rgb("primary-soft-fg"),
-        },
-        accent: {
-          DEFAULT: rgb("accent"),
-          bright: rgb("accent-bright"),
-          soft: rgb("accent-soft"),
-        },
-        // The navy frame. Constant across both themes on purpose — see the
-        // note in globals.css.
-        chrome: {
-          DEFAULT: rgb("chrome"),
-          raised: rgb("chrome-raised"),
-          fg: rgb("chrome-fg"),
-          "fg-muted": rgb("chrome-fg-muted"),
-          line: rgb("chrome-line"),
-        },
-        // One tint per mailbox, always rendered next to the account's name.
-        account: {
-          1: rgb("account-1"),
-          2: rgb("account-2"),
-          3: rgb("account-3"),
-          4: rgb("account-4"),
-        },
-        ring: rgb("ring"),
-        danger: {
-          DEFAULT: rgb("danger"),
-          fg: rgb("danger-fg"),
-        },
-        warning: rgb("warning"),
-        success: rgb("success"),
-        priority: {
-          critical: rgb("priority-critical"),
-          "critical-soft": rgb("priority-critical-soft"),
-          high: rgb("priority-high"),
-          "high-soft": rgb("priority-high-soft"),
-          normal: rgb("priority-normal"),
-          "normal-soft": rgb("priority-normal-soft"),
-          low: rgb("priority-low"),
-          "low-soft": rgb("priority-low-soft"),
-        },
-      },
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 4px)",
-        sm: "calc(var(--radius) - 6px)",
-      },
-      // Elevation comes from the theme rather than from Tailwind's neutral
-      // greys, because a grey shadow over a navy page reads as grime.
-      boxShadow: {
-        sm: "var(--shadow-sm)",
-        DEFAULT: "var(--shadow-sm)",
-        md: "var(--shadow-md)",
-        lg: "var(--shadow-lg)",
-      },
-      transitionTimingFunction: {
-        standard: "var(--ease-standard)",
-        "gentle-out": "var(--ease-out)",
-        "gentle-in-out": "var(--ease-in-out)",
-      },
-      transitionDuration: {
-        fast: "var(--motion-fast)",
-        base: "var(--motion-base)",
-        slow: "var(--motion-slow)",
+        primary: colors.sky,
+        secondary: colors.slate,
+        accent: colors.teal,
+        success: colors.emerald,
+        warning: colors.amber,
+        error: colors.red,
+        neutral: colors.zinc,
+        bg: 'rgb(var(--bg) / <alpha-value>)',
+        surface: 'rgb(var(--surface) / <alpha-value>)',
+        raised: 'rgb(var(--raised) / <alpha-value>)',
+        line: 'rgb(var(--line) / <alpha-value>)',
+        fg: 'rgb(var(--fg) / <alpha-value>)',
+        muted: 'rgb(var(--muted) / <alpha-value>)',
+        subtle: 'rgb(var(--subtle) / <alpha-value>)',
       },
       keyframes: {
-        // Used by the task-complete moment; see src/lib/motion.ts.
-        "check-draw": {
-          from: { strokeDashoffset: "24" },
-          to: { strokeDashoffset: "0" },
-        },
-        "rise-in": {
-          from: { opacity: "0", transform: "translateY(6px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
-        },
+        'fade-in': { from: { opacity: '0', transform: 'translateY(4px)' }, to: { opacity: '1', transform: 'none' } },
+        'slide-in': { from: { transform: 'translateX(100%)' }, to: { transform: 'none' } },
+        shimmer: { '100%': { transform: 'translateX(100%)' } },
       },
       animation: {
-        "check-draw": "check-draw var(--motion-base) var(--ease-out) forwards",
-        "rise-in": "rise-in var(--motion-base) var(--ease-out) both",
-      },
-      fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        'fade-in': 'fade-in 180ms ease-out',
+        'slide-in': 'slide-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
       },
     },
   },
   plugins: [],
-};
-
-export default config;
+} satisfies Config;

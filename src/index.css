@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: 246 247 249;
+    --surface: 255 255 255;
+    --raised: 240 242 245;
+    --line: 223 227 233;
+    --fg: 17 24 33;
+    --muted: 74 85 101;
+    --subtle: 110 120 135;
+    color-scheme: light;
+  }
+  .dark {
+    --bg: 11 15 20;
+    --surface: 17 22 29;
+    --raised: 25 31 40;
+    --line: 39 47 58;
+    --fg: 230 235 241;
+    --muted: 160 171 186;
+    --subtle: 122 134 150;
+    color-scheme: dark;
+  }
+  html {
+    font-size: 14px;
+  }
+  body {
+    @apply bg-bg text-fg font-sans antialiased;
+    line-height: 1.5;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  h1, h2, h3 {
+    line-height: 1.2;
+  }
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-1 ring-offset-bg;
+  }
+  ::selection {
+    @apply bg-primary-500/30;
+  }
+}
+
+@layer components {
+  .input {
+    @apply h-9 w-full rounded-md border border-line bg-surface px-3 text-base text-fg placeholder:text-subtle transition-colors hover:border-subtle focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30 disabled:opacity-50;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium text-muted;
+  }
+  .skeleton {
+    @apply relative overflow-hidden rounded bg-raised;
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-fg/5 to-transparent;
+    animation: shimmer 1.4s infinite;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

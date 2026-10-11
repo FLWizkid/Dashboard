@@ -1,91 +1,46 @@
-"use client";
+import type { ReactNode } from 'react';
+import * as D from '@radix-ui/react-dialog';
+import { X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
-import * as React from "react";
+interface DialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description?: string;
+  children: ReactNode;
+  footer?: ReactNode;
+  className?: string;
+  side?: 'center' | 'right';
+}
 
-import { cn } from "@/lib/utils";
-
-export const Dialog = DialogPrimitive.Root;
-export const DialogTrigger = DialogPrimitive.Trigger;
-export const DialogClose = DialogPrimitive.Close;
-
-export const DialogContent = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
-    /** Hide the built-in close button when the dialog supplies its own. */
-    hideClose?: boolean;
-  }
->(({ className, children, hideClose = false, ...props }, ref) => (
-  <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay
-      className={cn(
-        "fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]",
-        "data-[state=open]:animate-rise-in",
-      )}
-    />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2",
-        "rounded-lg border border-line bg-surface-raised p-6 shadow-xl",
-        "data-[state=open]:animate-rise-in",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      {hideClose ? null : (
-        <DialogPrimitive.Close
+export function Dialog({ open, onOpenChange, title, description, children, footer, className, side = 'center' }: DialogProps) {
+  return (
+    <D.Root open={open} onOpenChange={onOpenChange}>
+      <D.Portal>
+        <D.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] data-[state=open]:animate-fade-in" />
+        <D.Content
           className={cn(
-            "absolute right-4 top-4 rounded-sm p-1 text-fg-subtle",
-            "transition-colors duration-fast hover:bg-surface-muted hover:text-fg",
+            'fixed z-50 flex flex-col border border-line bg-surface shadow-2xl focus:outline-none',
+            side === 'center'
+              ? 'left-1/2 top-[12vh] max-h-[80vh] w-[calc(100vw-32px)] max-w-lg -translate-x-1/2 rounded-lg animate-fade-in'
+              : 'inset-y-0 right-0 w-full max-w-md animate-slide-in',
+            className,
           )}
         >
-          <X className="size-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-      )}
-    </DialogPrimitive.Content>
-  </DialogPrimitive.Portal>
-));
-DialogContent.displayName = "DialogContent";
-
-export const DialogTitle = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Title
-    ref={ref}
-    className={cn("text-base font-semibold text-fg", className)}
-    {...props}
-  />
-));
-DialogTitle.displayName = "DialogTitle";
-
-export const DialogDescription = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Description
-    ref={ref}
-    className={cn("mt-1 text-sm text-fg-muted", className)}
-    {...props}
-  />
-));
-DialogDescription.displayName = "DialogDescription";
-
-export function DialogFooter({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn(
-        "mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
-        className,
-      )}
-      {...props}
-    />
+          <div className="flex items-start gap-2 border-b border-line px-4 py-3">
+            <div className="flex-1">
+              <D.Title className="text-lg font-semibold">{title}</D.Title>
+              {description ? <D.Description className="text-sm text-muted">{description}</D.Description> : <D.Description className="sr-only">{title}</D.Description>}
+            </div>
+            <D.Close className="rounded p-1 text-subtle transition-colors hover:bg-raised hover:text-fg" aria-label="Close">
+              <X className="size-4" />
+            </D.Close>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">{children}</div>
+          {footer && <div className="flex justify-end gap-2 border-t border-line px-4 py-3">{footer}</div>}
+        </D.Content>
+      </D.Portal>
+    </D.Root>
   );
 }
