@@ -3,7 +3,8 @@ import { format } from 'date-fns';
 import { Trash2 } from 'lucide-react';
 import { TIME_CATEGORIES, type TimeCategory, type TimeEntry } from '@/lib/types';
 import { errorMessage, formatMinutes, parseDuration, toDateKey } from '@/lib/utils';
-import { useCompanies, useProjects } from '@/data/organization';
+import { useCompanies, useUsageRank } from '@/data/organization';
+import { ProjectPicker } from '@/components/projects/ProjectPicker';
 import { useDeleteTimeEntry, useSaveTimeEntry } from '@/data/time';
 import { Button } from '@/components/ui/button';
 import { Field, Select } from '@/components/ui/field';
@@ -11,7 +12,7 @@ import { useToast } from '@/components/ui/toast';
 
 export function TimeEntryEditor({ entry, onDone }: { entry: TimeEntry; onDone: () => void }) {
   const { data: companies = [] } = useCompanies();
-  const { data: projects = [] } = useProjects();
+  const rank = useUsageRank();
   const save = useSaveTimeEntry();
   const del = useDeleteTimeEntry();
   const toast = useToast();
@@ -51,22 +52,26 @@ export function TimeEntryEditor({ entry, onDone }: { entry: TimeEntry; onDone: (
       <div className="grid grid-cols-2 gap-3">
         <Field label="Category">
           <Select value={category} onChange={(e) => setCategory(e.target.value as TimeCategory)}>
-            {TIME_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            {rank([...TIME_CATEGORIES], 'time_category', (c) => c.value).map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </Select>
         </Field>
         <Field label="Duration" hint={minutes ? formatMinutes(minutes) : 'e.g. 45, 1h30'}>
           <input className="input font-mono" value={duration} onChange={(e) => setDuration(e.target.value)} aria-invalid={!minutes} />
         </Field>
         <Field label="Project">
-          <Select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-            <option value="">No project</option>
-            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </Select>
+          <ProjectPicker
+            value={projectId}
+            companyId={companyId || null}
+            onChange={(id, p) => {
+              setProjectId(id);
+              if (p?.company_id && !companyId) setCompanyId(p.company_id);
+            }}
+          />
         </Field>
         <Field label="Company">
           <Select value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
             <option value="">No company</option>
-            {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {rank(companies, 'company', (c) => c.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select>
         </Field>
         <Field label="Date"><input type="date" className="input" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} /></Field>

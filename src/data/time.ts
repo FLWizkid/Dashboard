@@ -59,6 +59,7 @@ export function useSaveTimeEntry() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['time'] });
       qc.invalidateQueries({ queryKey: ['settings'] });
+      qc.invalidateQueries({ queryKey: ['usage'] });
     },
   });
 }

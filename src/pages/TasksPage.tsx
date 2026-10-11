@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { CalendarDays, Columns3, List, Search } from 'lucide-react';
 import { IDENTITIES, PRIORITIES } from '@/lib/types';
 import { useTasks } from '@/data/tasks';
-import { useCompanies, useProjects } from '@/data/organization';
+import { useCompanies, useProjects, useUsageRank } from '@/data/organization';
 import { Panel } from '@/components/ui/panel';
 import { PageHeader } from '@/components/ui/page-header';
 import { Select } from '@/components/ui/field';
@@ -31,6 +31,7 @@ export function TasksPage() {
   const tasks = useTasks();
   const { data: companies = [] } = useCompanies();
   const { data: projects = [] } = useProjects();
+  const rank = useUsageRank();
 
   const setParam = (k: string, v: string) => {
     const next = new URLSearchParams(params);
@@ -86,11 +87,11 @@ export function TasksPage() {
         </Select>
         <Select className="w-auto" value={company} onChange={(e) => setParam('company', e.target.value)} aria-label="Company filter">
           <option value="">All companies</option>
-          {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {rank(companies, 'company', (c) => c.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
         <Select className="w-auto" value={project} onChange={(e) => setParam('project', e.target.value)} aria-label="Project filter">
           <option value="">All projects</option>
-          {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          {rank(projects, 'project', (p) => p.id).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </Select>
         <Select className="w-auto" value={priority} onChange={(e) => setParam('priority', e.target.value)} aria-label="Priority filter">
           <option value="">Any priority</option>

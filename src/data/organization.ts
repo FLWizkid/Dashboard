@@ -61,9 +61,11 @@ export function useSaveProject() {
         check(await supabase.from('cc_projects').update(p).eq('id', id));
         await recordAudit('project.update', 'project', id);
       } else {
-        const row = unwrap(await supabase.from('cc_projects').insert(p).select('id').single());
+        const row = unwrap(await supabase.from('cc_projects').insert(p).select('id').single()) as { id: string };
         await recordAudit('project.create', 'project', row.id);
+        return row.id;
       }
+      return id;
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['projects'] }),
   });
@@ -81,4 +83,30 @@ export function useDeleteProject() {
       qc.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
+}
+
+export type UsageKind = 'project' | 'company' | 'time_category';
+
+export function useUsage() {
+  return useQuery({
+    queryKey: ['usage'],
+    queryFn: async () => {
+      const rows = unwrap(await supabase.rpc('cc_usage_counts')) as { kind: UsageKind; key: string; uses: number; last_used: string | null }[];
+      return new Map(rows.map((r) => [`${r.kind}:${r.key}`, { uses: r.uses, last: r.last_used ? Date.parse(r.last_used) : 0 }]));
+    },
+    staleTime: 60_000,
+  });
+}
+
+export function useUsageRank() {
+  const { data: usage } = useUsage();
+  return <T,>(items: T[], kind: UsageKind, keyOf: (item: T) => string) => {
+    if (!usage) return items;
+    const stat = (item: T) => usage.get(`${kind}:${keyOf(item)}`) ?? { uses: 0, last: 0 };
+    return [...items].sort((a, b) => {
+      const x = stat(a);
+      const y = stat(b);
+      return y.uses - x.uses || y.last - x.last;
+    });
+  };
 }

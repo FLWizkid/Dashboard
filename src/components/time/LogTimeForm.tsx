@@ -3,18 +3,19 @@ import { Clock, CornerDownLeft } from 'lucide-react';
 import { TIME_CATEGORIES, type TimeCategory } from '@/lib/types';
 import { cn, errorMessage, formatMinutes, parseDuration } from '@/lib/utils';
 import { useSettings } from '@/data/settings';
-import { useCompanies, useProjects } from '@/data/organization';
+import { useCompanies, useUsageRank } from '@/data/organization';
 import { useSaveTimeEntry } from '@/data/time';
 import { Button } from '@/components/ui/button';
 import { Field, Select } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
+import { ProjectPicker } from '@/components/projects/ProjectPicker';
 
 const PRESETS = [15, 30, 60, 90];
 
 export function LogTimeForm({ layout = 'stack', onSaved, autoFocus }: { layout?: 'strip' | 'stack'; onSaved?: () => void; autoFocus?: boolean }) {
   const { data: settings } = useSettings();
   const { data: companies = [] } = useCompanies();
-  const { data: projects = [] } = useProjects();
+  const rank = useUsageRank();
   const save = useSaveTimeEntry();
   const toast = useToast();
 
@@ -42,12 +43,11 @@ export function LogTimeForm({ layout = 'stack', onSaved, autoFocus }: { layout?:
 
   async function submit() {
     if (!minutes || minutes < 1 || minutes > 1440) return toast('Enter a duration like 30, 45m, 1h30 or 1.5h.', 'error');
-    const project = projects.find((p) => p.id === projectId);
     try {
       await save.mutateAsync({
         minutes,
         category,
-        company_id: companyId || project?.company_id || null,
+        company_id: companyId || null,
         project_id: projectId || null,
         description: description.trim() || null,
         ...(date ? { started_at: new Date(`${date}T12:00:00`).toISOString() } : {}),
@@ -89,26 +89,23 @@ export function LogTimeForm({ layout = 'stack', onSaved, autoFocus }: { layout?:
     <div className={layout === 'strip' ? 'flex flex-wrap items-end gap-2' : 'space-y-3'}>
       <Field label="Category" className={layout === 'strip' ? 'min-w-[140px] flex-1' : ''}>
         <Select value={category} onChange={(e) => setCategory(e.target.value as TimeCategory)}>
-          {TIME_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+          {rank([...TIME_CATEGORIES], 'time_category', (c) => c.value).map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
         </Select>
       </Field>
       <Field label="Project" className={layout === 'strip' ? 'min-w-[160px] flex-1' : ''}>
-        <Select
+        <ProjectPicker
           value={projectId}
-          onChange={(e) => {
-            setProjectId(e.target.value);
-            const p = projects.find((x) => x.id === e.target.value);
+          companyId={companyId || null}
+          onChange={(id, p) => {
+            setProjectId(id);
             if (p?.company_id) setCompanyId(p.company_id);
           }}
-        >
-          <option value="">No project</option>
-          {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </Select>
+        />
       </Field>
       <Field label="Company" className={layout === 'strip' ? 'min-w-[130px] flex-1' : ''}>
         <Select value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
           <option value="">No company</option>
-          {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {rank(companies, 'company', (c) => c.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </Select>
       </Field>
       {descField}

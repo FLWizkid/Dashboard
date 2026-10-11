@@ -4,7 +4,8 @@ import { format } from 'date-fns';
 import { IDENTITIES, PRIORITIES, RECURRENCES, TASK_STATUSES, type Identity, type Priority, type Recurrence, type Task, type TaskStatus } from '@/lib/types';
 import { errorMessage } from '@/lib/utils';
 import { useTasks, useUpdateTask, useDeleteTask } from '@/data/tasks';
-import { useCompanies, useProjects } from '@/data/organization';
+import { useCompanies, useUsageRank } from '@/data/organization';
+import { ProjectPicker } from '@/components/projects/ProjectPicker';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Field, Select } from '@/components/ui/field';
@@ -27,7 +28,7 @@ function TaskForm({ task, onDone }: { task: Task; onDone: () => void }) {
   const [form, setForm] = useState(task);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { data: companies = [] } = useCompanies();
-  const { data: projects = [] } = useProjects();
+  const rank = useUsageRank();
   const update = useUpdateTask();
   const del = useDeleteTask();
   const toast = useToast();
@@ -95,7 +96,7 @@ function TaskForm({ task, onDone }: { task: Task; onDone: () => void }) {
             }}
           >
             <option value="">None</option>
-            {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {rank(companies, 'company', (c) => c.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </Select>
         </Field>
         <Field label="Identity" hint={!form.identity ? <span className="text-warning-700 dark:text-warning-400">Choose who this belongs to</span> : undefined}>
@@ -105,10 +106,12 @@ function TaskForm({ task, onDone }: { task: Task; onDone: () => void }) {
           </Select>
         </Field>
         <Field label="Project">
-          <Select value={form.project_id ?? ''} onChange={(e) => set({ project_id: e.target.value || null })}>
-            <option value="">None</option>
-            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </Select>
+          <ProjectPicker
+            value={form.project_id ?? ''}
+            companyId={form.company_id}
+            noneLabel="None"
+            onChange={(id, p) => set({ project_id: id || null, ...(p?.company_id && !form.company_id ? { company_id: p.company_id } : {}) })}
+          />
         </Field>
         <Field label="Category">
           <input className="input" value={form.category ?? ''} onChange={(e) => set({ category: e.target.value || null })} placeholder="IT, Security…" />

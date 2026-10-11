@@ -33,6 +33,7 @@ export type TaskInput = Partial<Omit<Task, 'id' | 'is_demo' | 'created_at' | 'up
 function invalidate(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['tasks'] });
   qc.invalidateQueries({ queryKey: ['priorities'] });
+  qc.invalidateQueries({ queryKey: ['usage'] });
 }
 
 export function useCreateTask() {
