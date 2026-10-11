@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { Trash2 } from 'lucide-react';
 import { IDENTITIES, MONITOR_KINDS, type Identity, type Monitor, type MonitorKind } from '@/lib/types';
@@ -6,7 +6,7 @@ import { errorMessage } from '@/lib/utils';
 import { useSaveMonitor, useDeleteMonitor, useRunChecks, type MonitorInput } from '@/data/ops';
 import { useCompanies } from '@/data/organization';
 import { Dialog } from '@/components/ui/dialog';
-import { Field, Select } from '@/components/ui/field';
+import { Field, Select, focusFirstError } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 
@@ -24,20 +24,31 @@ const schema = z
   })
   .superRefine((v, ctx) => {
     if ((v.kind === 'domain' || v.kind === 'email_auth') && !DOMAIN_RE.test(v.target)) {
-      ctx.addIssue({ code: 'custom', message: 'Enter a bare domain like example.com (no https:// or slashes).' });
+      ctx.addIssue({ code: 'custom', path: ['target'], message: v.target ? 'That does not look like a domain. Try something like encountive.com' : 'Enter a domain, for example encountive.com' });
     }
     if (v.kind === 'website') {
       try {
         const u = new URL(v.target);
-        if (!/^https?:$/.test(u.protocol) || v.target.length > 500) throw new Error();
+        if (!/^https?:$/.test(u.protocol) || v.target.length > 500 || !DOMAIN_RE.test(u.hostname)) throw new Error();
       } catch {
-        ctx.addIssue({ code: 'custom', message: 'Enter a full web address starting with https://' });
+        ctx.addIssue({ code: 'custom', path: ['target'], message: v.target ? 'That does not look like a web address. Try something like encountive.com' : 'Enter a web address, for example encountive.com' });
       }
     }
-    if (v.critical_days > v.warn_days) ctx.addIssue({ code: 'custom', message: 'The critical threshold must be fewer days than the warning threshold.' });
+    if (v.critical_days > v.warn_days) ctx.addIssue({ code: 'custom', path: ['critical_days'], message: 'Must be fewer days than the warning threshold.' });
   });
 
 type Draft = Omit<MonitorInput, 'dkim_selectors'> & { dkim: string };
+type Errors = Partial<Record<keyof Draft | 'form', string>>;
+
+function stripScheme(url: string) {
+  return url.trim().replace(/^https:\/\//i, '');
+}
+
+function toWebsiteUrl(input: string) {
+  const v = input.trim();
+  if (!v) return '';
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+}
 
 function blank(kind: MonitorKind): Draft {
   return {
@@ -48,12 +59,13 @@ function blank(kind: MonitorKind): Draft {
 
 function toDraft(m: Monitor): Draft {
   const { created_at: _c, updated_at: _u, dkim_selectors, ...rest } = m;
-  return { ...rest, dkim: dkim_selectors.join(', ') };
+  return { ...rest, target: rest.kind === 'website' && rest.target ? stripScheme(rest.target) : rest.target, dkim: dkim_selectors.join(', ') };
 }
 
 export function MonitorForm({ open, onOpenChange, monitor }: { open: boolean; onOpenChange: (o: boolean) => void; monitor: Monitor | null }) {
   const [draft, setDraft] = useState<Draft>(blank('website'));
-  const [problem, setProblem] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Errors>({});
+  const bodyRef = useRef<HTMLDivElement>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const save = useSaveMonitor();
   const remove = useDeleteMonitor();
@@ -64,19 +76,35 @@ export function MonitorForm({ open, onOpenChange, monitor }: { open: boolean; on
   useEffect(() => {
     if (!open) return;
     setDraft(monitor ? toDraft(monitor) : blank('website'));
-    setProblem(null);
+    setErrors({});
     setConfirmDelete(false);
   }, [open, monitor]);
 
-  const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }));
+  const set = <K extends keyof Draft>(k: K, v: Draft[K]) => {
+    setDraft((d) => ({ ...d, [k]: v }));
+    setErrors((e) => (e[k] || e.form ? { ...e, [k]: undefined, form: undefined } : e));
+  };
+
+  function showErrors(next: Errors) {
+    setErrors(next);
+    requestAnimationFrame(() => focusFirstError(bodyRef.current));
+  }
   const kind = draft.kind;
   const usesTarget = kind === 'domain' || kind === 'email_auth' || kind === 'website';
   const usesExpiry = kind === 'domain' || kind === 'website';
 
   async function submit() {
-    const target = kind === 'domain' || kind === 'email_auth' ? (draft.target ?? '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '') : (draft.target ?? '').trim();
+    const raw = draft.target ?? '';
+    const target = kind === 'domain' || kind === 'email_auth' ? raw.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '') : kind === 'website' ? toWebsiteUrl(raw) : raw.trim();
     const parsed = schema.safeParse({ ...draft, target });
-    if (!parsed.success) return setProblem(parsed.error.issues[0]?.message ?? 'Please check the form.');
+    if (!parsed.success) {
+      const next: Errors = {};
+      for (const issue of parsed.error.issues) {
+        const key = (issue.path[0] as keyof Draft | undefined) ?? 'form';
+        next[key] ??= issue.message;
+      }
+      return showErrors(next);
+    }
     const dkim = draft.dkim.split(/[\s,]+/).map((s) => s.trim().toLowerCase()).filter((s) => /^[a-z0-9._-]{1,63}$/.test(s));
     const { dkim: _d, ...rest } = draft;
     try {
@@ -85,7 +113,8 @@ export function MonitorForm({ open, onOpenChange, monitor }: { open: boolean; on
       onOpenChange(false);
       if (draft.enabled && kind !== 'manual') run.mutate([id], { onError: (e) => toast(errorMessage(e), 'error') });
     } catch (e) {
-      setProblem(errorMessage(e));
+      const msg = errorMessage(e);
+      showErrors(/address|domain|url|private/i.test(msg) && usesTarget ? { target: msg } : { form: msg });
     }
   }
 
@@ -96,7 +125,7 @@ export function MonitorForm({ open, onOpenChange, monitor }: { open: boolean; on
       toast('Check deleted');
       onOpenChange(false);
     } catch (e) {
-      setProblem(errorMessage(e));
+      showErrors({ form: errorMessage(e) });
     }
   }
 
@@ -120,7 +149,7 @@ export function MonitorForm({ open, onOpenChange, monitor }: { open: boolean; on
         </>
       }
     >
-      <div className="space-y-4">
+      <div ref={bodyRef} className="space-y-4">
         {!monitor && (
           <Field label="What to watch">
             <Select value={kind} onChange={(e) => setDraft({ ...blank(e.target.value as MonitorKind), label: draft.label, identity: draft.identity })}>
@@ -128,26 +157,43 @@ export function MonitorForm({ open, onOpenChange, monitor }: { open: boolean; on
             </Select>
           </Field>
         )}
-        <Field label="Name">
+        <Field label="Name" error={errors.label}>
           <input className="input" value={draft.label} onChange={(e) => set('label', e.target.value)} placeholder={kind === 'website' ? 'Krewe & Kin client site' : 'What is this?'} maxLength={120} />
         </Field>
         {usesTarget && (
-          <Field label={kind === 'website' ? 'Web address' : 'Domain'} hint={kind === 'website' ? 'Must be a public site. Private network addresses are refused.' : 'Just the domain, for example encountive.com'}>
-            <input className="input" value={draft.target ?? ''} onChange={(e) => set('target', e.target.value)} placeholder={kind === 'website' ? 'https://example.com' : 'example.com'} inputMode="url" autoCapitalize="none" spellCheck={false} />
+          <Field label={kind === 'website' ? 'Web address' : 'Domain'} error={errors.target} hint={kind === 'website' ? 'Just type the address, for example encountive.com. Must be a public site.' : 'Just the domain, for example encountive.com'}>
+            {kind === 'website' ? (
+              <span className="field-shell flex h-9 items-center overflow-hidden rounded-md border border-line bg-surface transition-colors focus-within:border-primary-500">
+                <span className="flex h-full select-none items-center border-r border-line bg-raised px-2 text-sm text-subtle">https://</span>
+                <input
+                  className="h-full min-w-0 flex-1 bg-transparent px-3 text-sm placeholder:text-subtle focus:outline-none"
+                  value={draft.target ?? ''}
+                  onChange={(e) => set('target', e.target.value)}
+                  onBlur={(e) => set('target', stripScheme(e.target.value))}
+                  placeholder="encountive.com"
+                  inputMode="url"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  aria-invalid={!!errors.target}
+                />
+              </span>
+            ) : (
+              <input className="input" value={draft.target ?? ''} onChange={(e) => set('target', e.target.value)} placeholder="encountive.com" inputMode="url" autoCapitalize="none" spellCheck={false} aria-invalid={!!errors.target} />
+            )}
           </Field>
         )}
         {usesExpiry && (
           <div className="grid grid-cols-2 gap-3">
-            <Field label={kind === 'website' ? 'Warn: certificate days left' : 'Warn: days before expiry'}>
+            <Field label={kind === 'website' ? 'Warn: certificate days left' : 'Warn: days before expiry'} error={errors.warn_days}>
               <input type="number" className="input" min={1} max={365} value={draft.warn_days} onChange={(e) => set('warn_days', Number(e.target.value))} />
             </Field>
-            <Field label="Critical: days left">
+            <Field label="Critical: days left" error={errors.critical_days}>
               <input type="number" className="input" min={0} max={365} value={draft.critical_days} onChange={(e) => set('critical_days', Number(e.target.value))} />
             </Field>
           </div>
         )}
         {kind === 'website' && (
-          <Field label="Slow if slower than (ms)" hint="Shows Attention when the site takes longer than this to answer.">
+          <Field label="Slow if slower than (ms)" error={errors.slow_ms} hint="Shows Attention when the site takes longer than this to answer.">
             <input type="number" className="input" min={200} max={30000} step={100} value={draft.slow_ms} onChange={(e) => set('slow_ms', Number(e.target.value))} />
           </Field>
         )}
@@ -157,7 +203,7 @@ export function MonitorForm({ open, onOpenChange, monitor }: { open: boolean; on
           </Field>
         )}
         {kind === 'manual' && (
-          <Field label="Confirm every (days)">
+          <Field label="Confirm every (days)" error={errors.check_every_days}>
             <input type="number" className="input" min={1} max={365} value={draft.check_every_days} onChange={(e) => set('check_every_days', Number(e.target.value))} />
           </Field>
         )}
@@ -182,7 +228,7 @@ export function MonitorForm({ open, onOpenChange, monitor }: { open: boolean; on
           <input type="checkbox" className="size-4 accent-primary-600" checked={draft.enabled} onChange={(e) => set('enabled', e.target.checked)} />
           Check is active
         </label>
-        {problem && <p role="alert" className="rounded-md border border-error-500/40 bg-error-500/10 px-3 py-2 text-sm text-error-700 dark:text-error-300">{problem}</p>}
+        {errors.form && <p role="alert" className="rounded-md border border-error-500/40 bg-error-500/10 px-3 py-2 text-sm text-error-700 dark:text-error-300">{errors.form}</p>}
       </div>
     </Dialog>
   );

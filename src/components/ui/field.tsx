@@ -4,14 +4,31 @@ import { cn } from '@/lib/utils';
 import { Button } from './button';
 import { Dialog } from './dialog';
 
-export function Field({ label, hint, children, className }: { label: string; hint?: ReactNode; children: ReactNode; className?: string }) {
+export function Field({ label, hint, error, children, className }: { label: string; hint?: ReactNode; error?: string | null; children: ReactNode; className?: string }) {
   return (
-    <label className={cn('block', className)}>
-      <span className="label">{label}</span>
+    <label
+      data-error={error ? 'true' : undefined}
+      className={cn(
+        'block',
+        error && '[&_.input]:border-error-500 [&_.input]:ring-2 [&_.input]:ring-error-500/30 [&_.field-shell]:border-error-500 [&_.field-shell]:ring-2 [&_.field-shell]:ring-error-500/30',
+        className,
+      )}
+    >
+      <span className={cn('label', error && 'text-error-700 dark:text-error-300')}>{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-xs text-subtle">{hint}</span>}
+      {error ? (
+        <span role="alert" className="mt-1 block text-xs font-medium text-error-700 dark:text-error-300">{error}</span>
+      ) : (
+        hint && <span className="mt-1 block text-xs text-subtle">{hint}</span>
+      )}
     </label>
   );
+}
+
+export function focusFirstError(root: HTMLElement | null) {
+  const el = root?.querySelector<HTMLElement>('[data-error="true"] input, [data-error="true"] select, [data-error="true"] textarea');
+  el?.focus();
+  el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
