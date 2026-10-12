@@ -17,12 +17,14 @@ function MessageRow({ m, account }: { m: MailMessage; account: MailAccount | und
   const toast = useToast();
   const href = safeHref(m.web_link);
   const sender = m.from_name || m.from_email || 'Unknown sender';
+  const identity = m.identity ?? account?.identity ?? null;
+  const toEmail = m.to_email ?? account?.email;
   const makeTask = () =>
     create.mutate(
       {
         title: (m.subject || `Email from ${sender}`).slice(0, 300),
-        identity: account?.identity ?? null,
-        notes: [`From: ${sender}${m.from_email ? ` <${m.from_email}>` : ''}`, account ? `To: ${account.email}` : '', href ?? ''].filter(Boolean).join('\n'),
+        identity,
+        notes: [`From: ${sender}${m.from_email ? ` <${m.from_email}>` : ''}`, toEmail ? `To: ${toEmail}` : '', href ?? ''].filter(Boolean).join('\n'),
       },
       { onSuccess: () => toast('Task created from email.'), onError: () => toast('Could not create the task. Try again.', 'error') },
     );
@@ -44,7 +46,7 @@ function MessageRow({ m, account }: { m: MailMessage; account: MailAccount | und
         <p className={cn('truncate text-sm', m.is_unread && 'font-medium')}>{m.subject || '(no subject)'}</p>
         {m.snippet && <p className="line-clamp-1 text-sm text-subtle">{m.snippet}</p>}
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <SourceBadge account={account} />
+          <SourceBadge account={account} toEmail={m.to_email} identity={m.identity} />
           <span className="flex-1" />
           <Button variant="ghost" size="sm" onClick={makeTask} disabled={create.isPending}><ListPlus /> Make task</Button>
           {href && account && (
@@ -66,7 +68,7 @@ export function InboxPage() {
   const messages = useMailMessages();
   const sync = useAutoSyncMail();
   const toast = useToast();
-  const list = accounts.data ?? [];
+  const list = useMemo(() => (accounts.data ?? []).filter((a) => a.provider !== 'outlook_ics'), [accounts.data]);
   const byId = useMemo(() => new Map(list.map((a) => [a.id, a])), [list]);
   const all = messages.data ?? [];
   const inSource = source ? all.filter((m) => m.account_id === source) : all;
@@ -115,7 +117,7 @@ export function InboxPage() {
       <Panel
         title={tab === 'unread' ? 'Unread' : tab === 'important' ? 'Important' : 'Latest mail'}
         icon={<Inbox />}
-        subtitle={noAccounts ? undefined : 'Most recent 50 inbox messages per Outlook account, 30 per Gmail account.'}
+        subtitle={noAccounts ? undefined : 'Most recent 30 inbox messages per Gmail account, including mail forwarded from doug@theonefor.ai.'}
         updatedAt={noAccounts ? undefined : lastSynced(list)}
         onRefresh={noAccounts ? undefined : refresh}
         refreshing={sync.isPending || messages.isFetching}
@@ -123,7 +125,7 @@ export function InboxPage() {
         error={accounts.error ?? messages.error}
         empty={noAccounts || shown.length === 0}
         emptyState={noAccounts ? (
-          <EmptyState icon={<Mail />} title="Not connected yet, so there is no mail to show" text="Outlook and Google each need a one-time setup from you; Setup walks you through it."
+          <EmptyState icon={<Mail />} title="Not connected yet, so there is no mail to show" text="Connect Gmail (doug@encountive.com) and forward doug@theonefor.ai into it. Setup walks you through both, with no Azure needed."
             action={<Button asChild variant="primary"><Link to="/setup">Open setup steps</Link></Button>} />
         ) : (
           <EmptyState icon={<Inbox />} title={tab === 'all' ? 'Inbox is empty' : `Nothing ${tab}`} text="New mail appears after the next sync." />

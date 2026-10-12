@@ -29,7 +29,7 @@ export function MeetingsPanel() {
       error={accounts.error ?? events.error}
       empty={noAccounts || shown.length === 0}
       emptyState={noAccounts ? (
-        <EmptyState title="Calendars not connected yet" text="Outlook and Google each need a one-time setup from you before meetings appear."
+        <EmptyState title="Calendars not connected yet" text="Paste your Outlook calendar link and connect Google in Setup before meetings appear. No Azure needed."
           action={<Button asChild size="sm"><Link to="/setup">Open setup steps</Link></Button>} />
       ) : (
         <EmptyState title="No meetings in the next 3 days" />

@@ -27,7 +27,7 @@ The earlier work used its own phase numbers. It is mapped to v5 numbers below.
 - **Supabase:** hosted cloud project, connected through Bolt's Supabase integration and reachable. The project ref, region and plan are not visible from inside the workspace; check them in the Bolt database panel.
   - pg_cron 1.6.4, pgcrypto and supabase_vault are installed. pg_net is available but not installed.
 - **Edge functions:** `ops-check` (signed-in users only) and `mail-connect` (OAuth callback is public; every other action checks the sign-in).
-- **Edge function secrets set:** only the built-in Supabase ones. None of these are set yet: MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, RESEND_API_KEY.
+- **Edge function secrets set:** only the built-in Supabase ones. Still needed: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, RESEND_API_KEY. No Microsoft keys are used.
 - **Git:** this workspace has no git access. Bolt syncs to whichever GitHub branch is connected in Bolt's GitHub settings. A `console-v5` branch cannot be created from inside this workspace; see decision D1.
 - **Hosting:** no Vercel or Netlify project is linked from this workspace.
 
@@ -54,7 +54,7 @@ No legacy rows need mapping: the legacy tables are empty apart from the profile 
 | C3 | Superhuman is the client for Outlook + Gmail; no REST API | Inbox already uses Graph and Gmail directly (correct) | Add an "Open in" setting per account (Superhuman / native) in Phase 6 |
 | C4 | Dashboard relays agent results by email | Needs Resend (Phase 3 gap) and an ingest endpoint (Phase 5) | Build in phase order |
 | C5 | Identities are Encountive, Doug IT and Personal, plus Retired addresses; Krewe & Kin is a Company, not an identity | **Conflict:** the built identity list includes `krewe_kin` | Map `krewe_kin` to `doug_it` on existing rows (a data change, needs approval) and remove it from pickers |
-| C6 | Gmail = doug@encountive.com (Encountive), Outlook = doug@theonefor.ai (Doug IT); single-tenant Microsoft app; Internal Google app | Code supports this. The Microsoft tenant is fixed to theonefor.ai in code. | Document the Internal Google app |
+| C6 | Gmail = doug@encountive.com (Encountive), Outlook = doug@theonefor.ai (Doug IT); Internal Google app; no Azure | Outlook calendar comes in through a published ICS link; theonefor.ai mail is forwarded into Gmail and tagged by recipient domain | Done in code; Doug's steps 1 and 4 |
 | C7 | Email and calendar is Phase 6, after agents | Built early as read-only and unconnected | Keep, mark "Built early", finish Phase 6 items later |
 | C8 | Shortcuts G then A and G then R | Not present | Add with the Agents and Reports pages |
 | C9 | Magic-link sign-in; MFA before email integrations go live | **Conflict:** sign-in is email + password, with no MFA | Add an authenticator-app MFA requirement before any mailbox is connected; magic link optional (D3) |
@@ -107,7 +107,7 @@ Rollback note per migration: drop the new table or column. For item 6, restore f
 - **D3 Sign-in:** password stays, and Windows Hello (passkey) sign-in is added. The sign-in page and Settings > Account are built. Doug still needs to do this: in the Supabase dashboard, go to Authentication > Passkeys, enable passkeys, set the RP ID to the stable deployed domain (bare domain, no https), and add the deployed URL as an RP origin. Changing the RP ID later invalidates saved passkeys.
 - **D4 Identities:** done. Migration `cc_identity_krewe_kin_to_doug_it` moved 1 company, 1 project and 1 task to doug_it, with audit rows; the rollback is in the migration comment.
 - **D5 Data export:** not needed, because there is no live data yet.
-- **D6 Mail and calendar:** the early build is accepted. The calendar and inbox are empty because no accounts are connected. Connecting needs Doug's admin sign-in to create the Azure app (single tenant, theonefor.ai) and the Google Internal app (encountive.com), then the keys go in Bolt Secrets: MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET (tenant is fixed to theonefor.ai; token encryption derives from the service key, so no extra tenant or encryption keys are needed). Empty screens now link to Setup.
+- **D6 Mail and calendar:** Doug does not use Azure, so there is no Microsoft app. Outlook calendar: Doug publishes it in Outlook on the web and pastes the ICS link on Setup > Connectors; the link is stored encrypted on the server and only outlook.office365.com / outlook.office.com / outlook.live.com links are fetched. Outlook mail: GoDaddy external forwarding on, then doug@theonefor.ai forwards to doug@encountive.com; the Gmail sync reads To/Cc/Delivered-To/X-Forwarded-To and tags messages by company domain (theonefor.ai and kreweandkin.com = Doug IT). Only GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are needed in Bolt Secrets. Migration `cc_outlook_calendar_link_and_forwarded_mail`.
 
 ### Session 2026-10-12 (afternoon)
 

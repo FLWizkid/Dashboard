@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Building2, Database, FolderKanban, ListChecks, ListTodo, Plug, RefreshCw, ShieldAlert, Trash2, Unplug } from 'lucide-react';
-import { IDENTITIES, MAIL_PROVIDERS, type Identity, type MailAccount, type MailProvider } from '@/lib/types';
-import { cn, errorMessage, relativeTime } from '@/lib/utils';
-import { useConnectMail, useDisconnectMail, useMailAccounts, useMailStatus, useSyncMail, useUpdateMailAccount } from '@/data/mail';
+import { Building2, Database, FolderKanban, ListChecks, ListTodo, Plug, ShieldAlert, Trash2 } from 'lucide-react';
+import { IDENTITIES, type Identity } from '@/lib/types';
+import { errorMessage } from '@/lib/utils';
 import { useCompanies, useProjects } from '@/data/organization';
 import { useTasks } from '@/data/tasks';
 import {
@@ -13,12 +12,11 @@ import { parseQuickAdd } from '@/lib/quick-add';
 import { PageHeader, type PageTab } from '@/components/ui/page-header';
 import { Panel, EmptyState } from '@/components/ui/panel';
 import { Button } from '@/components/ui/button';
-import { StatusPill } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
-import { Field, Input, Select } from '@/components/ui/field';
+import { Input, Select } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
-import { ProviderMark } from '@/components/mail/SourceBadge';
-import { CopyRow, GOOGLE_STEPS, MICROSOFT_STEPS, SECRETS_STEPS, SetupSteps } from '@/components/setup/SetupSteps';
+import { SetupSteps } from '@/components/setup/SetupSteps';
+import { ConnectorsSection } from '@/components/setup/ConnectorsSection';
 
 type Section = 'steps' | 'connectors' | 'data' | 'dangers';
 
@@ -41,186 +39,6 @@ function useReturnToast() {
     };
     return read;
   }, [toast]);
-}
-
-function GuideDialog({ open, onOpenChange, provider, redirectUri }: {
-  open: boolean; onOpenChange: (open: boolean) => void; provider: MailProvider; redirectUri: string;
-}) {
-  const steps = [...(provider === 'microsoft' ? MICROSOFT_STEPS : GOOGLE_STEPS), ...SECRETS_STEPS];
-  const keys = provider === 'microsoft'
-    ? [['MICROSOFT_CLIENT_ID', 'the Application (client) ID'], ['MICROSOFT_CLIENT_SECRET', 'the secret Value']]
-    : [['GOOGLE_CLIENT_ID', 'the Client ID'], ['GOOGLE_CLIENT_SECRET', 'the Client secret']];
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange} title={`Connect ${MAIL_PROVIDERS[provider].label}`} description="One-time setup. Access is read-only.">
-      <ol className="list-decimal space-y-2 pl-5 text-sm">
-        {steps.map((s) => <li key={s}>{s}</li>)}
-      </ol>
-      <p className="label mt-4">Redirect address</p>
-      <CopyRow value={redirectUri} />
-      <p className="label mt-4">Keys to add in Bolt (database icon, then Secrets)</p>
-      <ul className="space-y-1 text-sm">
-        {keys.map(([k, d]) => (
-          <li key={k}><code className="rounded bg-raised px-1.5 py-0.5 text-xs">{k}</code> — {d}</li>
-        ))}
-      </ul>
-    </Dialog>
-  );
-}
-
-function ConnectorRow({ provider, configured, redirectUri }: { provider: MailProvider; configured: boolean; redirectUri: string }) {
-  const [guide, setGuide] = useState(false);
-  const connect = useConnectMail();
-  const toast = useToast();
-  const onConnect = () => connect.mutate(provider, { onError: (e) => toast(errorMessage(e), 'error') });
-  return (
-    <div className={cn('rounded-md border p-3', configured ? 'border-line' : 'border-dashed border-line bg-raised/50')}>
-      <div className="flex flex-wrap items-center gap-3">
-        <ProviderMark provider={provider} />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">{MAIL_PROVIDERS[provider].label}</p>
-          <p className="text-xs text-subtle">{configured ? 'Keys are in place. You can connect an account.' : 'Waiting on you: follow Steps, add the keys in Bolt, then Connect appears here.'}</p>
-        </div>
-        {configured ? (
-          <Button variant="primary" size="sm" onClick={onConnect} disabled={connect.isPending}>
-            <Plug /> {connect.isPending ? 'Opening sign-in...' : 'Connect'}
-          </Button>
-        ) : (
-          <Button variant="primary" size="sm" onClick={() => setGuide(true)}>Set up</Button>
-        )}
-        <Button size="sm" onClick={() => setGuide(true)}>Steps</Button>
-      </div>
-      <GuideDialog open={guide} onOpenChange={setGuide} provider={provider} redirectUri={redirectUri} />
-    </div>
-  );
-}
-
-function AccountRow({ account }: { account: MailAccount }) {
-  const update = useUpdateMailAccount();
-  const sync = useSyncMail();
-  const disconnect = useDisconnectMail();
-  const toast = useToast();
-  const [confirm, setConfirm] = useState(false);
-  const onSync = () => sync.mutate(account.id, {
-    onSuccess: () => toast('Account refreshed.'),
-    onError: (e) => toast(errorMessage(e), 'error'),
-  });
-  const onDisconnect = () => disconnect.mutate(account.id, {
-    onSuccess: () => { setConfirm(false); toast('Disconnected. Its sign-in and cached mail were deleted.'); },
-    onError: () => toast('Could not disconnect. Try again.', 'error'),
-  });
-  return (
-    <div className="rounded-md border border-line p-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <ProviderMark provider={account.provider} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{account.email}</p>
-          <p className="text-xs text-subtle">{MAIL_PROVIDERS[account.provider].app} · synced {relativeTime(account.last_synced_at)}</p>
-        </div>
-        {account.status === 'connected'
-          ? <StatusPill status="healthy" label="Connected" />
-          : <StatusPill status="action" label="Needs attention" />}
-      </div>
-      {account.last_error && <p className="mt-2 text-sm text-error-700 dark:text-error-300">{account.last_error}</p>}
-      <div className="mt-3 flex flex-wrap items-center gap-3">
-        <Field label="Identity" className="min-w-44">
-          <Select
-            value={account.identity ?? ''}
-            onChange={(e) => update.mutate({ id: account.id, identity: (e.target.value || null) as Identity | null }, {
-              onSuccess: () => toast('Identity saved.'),
-              onError: () => toast('Could not save the identity. Try again.', 'error'),
-            })}
-            className={cn(!account.identity && 'border-warning-500')}
-            aria-label={`Identity for ${account.email}`}
-          >
-            <option value="">Not chosen</option>
-            {IDENTITIES.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
-          </Select>
-        </Field>
-        <span className="flex-1" />
-        <Button size="sm" onClick={onSync} disabled={sync.isPending}>
-          <RefreshCw className={cn(sync.isPending && 'animate-spin')} /> Sync now
-        </Button>
-        {account.status === 'error' && (
-          <ReconnectButton provider={account.provider} />
-        )}
-        <Button variant="ghost" size="sm" onClick={() => setConfirm(true)}><Unplug /> Disconnect</Button>
-      </div>
-      <Dialog
-        open={confirm}
-        onOpenChange={setConfirm}
-        title={`Disconnect ${account.email}?`}
-        description="Deletes the saved sign-in and all cached mail and events for this account."
-        footer={
-          <>
-            <Button onClick={() => setConfirm(false)}>Cancel</Button>
-            <Button variant="danger" onClick={onDisconnect} disabled={disconnect.isPending}>Disconnect</Button>
-          </>
-        }
-      >
-        <p className="text-sm text-muted">
-          To fully revoke access, also remove "CIO Command Console" from your {account.provider === 'microsoft' ? 'Microsoft account apps (myapps.microsoft.com)' : 'Google account third-party access page'}.
-        </p>
-      </Dialog>
-    </div>
-  );
-}
-
-function ReconnectButton({ provider }: { provider: MailProvider }) {
-  const connect = useConnectMail();
-  const toast = useToast();
-  return (
-    <Button variant="primary" size="sm" disabled={connect.isPending}
-      onClick={() => connect.mutate(provider, { onError: (e) => toast(errorMessage(e), 'error') })}>
-      <Plug /> Reconnect
-    </Button>
-  );
-}
-
-function ConnectorsSection() {
-  const status = useMailStatus();
-  const accounts = useMailAccounts();
-  const list = accounts.data ?? [];
-  const unset = list.filter((a) => !a.identity).length;
-  return (
-    <Panel
-      title="Connectors"
-      icon={<Plug />}
-      subtitle="One-time setup, then connect accounts. Access is read-only and sign-ins are stored only on the server."
-      updatedAt={accounts.dataUpdatedAt}
-      onRefresh={() => { accounts.refetch(); status.refetch(); }}
-      refreshing={accounts.isFetching || status.isFetching}
-      loading={accounts.isLoading || status.isLoading}
-      error={accounts.error ?? status.error}
-    >
-      <div className="space-y-4">
-        {unset > 0 && (
-          <p className="rounded-md border border-warning-500/40 bg-warning-500/10 px-3 py-2 text-sm text-warning-800 dark:text-warning-300">
-            {unset === 1 ? 'One connected account has' : `${unset} connected accounts have`} no identity yet. Choose one so every email and event shows the right badge.
-          </p>
-        )}
-        <div>
-          <p className="label">Connected accounts</p>
-          {list.length === 0 ? (
-            <p className="rounded-md border border-dashed border-line bg-raised/50 p-3 text-sm text-muted">No accounts connected yet.</p>
-          ) : (
-            <div className="space-y-2">{list.map((a) => <AccountRow key={a.id} account={a} />)}</div>
-          )}
-        </div>
-        <div>
-          <p className="label">Providers</p>
-          <div className="space-y-2">
-            {status.data && (Object.keys(MAIL_PROVIDERS) as MailProvider[]).map((p) => (
-              <ConnectorRow key={p} provider={p} configured={status.data.providers[p]?.configured ?? false} redirectUri={status.data.redirectUri} />
-            ))}
-          </div>
-        </div>
-        <p className="rounded-md bg-raised p-3 text-sm text-muted">
-          Superhuman reads your Gmail and Outlook inboxes, so connecting those accounts covers it — nothing separate to connect.
-          Proton Mail needs Proton Mail Bridge on your Windows PC and arrives in a later phase.
-        </p>
-      </div>
-    </Panel>
-  );
 }
 
 function DeleteCompanyRow({ id, name, count }: { id: string; name: string; count: number }) {

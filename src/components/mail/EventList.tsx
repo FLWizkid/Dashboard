@@ -72,7 +72,7 @@ export function EventList({ events, accounts, compact }: { events: CalendarEvent
                         {href && account && (
                           <a href={href} target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-xs text-primary-700 hover:underline dark:text-primary-400">
-                            <ExternalLink className="size-3" /> Open in {account.provider === 'microsoft' ? 'Outlook' : 'Google Calendar'}
+                            <ExternalLink className="size-3" /> Open in {account.provider === 'google' ? 'Google Calendar' : 'Outlook'}
                           </a>
                         )}
                       </div>

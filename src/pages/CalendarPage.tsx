@@ -59,7 +59,7 @@ export function CalendarPage() {
         empty={noAccounts || shown.length === 0}
         emptyState={noAccounts ? (
           <EmptyState icon={<CalendarDays />} title="Not connected yet, so there is nothing to show"
-            text="The calendar fills in once you connect Outlook (doug@theonefor.ai) and Google (doug@encountive.com). Each needs a one-time app registration that only you can do with your admin sign-in; Setup walks you through it step by step."
+            text="The calendar fills in once you paste your Outlook calendar link (doug@theonefor.ai) and connect Google (doug@encountive.com). Setup walks you through both step by step, with no Azure needed."
             action={<Button asChild variant="primary"><Link to="/setup">Open setup steps</Link></Button>} />
         ) : (
           <EmptyState icon={<CalendarDays />} title="No meetings" text="Nothing on your connected calendars for this period." />

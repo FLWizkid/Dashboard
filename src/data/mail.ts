@@ -6,7 +6,7 @@ import type { CalendarEvent, Identity, MailAccount, MailMessage, MailProvider } 
 import { check, recordAudit, unwrap } from './core';
 
 const STALE_AFTER_MS = 10 * 60_000;
-const SIGN_IN_HOSTS = ['https://login.microsoftonline.com/', 'https://accounts.google.com/'];
+const SIGN_IN_HOST = 'https://accounts.google.com/';
 
 async function callMail<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke('mail-connect', { body });
@@ -77,16 +77,28 @@ function invalidateMail(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['calendar-events'] });
 }
 
-export function useConnectMail() {
+export function useConnectGoogle() {
   return useMutation({
-    mutationFn: async (provider: MailProvider) => {
-      const { url } = await callMail<{ url?: string }>({ action: 'start', provider });
-      if (typeof url !== 'string' || !SIGN_IN_HOSTS.some((h) => url.startsWith(h))) {
+    mutationFn: async () => {
+      const { url } = await callMail<{ url?: string }>({ action: 'start', provider: 'google' });
+      if (typeof url !== 'string' || !url.startsWith(SIGN_IN_HOST)) {
         throw new Error('The sign-in page address looked wrong, so it was not opened.');
       }
       await recordAudit('mail.connect_start', 'mail_account');
       window.location.assign(url);
     },
+  });
+}
+
+export function useAddCalendarLink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (link: string) => {
+      const res = await callMail<{ ok?: boolean; error?: string }>({ action: 'add_calendar_link', link });
+      if (!res.ok) throw new Error(res.error ?? 'The calendar link could not be added.');
+      await recordAudit('mail.calendar_link_add', 'mail_account');
+    },
+    onSettled: () => invalidateMail(qc),
   });
 }
 

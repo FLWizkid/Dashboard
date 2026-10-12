@@ -222,11 +222,11 @@ export interface CheckResult {
   source: 'auto' | 'manual';
 }
 
-export type MailProvider = 'microsoft' | 'google';
+export type MailProvider = 'google' | 'outlook_ics';
 
 export const MAIL_PROVIDERS: Record<MailProvider, { label: string; app: string; short: string; mark: string }> = {
-  microsoft: { label: 'Microsoft 365 / Outlook', app: 'Outlook', short: 'O', mark: 'bg-primary-600 text-white' },
   google: { label: 'Google Workspace / Gmail', app: 'Gmail', short: 'G', mark: 'bg-error-600 text-white' },
+  outlook_ics: { label: 'Outlook calendar (published link)', app: 'Outlook', short: 'O', mark: 'bg-primary-600 text-white' },
 };
 
 export interface MailAccount {
@@ -253,6 +253,8 @@ export interface MailMessage {
   is_unread: boolean;
   is_important: boolean;
   web_link: string | null;
+  to_email: string | null;
+  identity: Identity | null;
 }
 
 export interface CalendarEvent {
