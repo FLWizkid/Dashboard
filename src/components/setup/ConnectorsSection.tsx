@@ -30,7 +30,7 @@ function StepsDialog({ open, onOpenChange, title, steps, children }: {
   );
 }
 
-function GoogleRow({ configured, redirectUri }: { configured: boolean; redirectUri: string }) {
+export function GoogleRow({ configured, redirectUri, showGuide = true }: { configured: boolean; redirectUri: string; showGuide?: boolean }) {
   const [guide, setGuide] = useState(false);
   const connect = useConnectGoogle();
   const toast = useToast();
@@ -41,31 +41,26 @@ function GoogleRow({ configured, redirectUri }: { configured: boolean; redirectU
         <ProviderMark provider="google" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{MAIL_PROVIDERS.google.label}</p>
-          <p className="text-xs text-subtle">{configured ? 'Keys are in place. You can connect doug@encountive.com.' : 'Waiting on you: follow Steps, add the keys in Bolt, then Connect appears here.'}</p>
+          <p className="text-xs text-subtle">{configured ? 'Ready. Click Connect and sign in as doug@encountive.com.' : 'Not ready yet. Finish Parts A and B of step 2 on the Your steps tab, then Connect appears here.'}</p>
         </div>
         {configured ? (
           <Button variant="primary" size="sm" onClick={onConnect} disabled={connect.isPending}>
             <Plug /> {connect.isPending ? 'Opening sign-in...' : 'Connect'}
           </Button>
         ) : (
-          <Button variant="primary" size="sm" onClick={() => setGuide(true)}>Set up</Button>
+          <Button variant="primary" size="sm" disabled>Connect</Button>
         )}
-        <Button size="sm" onClick={() => setGuide(true)}>Steps</Button>
+        {showGuide && <Button size="sm" onClick={() => setGuide(true)}>Steps</Button>}
       </div>
       <StepsDialog open={guide} onOpenChange={setGuide} title="Connect Google Workspace / Gmail" steps={[...GOOGLE_STEPS, ...SECRETS_STEPS]}>
         <p className="label mt-4">Redirect address</p>
         <CopyRow value={redirectUri} />
-        <p className="label mt-4">Keys to add in Bolt (database icon, then Secrets)</p>
-        <ul className="space-y-1 text-sm">
-          <li><code className="rounded bg-raised px-1.5 py-0.5 text-xs">GOOGLE_CLIENT_ID</code> — the Client ID</li>
-          <li><code className="rounded bg-raised px-1.5 py-0.5 text-xs">GOOGLE_CLIENT_SECRET</code> — the Client secret</li>
-        </ul>
       </StepsDialog>
     </div>
   );
 }
 
-function OutlookLinkRow() {
+export function OutlookLinkRow({ showGuide = true }: { showGuide?: boolean }) {
   const [guide, setGuide] = useState(false);
   const [link, setLink] = useState('');
   const add = useAddCalendarLink();
@@ -86,14 +81,14 @@ function OutlookLinkRow() {
           <p className="text-sm font-medium">Outlook calendar link (doug@theonefor.ai)</p>
           <p className="text-xs text-subtle">No Microsoft app or Azure needed. Publish your calendar in Outlook and paste the ICS link.</p>
         </div>
-        <Button size="sm" onClick={() => setGuide(true)}>Steps</Button>
+        {showGuide && <Button size="sm" onClick={() => setGuide(true)}>Steps</Button>}
       </div>
       <form onSubmit={onSubmit} className="mt-3 flex flex-wrap gap-2">
         <Input
           className="min-w-64 flex-1"
           value={link}
           onChange={(e) => setLink(e.target.value)}
-          placeholder="https://outlook.office365.com/owa/calendar/.../calendar.ics"
+          placeholder="Paste the ICS link from Outlook (ends in .ics)"
           aria-label="Outlook calendar ICS link"
           inputMode="url"
           autoComplete="off"

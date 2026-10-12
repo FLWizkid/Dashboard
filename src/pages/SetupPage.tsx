@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Building2, Database, FolderKanban, ListChecks, ListTodo, Plug, ShieldAlert, Trash2 } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Building2, Database, FolderKanban, ListChecks, ListTodo, Plug, ShieldAlert, Trash2 } from 'lucide-react';
 import { IDENTITIES, type Identity } from '@/lib/types';
 import { errorMessage } from '@/lib/utils';
 import { useCompanies, useProjects } from '@/data/organization';
@@ -302,7 +302,8 @@ export function SetupPage() {
     <div className="mx-auto max-w-[960px] space-y-6">
       <PageHeader
         title="Setup"
-        description="Behind-the-scenes controls: connect accounts, enter raw data, or start over."
+        description="Connect accounts, enter raw data, or start over. Open it any time from Setup in the left menu or the top bar."
+        actions={<Button asChild size="sm"><Link to="/"><ArrowLeft /> Back to Today</Link></Button>}
         tabs={tabs}
         activeTab={section}
       />

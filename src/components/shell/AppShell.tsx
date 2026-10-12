@@ -242,7 +242,7 @@ export function AppShell() {
           <Button size="sm" variant="ghost" asChild>
             <Link to="/setup" title="Setup: connectors, raw data, reset" aria-label="Setup">
               <Wrench />
-              <span className="hidden xl:inline">Setup</span>
+              <span className="hidden sm:inline">Setup</span>
             </Link>
           </Button>
           <span

@@ -74,7 +74,7 @@ export function PasskeySettings() {
         </Button>
       </div>
       {!enabled && !settings.isLoading && (
-        <p className="text-sm text-muted">Windows Hello has to be switched on for this app first. See Setup, Your steps, step 5.</p>
+        <p className="text-sm text-muted">Windows Hello is set aside for now. Password sign-in keeps working.</p>
       )}
       {error && <p className="rounded-md border border-error-500/40 bg-error-500/10 p-2 text-sm text-error-700 dark:text-error-300" role="alert">{error}</p>}
       {keys.length > 0 && (

@@ -1,6 +1,6 @@
 import {
   Activity, BookOpen, Bot, CalendarDays, CheckSquare, Clock, FileBarChart, FolderKanban, HardDrive,
-  Inbox, LayoutDashboard, LifeBuoy, Library, Receipt, Settings, ShieldCheck, type LucideIcon,
+  Inbox, LayoutDashboard, LifeBuoy, Library, Receipt, Settings, ShieldCheck, Wrench, type LucideIcon,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -49,7 +49,10 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
   {
     label: 'System',
-    items: [{ to: '/settings', label: 'Settings', icon: Settings, phase: 1 }],
+    items: [
+      { to: '/setup', label: 'Setup', icon: Wrench, phase: 1 },
+      { to: '/settings', label: 'Settings', icon: Settings, phase: 1 },
+    ],
   },
 ];
 
