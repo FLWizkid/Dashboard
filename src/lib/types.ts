@@ -1,4 +1,4 @@
-export type Identity = 'encountive' | 'doug_it' | 'krewe_kin' | 'personal';
+export type Identity = 'encountive' | 'doug_it' | 'personal';
 export type TaskStatus = 'backlog' | 'ready' | 'in_progress' | 'waiting' | 'done';
 export type Priority = 'low' | 'medium' | 'high' | 'urgent';
 export type Recurrence = 'none' | 'daily' | 'weekly' | 'monthly' | 'annually';
@@ -17,15 +17,8 @@ export const IDENTITIES: { value: Identity; label: string; address: string; belo
     value: 'doug_it',
     label: 'Doug IT',
     address: 'doug@theonefor.ai',
-    belongs: 'Your IT working inbox: agent notifications, monitoring alerts, personally-held accounts, trials, newsletters, consulting, and this console\'s mail.',
+    belongs: 'Your IT working inbox: agent notifications, monitoring alerts, personally-held accounts, trials, newsletters, Krewe & Kin and consulting work, and this console\'s mail.',
     tone: 'border-accent-500/40 bg-accent-500/10 text-accent-700 dark:text-accent-300',
-  },
-  {
-    value: 'krewe_kin',
-    label: 'Krewe & Kin',
-    address: 'doug@theonefor.ai',
-    belongs: 'Krewe & Kin web studio client work.',
-    tone: 'border-warning-500/40 bg-warning-500/10 text-warning-800 dark:text-warning-300',
   },
   {
     value: 'personal',

@@ -58,8 +58,9 @@ export function CalendarPage() {
         error={accounts.error ?? events.error}
         empty={noAccounts || shown.length === 0}
         emptyState={noAccounts ? (
-          <EmptyState icon={<CalendarDays />} title="No calendars connected" text="Connect Outlook (doug@theonefor.ai) and Google Workspace to see your meetings here."
-            action={<Button asChild variant="primary"><Link to="/settings/connections">Set up connections</Link></Button>} />
+          <EmptyState icon={<CalendarDays />} title="Not connected yet, so there is nothing to show"
+            text="The calendar fills in once you connect Outlook (doug@theonefor.ai) and Google (doug@encountive.com). Each needs a one-time app registration that only you can do with your admin sign-in; Setup walks you through it step by step."
+            action={<Button asChild variant="primary"><Link to="/setup">Open setup steps</Link></Button>} />
         ) : (
           <EmptyState icon={<CalendarDays />} title="No meetings" text="Nothing on your connected calendars for this period." />
         )}

@@ -25,7 +25,7 @@ function ImportantMail() {
   if (accounts.isLoading) return <span className="skeleton h-6 w-full" aria-label="Loading" />;
   if (!accounts.data?.length) {
     return (
-      <Link to="/settings/connections" className="flex items-center gap-2 text-sm text-subtle hover:text-fg">
+      <Link to="/setup" className="flex items-center gap-2 text-sm text-subtle hover:text-fg">
         <CircleDashed className="size-3.5" />
         <span className="flex-1">Important unread mail</span>
         <span className="text-xs">Not connected · Set up</span>

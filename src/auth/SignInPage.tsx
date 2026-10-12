@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Eye, EyeOff, KeyRound, Mail, Terminal } from 'lucide-react';
+import { Eye, EyeOff, Fingerprint, KeyRound, Mail, Terminal } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { useAuth } from './AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { passkeyError, passkeySupported } from './passkey';
 
 type Mode = 'signin' | 'signup';
 
@@ -39,6 +40,15 @@ export function SignInPage() {
     setBusy(false);
     if (res.error) return setError(friendly(res.error.message));
     if (mode === 'signup' && !res.data.session) setNotice('Account created. Sign in to continue.');
+  }
+
+  async function windowsHello() {
+    setError(null);
+    setNotice(null);
+    setBusy(true);
+    const { error: err } = await supabase.auth.signInWithPasskey();
+    setBusy(false);
+    if (err) setError(passkeyError(err));
   }
 
   async function magicLink() {
@@ -105,13 +115,23 @@ export function SignInPage() {
               {mode === 'signin' ? 'Sign in' : 'Create account'}
             </Button>
           </form>
+          {mode === 'signin' && passkeySupported() && (
+            <>
+              <div className="my-4 flex items-center gap-3 text-xs text-subtle">
+                <span className="h-px flex-1 bg-line" />or<span className="h-px flex-1 bg-line" />
+              </div>
+              <Button variant="secondary" className="w-full" onClick={windowsHello} disabled={busy}>
+                <Fingerprint /> Sign in with Windows Hello
+              </Button>
+            </>
+          )}
           {mode === 'signin' && (
             <Button variant="ghost" className="mt-2 w-full" onClick={magicLink} disabled={busy}>
               <Mail /> Email me a sign-in link instead
             </Button>
           )}
         </div>
-        <p className="mt-4 text-center text-xs text-subtle">Two-factor sign-in is planned once the app is deployed to its permanent address.</p>
+        <p className="mt-4 text-center text-xs text-subtle">First time? Sign in with your password, then turn on Windows Hello in Settings, Account.</p>
       </div>
     </div>
   );

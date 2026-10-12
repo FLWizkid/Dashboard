@@ -100,14 +100,14 @@ Rollback note per migration: drop the new table or column. For item 6, restore f
 - Phase 6: finish email and calendar, including Open in Superhuman, the local relay (Proton, Claude Code hook, watch-folder), and drift detection.
 - Phase 7: GitHub, Vercel and Resend status lights, Weekly CIO Report, exports, accessibility pass, production-readiness checklist.
 
-### Decisions needed from Doug
+### Decisions (answered by Doug)
 
-- **D1 Branch:** Bolt pushes to the currently connected GitHub branch. Before the next push, switch Bolt's GitHub connection to a `console-v5` branch, or confirm that pushing to the current branch is acceptable.
-- **D2 Framework:** keep Vite + React 18 (already built and approved in Phase 1), not Next.js.
-- **D3 Sign-in:** keep email + password and add authenticator-app MFA before any mailbox connects, or switch to magic link + MFA.
-- **D4 Identities:** approve mapping Krewe & Kin to Doug IT (database plan item 6).
-- **D5 Data export:** before the first v5 migration, run Settings > Data > Export all. Export files are not committed to the repo, because they would contain your data.
-- **D6 Mail and calendar:** accept the early build as v5 Phase 6 groundwork.
+- **D1 Branch:** work on main. The app is in development and QA only; nothing is rolled out.
+- **D2 Framework:** keep Vite + React 18.
+- **D3 Sign-in:** password stays, and Windows Hello (passkey) sign-in is added. The sign-in page and Settings > Account are built. Doug still needs to do this: in the Supabase dashboard, go to Authentication > Passkeys, enable passkeys, set the RP ID to the stable deployed domain (bare domain, no https), and add the deployed URL as an RP origin. Changing the RP ID later invalidates saved passkeys.
+- **D4 Identities:** done. Migration `cc_identity_krewe_kin_to_doug_it` moved 1 company, 1 project and 1 task to doug_it, with audit rows; the rollback is in the migration comment.
+- **D5 Data export:** not needed, because there is no live data yet.
+- **D6 Mail and calendar:** the early build is accepted. The calendar and inbox are empty because no accounts are connected. Connecting needs Doug's admin sign-in to create the Azure app (single tenant, theonefor.ai) and the Google Internal app (encountive.com), then the keys go in Bolt Secrets: MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_TENANT, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET. Empty screens now link to Setup.
 
 ## Acceptance checklist
 
@@ -122,7 +122,7 @@ Rollback note per migration: drop the new table or column. For item 6, restore f
 | A7 Notification Routes | Not built (Phase 5) |
 | A8 Drift detection | Not built (Phase 5/6) |
 | A9 Seeded Claude agents, Import, no kill-switch claims | Not built (Phase 5) |
-| A10 Data preserved, branch only, no production | Data preserved. Branch: pending D1. No production deploy made. |
+| A10 Data preserved, branch only, no production | Data preserved (identity change audited). Work stays on main by decision D1. No production deploy made. |
 | A11 Graph + Gmail sync; Open in Superhuman; Proton on relay | Partial: sync built, not connected; Superhuman links and relay missing |
 | A12 Hosted Supabase; schema in migrations; self-hosting notes | Partial: notes file missing |
 | A13 This file current | Done |

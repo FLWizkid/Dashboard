@@ -123,8 +123,8 @@ export function InboxPage() {
         error={accounts.error ?? messages.error}
         empty={noAccounts || shown.length === 0}
         emptyState={noAccounts ? (
-          <EmptyState icon={<Mail />} title="No inboxes connected" text="Connect Outlook and Google Workspace to see your mail here, read-only."
-            action={<Button asChild variant="primary"><Link to="/settings/connections">Set up connections</Link></Button>} />
+          <EmptyState icon={<Mail />} title="Not connected yet, so there is no mail to show" text="Outlook and Google each need a one-time setup from you; Setup walks you through it."
+            action={<Button asChild variant="primary"><Link to="/setup">Open setup steps</Link></Button>} />
         ) : (
           <EmptyState icon={<Inbox />} title={tab === 'all' ? 'Inbox is empty' : `Nothing ${tab}`} text="New mail appears after the next sync." />
         )}

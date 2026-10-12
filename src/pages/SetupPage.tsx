@@ -42,15 +42,17 @@ function useReturnToast() {
   }, [toast]);
 }
 
+const SECRETS_STEP = 'In Bolt, click the database icon at the top of the screen, open Secrets, and add each key below with its exact name. Then come back here and click Connect.';
+
 const MICROSOFT_STEPS = [
   'Open portal.azure.com and sign in with a theonefor.ai admin account.',
   'Search for "App registrations" and click New registration.',
-  'Name: CIO Command Console. Supported accounts: "Accounts in any organizational directory and personal Microsoft accounts".',
+  'Name: CIO Command Console. Supported accounts: "Accounts in this organizational directory only" (single tenant).',
   'Under Redirect URI, choose Web and paste the redirect address below. Click Register.',
-  'Copy the "Application (client) ID" from the overview page.',
-  'Under Certificates & secrets, click New client secret (24 months), then copy the Value column.',
-  'Under API permissions, add these Microsoft Graph delegated permissions: Mail.Read, Calendars.Read, User.Read, offline_access, openid, email. Grant admin consent if the button appears.',
-  'Add the two keys under Connectors below, then click Connect for Outlook.',
+  'From the overview page, copy the "Application (client) ID" and the "Directory (tenant) ID".',
+  'Under Certificates & secrets, click New client secret (24 months), then copy the Value column right away; it is shown only once.',
+  'Under API permissions, add these Microsoft Graph delegated permissions: User.Read, Mail.Read, Calendars.Read, offline_access, openid, email. Click "Grant admin consent".',
+  SECRETS_STEP,
 ];
 
 const GOOGLE_STEPS = [
@@ -59,7 +61,7 @@ const GOOGLE_STEPS = [
   'Under OAuth consent screen, set the user type to Internal (this limits it to encountive.com accounts, so no Google review is needed).',
   'Under Credentials, click Create credentials > OAuth client ID, type Web application.',
   'Paste the redirect address below under Authorized redirect URIs, then copy the Client ID and Client secret.',
-  'Add the two keys under Connectors below, then click Connect for Google.',
+  SECRETS_STEP,
 ];
 
 function CopyRow({ value }: { value: string }) {
@@ -85,7 +87,7 @@ function GuideDialog({ open, onOpenChange, provider, redirectUri }: {
 }) {
   const steps = provider === 'microsoft' ? MICROSOFT_STEPS : GOOGLE_STEPS;
   const keys = provider === 'microsoft'
-    ? [['MICROSOFT_CLIENT_ID', 'the Application (client) ID'], ['MICROSOFT_CLIENT_SECRET', 'the secret Value']]
+    ? [['MICROSOFT_CLIENT_ID', 'the Application (client) ID'], ['MICROSOFT_CLIENT_SECRET', 'the secret Value'], ['MICROSOFT_TENANT', 'the Directory (tenant) ID']]
     : [['GOOGLE_CLIENT_ID', 'the Client ID'], ['GOOGLE_CLIENT_SECRET', 'the Client secret']];
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={`Connect ${MAIL_PROVIDERS[provider].label}`} description="One-time setup. Access is read-only.">
@@ -94,7 +96,7 @@ function GuideDialog({ open, onOpenChange, provider, redirectUri }: {
       </ol>
       <p className="label mt-4">Redirect address</p>
       <CopyRow value={redirectUri} />
-      <p className="label mt-4">Keys to add below</p>
+      <p className="label mt-4">Keys to add in Bolt (database icon, then Secrets)</p>
       <ul className="space-y-1 text-sm">
         {keys.map(([k, d]) => (
           <li key={k}><code className="rounded bg-raised px-1.5 py-0.5 text-xs">{k}</code> — {d}</li>
@@ -115,7 +117,7 @@ function ConnectorRow({ provider, configured, redirectUri }: { provider: MailPro
         <ProviderMark provider={provider} />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{MAIL_PROVIDERS[provider].label}</p>
-          <p className="text-xs text-subtle">{configured ? 'Keys are in place. You can connect an account.' : 'Not set up yet. Follow the steps, add the keys, then connect.'}</p>
+          <p className="text-xs text-subtle">{configured ? 'Keys are in place. You can connect an account.' : 'Waiting on you: follow Steps, add the keys in Bolt, then Connect appears here.'}</p>
         </div>
         {configured ? (
           <Button variant="primary" size="sm" onClick={onConnect} disabled={connect.isPending}>

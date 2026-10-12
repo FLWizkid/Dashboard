@@ -17,6 +17,7 @@ import { PageHeader, type PageTab } from '@/components/ui/page-header';
 import { SHORTCUTS } from '@/components/shell/shortcuts';
 import { CompaniesSettings } from '@/components/settings/CompaniesSettings';
 import { AuditLogPanel, DemoDataSettings, ExportSettings } from '@/components/settings/DataSettings';
+import { PasskeySettings } from '@/components/settings/PasskeySettings';
 
 const INTEGRATIONS: { key: keyof typeof SETUP; title: string }[] = [
   { key: 'agents', title: 'Agent digest' },
@@ -161,10 +162,7 @@ function AccountPanels() {
             <span className="flex-1 truncate text-sm">{user?.email}</span>
             <Button variant="secondary" onClick={signOut}><LogOut /> Sign out</Button>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted">
-            <StatusPill status="unknown" label="Two-factor: not set up" />
-            <span>Planned before any connections go live.</span>
-          </div>
+          <PasskeySettings />
         </div>
       </Panel>
       <Panel title="Keyboard shortcuts" icon={<Keyboard />}>

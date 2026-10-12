@@ -29,8 +29,8 @@ export function MeetingsPanel() {
       error={accounts.error ?? events.error}
       empty={noAccounts || shown.length === 0}
       emptyState={noAccounts ? (
-        <EmptyState title="Calendars not connected" text="Connect Outlook and Google Workspace to see meetings here."
-          action={<Button asChild size="sm"><Link to="/settings/connections">Set up</Link></Button>} />
+        <EmptyState title="Calendars not connected yet" text="Outlook and Google each need a one-time setup from you before meetings appear."
+          action={<Button asChild size="sm"><Link to="/setup">Open setup steps</Link></Button>} />
       ) : (
         <EmptyState title="No meetings in the next 3 days" />
       )}

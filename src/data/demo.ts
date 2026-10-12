@@ -7,7 +7,7 @@ import { check, recordAudit, unwrap } from './core';
 const COMPANIES: { name: string; slug: string; identity: Identity; color: string }[] = [
   { name: 'Encountive', slug: 'encountive', identity: 'encountive', color: 'sky' },
   { name: 'Doug IT', slug: 'doug-it', identity: 'doug_it', color: 'teal' },
-  { name: 'Krewe & Kin', slug: 'krewe-kin', identity: 'krewe_kin', color: 'amber' },
+  { name: 'Krewe & Kin', slug: 'krewe-kin', identity: 'doug_it', color: 'amber' },
 ];
 
 const PROJECTS: { name: string; company: string; identity: Identity }[] = [
@@ -15,7 +15,7 @@ const PROJECTS: { name: string; company: string; identity: Identity }[] = [
   { name: 'Manual Blood Pressure Trainer (WebXR)', company: 'encountive', identity: 'encountive' },
   { name: 'Encountive Website', company: 'encountive', identity: 'encountive' },
   { name: 'Email & Domain Cleanup', company: 'encountive', identity: 'encountive' },
-  { name: 'Krewe & Kin Client Work', company: 'krewe-kin', identity: 'krewe_kin' },
+  { name: 'Krewe & Kin Client Work', company: 'krewe-kin', identity: 'doug_it' },
 ];
 
 async function ensureCompaniesAndProjects(): Promise<Company[]> {
@@ -52,7 +52,7 @@ async function insertDemoRows(companies: Company[]) {
     { title: 'Cancel unused design tool trial', status: 'waiting', priority: 'low', due: -1, category: 'Vendor', company: 'doug-it', identity: null },
     { title: 'Rotate Vercel API token', status: 'backlog', priority: 'urgent', due: 1, category: 'Security', company: null, identity: null },
     { title: 'Deploy WebXR trainer build to staging', status: 'in_progress', priority: 'high', due: 2, category: 'Dev', company: 'encountive', identity: 'encountive', project: 'Manual Blood Pressure Trainer (WebXR)' },
-    { title: 'Send Krewe & Kin client hosting invoice', status: 'ready', priority: 'medium', due: 4, category: 'Admin', company: 'krewe-kin', identity: 'krewe_kin', project: 'Krewe & Kin Client Work' },
+    { title: 'Send Krewe & Kin client hosting invoice', status: 'ready', priority: 'medium', due: 4, category: 'Admin', company: 'krewe-kin', identity: 'doug_it', project: 'Krewe & Kin Client Work' },
     { title: 'Document DNS records for encountive.com', status: 'done', priority: 'medium', due: -3, category: 'IT', company: 'encountive', identity: 'encountive', project: 'Email & Domain Cleanup' },
     { title: 'Quarterly access review', status: 'backlog', priority: null, due: null, category: 'Security', company: 'encountive', identity: null },
   ];
