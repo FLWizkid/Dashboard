@@ -48,7 +48,7 @@ function GuideDialog({ open, onOpenChange, provider, redirectUri }: {
 }) {
   const steps = [...(provider === 'microsoft' ? MICROSOFT_STEPS : GOOGLE_STEPS), ...SECRETS_STEPS];
   const keys = provider === 'microsoft'
-    ? [['MICROSOFT_CLIENT_ID', 'the Application (client) ID'], ['MICROSOFT_CLIENT_SECRET', 'the secret Value'], ['MICROSOFT_TENANT', 'the Directory (tenant) ID']]
+    ? [['MICROSOFT_CLIENT_ID', 'the Application (client) ID'], ['MICROSOFT_CLIENT_SECRET', 'the secret Value']]
     : [['GOOGLE_CLIENT_ID', 'the Client ID'], ['GOOGLE_CLIENT_SECRET', 'the Client secret']];
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={`Connect ${MAIL_PROVIDERS[provider].label}`} description="One-time setup. Access is read-only.">

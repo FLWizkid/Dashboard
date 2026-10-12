@@ -107,7 +107,7 @@ Rollback note per migration: drop the new table or column. For item 6, restore f
 - **D3 Sign-in:** password stays, and Windows Hello (passkey) sign-in is added. The sign-in page and Settings > Account are built. Doug still needs to do this: in the Supabase dashboard, go to Authentication > Passkeys, enable passkeys, set the RP ID to the stable deployed domain (bare domain, no https), and add the deployed URL as an RP origin. Changing the RP ID later invalidates saved passkeys.
 - **D4 Identities:** done. Migration `cc_identity_krewe_kin_to_doug_it` moved 1 company, 1 project and 1 task to doug_it, with audit rows; the rollback is in the migration comment.
 - **D5 Data export:** not needed, because there is no live data yet.
-- **D6 Mail and calendar:** the early build is accepted. The calendar and inbox are empty because no accounts are connected. Connecting needs Doug's admin sign-in to create the Azure app (single tenant, theonefor.ai) and the Google Internal app (encountive.com), then the keys go in Bolt Secrets: MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_TENANT, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET. Empty screens now link to Setup.
+- **D6 Mail and calendar:** the early build is accepted. The calendar and inbox are empty because no accounts are connected. Connecting needs Doug's admin sign-in to create the Azure app (single tenant, theonefor.ai) and the Google Internal app (encountive.com), then the keys go in Bolt Secrets: MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET (tenant is fixed to theonefor.ai; token encryption derives from the service key, so no MICROSOFT_TENANT or MAIL_TOKEN_KEY). Empty screens now link to Setup.
 
 ### Session 2026-10-12 (afternoon)
 

@@ -15,14 +15,15 @@ export const SECRETS_STEPS = [
 ];
 
 export const MICROSOFT_STEPS = [
-  'Go to portal.azure.com and sign in as doug@theonefor.ai (an admin of the theonefor.ai Microsoft 365).',
+  'Why Microsoft: your doug@theonefor.ai email from GoDaddy is Microsoft 365 underneath. GoDaddy resells it, and your Outlook and calendar live on Microsoft. So this one-time app is created in Microsoft\'s portal using that same GoDaddy email login. There is no separate Microsoft account.',
+  'Go to portal.azure.com and type doug@theonefor.ai. Microsoft sends you to a GoDaddy sign-in page. Use the same password you use for your GoDaddy email.',
   'In the search bar at the top, type "App registrations" and open it. Click New registration.',
   'Name: CIO Command Console. Supported account types: "Accounts in this organizational directory only (single tenant)".',
   'Redirect URI: choose Web, paste the redirect address shown below, then click Register.',
-  'On the Overview page, copy "Application (client) ID" and "Directory (tenant) ID" into a notepad.',
+  'On the Overview page, copy "Application (client) ID" into a notepad. You can ignore the other IDs.',
   'Left menu: Certificates & secrets > Client secrets > New client secret. Description: Console, Expires: 24 months, Add. Copy the Value column immediately (it is hidden after you leave the page). Do not copy the Secret ID.',
-  'Left menu: API permissions > Add a permission > Microsoft Graph > Delegated permissions. Tick User.Read, Mail.Read, Calendars.Read, offline_access, openid and email. Click Add permissions, then "Grant admin consent for ..." and confirm.',
-  'Your theonefor.ai mailbox is Microsoft 365 bought through GoDaddy. If Azure says you do not have permission to register apps or grant consent, stop and tell me the exact message; GoDaddy sometimes holds the top admin role.',
+  'Left menu: API permissions > Add a permission > Microsoft Graph > Delegated permissions. Tick User.Read, Mail.Read, Calendars.Read, offline_access, openid and email. Click Add permissions. If a "Grant admin consent" button is available, click it; if it is greyed out, skip it, because you approve the access yourself when you click Connect later.',
+  'If Azure says you are not allowed to register apps, stop and tell me the exact message. GoDaddy sometimes locks this, and there is a workaround.',
 ];
 
 export const GOOGLE_STEPS = [
@@ -121,16 +122,15 @@ export function SetupSteps() {
       onRefresh={() => { mail.refetch(); accounts.refetch(); auth.refetch(); }}
       refreshing={mail.isFetching || accounts.isFetching || auth.isFetching}>
       <ol className="space-y-2">
-        <Step n={1} title="Create the Outlook and calendar app (theonefor.ai)" where="Microsoft Azure portal, then Bolt" status={keyStatus(msReady, 'microsoft')} defaultOpen={!msReady}>
+        <Step n={1} title="Create the Outlook and calendar app (doug@theonefor.ai, GoDaddy email)" where="Microsoft portal using your GoDaddy email login, then Bolt" status={keyStatus(msReady, 'microsoft')} defaultOpen={!msReady}>
           <Steps items={MICROSOFT_STEPS} />
-          <Sub>Redirect address to paste in step 4</Sub>
+          <Sub>Redirect address to paste in step 5</Sub>
           <CopyRow value={redirectUri} />
-          <Sub>Then add these three keys in Bolt</Sub>
+          <Sub>Then add these two keys in Bolt</Sub>
           <Steps items={SECRETS_STEPS} />
           <div className="mt-3"><Keys items={[
             ['MICROSOFT_CLIENT_ID', 'Application (client) ID'],
             ['MICROSOFT_CLIENT_SECRET', 'the secret Value (not the Secret ID)'],
-            ['MICROSOFT_TENANT', 'Directory (tenant) ID'],
           ]} /></div>
         </Step>
 

@@ -23,7 +23,7 @@ class UserError extends Error {}
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/mail-connect/callback`;
-const MS_TENANT = Deno.env.get("MICROSOFT_TENANT") || "common";
+const MS_TENANT = "theonefor.ai";
 const MS_SCOPES = "offline_access openid email User.Read Mail.Read Calendars.Read";
 const GOOGLE_SCOPES = "openid email https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly";
 
@@ -46,7 +46,7 @@ function randomToken(n = 32) {
 }
 
 async function aesKey() {
-  const material = Deno.env.get("MAIL_TOKEN_KEY") || SERVICE_KEY;
+  const material = SERVICE_KEY;
   const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(material), "HKDF", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
     { name: "HKDF", hash: "SHA-256", salt: new TextEncoder().encode("cc-mail-tokens-v1"), info: new Uint8Array() },
