@@ -219,8 +219,8 @@ export function ConnectorsSection() {
           </div>
         </div>
         <p className="rounded-md bg-raised p-3 text-sm text-muted">
-          doug@theonefor.ai mail reaches the console by forwarding it to Gmail (Your steps, step 4); it is tagged Doug IT automatically.
-          Superhuman reads the same Gmail inbox, so there is nothing separate to connect. Proton Mail needs Proton Mail Bridge on your Windows PC and arrives in a later phase.
+          doug@theonefor.ai mail stays in its own Outlook mailbox and is kept separate from Encountive; reading it here would need a Microsoft app, which is skipped because you do not use Azure. Its calendar comes in through the link above.
+          Proton Mail (dougtully@protonmail.com) needs Proton Mail Bridge on your Windows PC and arrives in a later phase.
         </p>
       </div>
     </Panel>

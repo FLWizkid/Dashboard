@@ -54,7 +54,7 @@ No legacy rows need mapping: the legacy tables are empty apart from the profile 
 | C3 | Superhuman is the client for Outlook + Gmail; no REST API | Inbox already uses Graph and Gmail directly (correct) | Add an "Open in" setting per account (Superhuman / native) in Phase 6 |
 | C4 | Dashboard relays agent results by email | Needs Resend (Phase 3 gap) and an ingest endpoint (Phase 5) | Build in phase order |
 | C5 | Identities are Encountive, Doug IT and Personal, plus Retired addresses; Krewe & Kin is a Company, not an identity | **Conflict:** the built identity list includes `krewe_kin` | Map `krewe_kin` to `doug_it` on existing rows (a data change, needs approval) and remove it from pickers |
-| C6 | Gmail = doug@encountive.com (Encountive), Outlook = doug@theonefor.ai (Doug IT); Internal Google app; no Azure | Outlook calendar comes in through a published ICS link; theonefor.ai mail is forwarded into Gmail and tagged by recipient domain | Done in code; Doug's steps 1 and 4 |
+| C6 | Gmail = doug@encountive.com (Encountive), Outlook = doug@theonefor.ai (Doug IT); Internal Google app; no Azure | Outlook calendar comes in through a published ICS link; theonefor.ai mail is not read (kept separate, no Azure) | Done in code; Doug's step 1 |
 | C7 | Email and calendar is Phase 6, after agents | Built early as read-only and unconnected | Keep, mark "Built early", finish Phase 6 items later |
 | C8 | Shortcuts G then A and G then R | Not present | Add with the Agents and Reports pages |
 | C9 | Magic-link sign-in; MFA before email integrations go live | **Conflict:** sign-in is email + password, with no MFA | Add an authenticator-app MFA requirement before any mailbox is connected; magic link optional (D3) |
@@ -67,7 +67,7 @@ No legacy rows need mapping: the legacy tables are empty apart from the profile 
 - **G1:** Recurring tasks are not built.
 - **G2:** "Where does this belong?" guide and identity tooltips are not built.
 - **G3:** Identity addresses, approved-destinations list and console notification address are not in Settings.
-- **G4:** Resend sender on notify.theonefor.ai and "Send test" are not built.
+- **G4:** Resend sender (doug@encountive.com) and "Send test" are not built.
 - **G5:** Uptime runs when you open IT Ops or press refresh, not every 15 minutes on a schedule.
 - **G6:** VIP senders, IT-signal tagging rules and the "suggest identity" hint in the inbox are not built.
 - **G7:** Inbox filters "Encountive only / Doug IT only / Personal only" are partly covered by source chips; a filter by identity is still needed.
@@ -107,7 +107,7 @@ Rollback note per migration: drop the new table or column. For item 6, restore f
 - **D3 Sign-in:** password stays, and Windows Hello (passkey) sign-in is added. The sign-in page and Settings > Account are built. Doug still needs to do this: in the Supabase dashboard, go to Authentication > Passkeys, enable passkeys, set the RP ID to the stable deployed domain (bare domain, no https), and add the deployed URL as an RP origin. Changing the RP ID later invalidates saved passkeys.
 - **D4 Identities:** done. Migration `cc_identity_krewe_kin_to_doug_it` moved 1 company, 1 project and 1 task to doug_it, with audit rows; the rollback is in the migration comment.
 - **D5 Data export:** not needed, because there is no live data yet.
-- **D6 Mail and calendar:** Doug does not use Azure, so there is no Microsoft app. Outlook calendar: Doug publishes it in Outlook on the web and pastes the ICS link on Setup > Connectors; the link is stored encrypted on the server and only outlook.office365.com / outlook.office.com / outlook.live.com links are fetched. Outlook mail: GoDaddy external forwarding on, then doug@theonefor.ai forwards to doug@encountive.com; the Gmail sync reads To/Cc/Delivered-To/X-Forwarded-To and tags messages by company domain (theonefor.ai and kreweandkin.com = Doug IT). Only GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are needed in Bolt Secrets. Migration `cc_outlook_calendar_link_and_forwarded_mail`.
+- **D6 Mail and calendar:** Doug does not use Azure, so there is no Microsoft app. Outlook calendar: Doug publishes it in Outlook on the web and pastes the ICS link on Setup > Connectors; the link is stored encrypted on the server and only outlook.office365.com / outlook.office.com / outlook.live.com links are fetched. theonefor.ai mail is NOT forwarded: Encountive and theonefor.ai are separate entities, so only the Gmail inbox (doug@encountive.com) is read. Alerts go from and to doug@encountive.com. Personal = dougtully@protonmail.com. Only GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are needed in Bolt Secrets. Krewe of Shamrock: kreweofshamrock.com (GoDaddy DNS, Vercel site, ImprovMX mail, no DMARC), 3 monitors added.
 
 ### Session 2026-10-12 (afternoon)
 

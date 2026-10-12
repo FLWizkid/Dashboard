@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { ChevronDown, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useMailAccounts, useMailMessages, useMailStatus } from '@/data/mail';
+import { useMailAccounts, useMailStatus } from '@/data/mail';
 import { useAuthSettings } from '@/auth/passkey';
 import { Panel } from '@/components/ui/panel';
 import { Button } from '@/components/ui/button';
@@ -21,15 +21,6 @@ export const OUTLOOK_CALENDAR_STEPS = [
   'Two links appear. Click the ICS link (the one ending in .ics) and choose Copy link.',
   'Back here, open the Connectors tab, paste it into the "Outlook calendar link" box and click Add calendar.',
   'If "Publish a calendar" is missing, GoDaddy has calendar publishing switched off. Call GoDaddy support and ask them to "allow calendar publishing for doug@theonefor.ai on my Microsoft 365 plan", then repeat these steps.',
-];
-
-export const FORWARDING_STEPS = [
-  'Allow forwarding at GoDaddy: sign in at godaddy.com with your GoDaddy account login (not the email password). Open My Products, find Email and Office, and click Manage All to open the Email & Office Dashboard.',
-  'In the dashboard, open the admin menu at the top and choose Email Forwarding. Under Forwarding Status, switch forwarding on for theonefor.ai and confirm.',
-  'Set up the forward: go to outlook.office.com as doug@theonefor.ai. Click the gear icon, then Mail, then Forwarding.',
-  'Switch on "Enable forwarding", type doug@encountive.com, tick "Keep a copy of forwarded messages", and click Save.',
-  'Test it: from any other address, send a short email to doug@theonefor.ai. Within a few minutes it shows in Gmail and, after Sync now, in the console Inbox with the Doug IT badge.',
-  'If the test never arrives, GoDaddy is still blocking outside forwarding. Call GoDaddy support and ask them to "turn on external email forwarding for theonefor.ai".',
 ];
 
 export const GOOGLE_STEPS = [
@@ -115,9 +106,7 @@ export function SetupSteps() {
   const auth = useAuthSettings();
   const redirectUri = mail.data?.redirectUri ?? '';
   const gReady = mail.data?.providers.google?.configured ?? false;
-  const messages = useMailMessages();
   const list = accounts.data ?? [];
-  const forwarded = (messages.data ?? []).some((m) => m.identity === 'doug_it');
   const connected = (p: string) => list.some((a) => a.provider === p && a.status === 'connected');
   const keyStatus = (ready: boolean, p: string): Status =>
     connected(p) ? DONE : ready ? { status: 'attention', label: 'Keys in place, connect next' } : YOURS;
@@ -126,7 +115,7 @@ export function SetupSteps() {
     <Panel title="Your steps" icon={<ListChecks />}
       subtitle="Everything only you can do, in order. Click a step to open it. Steps with a live status update on their own."
       loading={mail.isLoading} error={mail.error}
-      onRefresh={() => { mail.refetch(); accounts.refetch(); messages.refetch(); auth.refetch(); }}
+      onRefresh={() => { mail.refetch(); accounts.refetch(); auth.refetch(); }}
       refreshing={mail.isFetching || accounts.isFetching || auth.isFetching}>
       <ol className="space-y-2">
         <Step n={1} title="Show your Outlook calendar here (doug@theonefor.ai)" where="Outlook on the web, then this console. No Azure." status={connected('outlook_ics') ? DONE : YOURS} defaultOpen={!connected('outlook_ics')}>
@@ -136,7 +125,7 @@ export function SetupSteps() {
         </Step>
 
         <Step n={2} title="Create the Gmail and Google Calendar app (encountive.com)" where="Google Cloud console, then Bolt" status={keyStatus(gReady, 'google')}>
-          <p className="mb-3 text-sm text-muted">Needed for your Encountive mail and calendar, and for theonefor.ai mail once it is forwarded in step 4.</p>
+          <p className="mb-3 text-sm text-muted">Needed for your Encountive mail and calendar. Encountive stays separate from theonefor.ai; nothing is forwarded between them.</p>
           <Steps items={GOOGLE_STEPS} />
           <Sub>Redirect address to paste in item 6</Sub>
           <CopyRow value={redirectUri} />
@@ -155,33 +144,28 @@ export function SetupSteps() {
           ]} />
         </Step>
 
-        <Step n={4} title="Forward doug@theonefor.ai mail into Gmail" where="GoDaddy, then Outlook on the web. No Azure." status={forwarded ? DONE : YOURS}>
-          <p className="mb-3 text-sm text-muted">This gets your Doug IT mail into the console without any Microsoft app. Forwarded mail is tagged Doug IT automatically, and the original copy stays in Outlook.</p>
-          <Steps items={FORWARDING_STEPS} />
-        </Step>
-
-        <Step n={5} title="Publish the console to a permanent address" where="Bolt" status={YOURS}>
+        <Step n={4} title="Publish the console to a permanent address" where="Bolt" status={YOURS}>
           <Steps items={[
             'In Bolt, click Publish at the top right of the screen, then click Publish.',
             'When it finishes, click the pencil next to the address and pick a name you will keep, for example cio-console. Leave "Republish after updating" ticked and click Save.',
-            'Send me the full address (it ends in .bolt.host). Windows Hello is tied to this exact address, so choose it before step 6.',
+            'Send me the full address (it ends in .bolt.host). Windows Hello is tied to this exact address, so choose it before step 5.',
           ]} />
         </Step>
 
-        <Step n={6} title="Switch on Windows Hello sign-in" where="Supabase (needs your database moved to your own Supabase account)" status={auth.data?.passkeys_enabled ? DONE : YOURS}>
+        <Step n={5} title="Switch on Windows Hello sign-in" where="Supabase (needs your database moved to your own Supabase account)" status={auth.data?.passkeys_enabled ? DONE : YOURS}>
           <p className="mb-3 text-sm text-muted">Bolt's own sign-in settings do not include a Windows Hello switch. To get it, the database has to be claimed into a Supabase account you own. Claiming keeps all data and needs a Bolt Pro or Teams plan.</p>
           <Steps items={[
             'In Bolt, click the database icon at the top center, then Advanced, then Claim database in Supabase. Sign in to or create a free Supabase account and finish the claim.',
             'At supabase.com/dashboard open the claimed project, then Authentication in the left menu.',
             'Open the Passkeys (or WebAuthn) settings and turn it on.',
-            'Display name: CIO Command Console. Relying party ID: your address from step 5 without https:// (for example cio-console.bolt.host). Origins: the full address with https://. Save.',
+            'Display name: CIO Command Console. Relying party ID: your address from step 4 without https:// (for example cio-console.bolt.host). Origins: the full address with https://. Save.',
             'Back in the console, sign in with your password, go to Settings > Account and click Add this PC. Windows asks for your PIN, fingerprint or face.',
             'Sign out. The sign-in page now shows "Sign in with Windows Hello". Your password still works.',
           ]} />
           <p className="mt-3 text-xs text-subtle">If you would rather not claim the database, password sign-in stays as it is and nothing else changes.</p>
         </Step>
 
-        <Step n={7} title="Turn on email signing for theonefor.ai (DKIM)" where="Microsoft security page with your email login, then GoDaddy DNS. No Azure." status={YOURS}>
+        <Step n={6} title="Turn on email signing for theonefor.ai (DKIM)" where="Microsoft security page with your email login, then GoDaddy DNS. No Azure." status={YOURS}>
           <p className="mb-3 text-sm text-muted">I checked: theonefor.ai mail is not signed, so it is easier to fake mail from your address. The Operations page shows this as needing action until it is fixed.</p>
           <Steps items={[
             'Go to security.microsoft.com and sign in as doug@theonefor.ai with your GoDaddy email password. This is the Microsoft 365 security page, not Azure.',
@@ -193,7 +177,7 @@ export function SetupSteps() {
           ]} />
         </Step>
 
-        <Step n={8} title="Turn on email signing for encountive.com (DKIM)" where="Google Admin, then SiteGround DNS" status={YOURS}>
+        <Step n={7} title="Turn on email signing for encountive.com (DKIM)" where="Google Admin, then SiteGround DNS" status={YOURS}>
           <p className="mb-3 text-sm text-muted">I checked: Google Workspace signing is not published for encountive.com (Resend signing is fine).</p>
           <Steps items={[
             'Go to admin.google.com as doug@encountive.com. Apps > Google Workspace > Gmail > Authenticate email.',
@@ -204,23 +188,24 @@ export function SetupSteps() {
           ]} />
         </Step>
 
-        <Step n={9} title="Add spoofing protection (DMARC) to theonefor.ai and kreweandkin.com" where="GoDaddy DNS and Cloudflare" status={YOURS}>
+        <Step n={8} title="Add spoofing protection (DMARC) to theonefor.ai, kreweandkin.com and kreweofshamrock.com" where="GoDaddy DNS (2 domains) and Cloudflare" status={YOURS}>
           <p className="mb-3 text-sm text-muted">encountive.com already has one. This record starts in watch-only mode, so no mail is blocked; reports go to doug@theonefor.ai.</p>
-          <Sub>Value for both domains</Sub>
+          <Sub>Value for all three domains</Sub>
           <CopyRow value={DMARC_VALUE} />
           <Sub>theonefor.ai at GoDaddy</Sub>
           <Steps items={['dcc.godaddy.com > Domains > theonefor.ai > DNS > Add New Record.', 'Type TXT, Name _dmarc, Value: paste the value above. Save.']} />
           <Sub>kreweandkin.com at Cloudflare</Sub>
           <Steps items={['dash.cloudflare.com > kreweandkin.com > DNS > Records > Add record.', 'Type TXT, Name _dmarc, Content: paste the value above. Save.', 'If Missy owns the Cloudflare account, she can add you as a member under Manage account > Members, or do these two steps herself.']} />
+          <Sub>kreweofshamrock.com at GoDaddy</Sub>
+          <Steps items={['Sign in to the GoDaddy account that holds kreweofshamrock.com (it may be the Krewe\'s account rather than yours).', 'dcc.godaddy.com > Domains > kreweofshamrock.com > DNS > Add New Record.', 'Type TXT, Name _dmarc, Value: paste the value above. Save.']} />
         </Step>
 
-        <Step n={10} title="Get the console's own email sender ready (Resend)" where="resend.com, then Bolt" status={YOURS}>
-          <p className="mb-3 text-sm text-muted">This is for the next phase (alerts and Send test). encountive.com is already verified in a Resend account, so the quickest path is to reuse it.</p>
+        <Step n={9} title="Get the console's own email sender ready (Resend)" where="resend.com, then Bolt" status={YOURS}>
+          <p className="mb-3 text-sm text-muted">This is for the next phase (alerts and Send test). Alerts will be sent from and to your existing doug@encountive.com, so no new mailbox is created. encountive.com is already verified in a Resend account, so you only need a key.</p>
           <Steps items={[
             'Go to resend.com and sign in to the account that verified encountive.com. If you are not sure which, open Domains and look for encountive.com marked Verified.',
             'API Keys > Create API key. Name: CIO Console. Permission: Sending access. Domain: encountive.com. Create, then copy the key (shown once).',
             'Add it in Bolt the same way as the other keys (database icon > Secrets), with the name below.',
-            'Tell me which address alerts should come from, for example console@encountive.com.',
           ]} />
           <div className="mt-3"><Keys items={[['RESEND_API_KEY', 'the key you just created']]} /></div>
         </Step>

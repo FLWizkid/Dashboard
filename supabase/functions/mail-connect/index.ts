@@ -13,7 +13,6 @@ interface Account { id: string; user_id: string; provider: Provider; email: stri
 interface MessageRow {
   provider_id: string; thread_id: string | null; from_name: string | null; from_email: string | null;
   subject: string | null; snippet: string | null; received_at: string; is_unread: boolean; is_important: boolean; web_link: string | null;
-  to_email: string | null; identity: string | null;
 }
 interface EventRow {
   provider_id: string; title: string | null; starts_at: string; ends_at: string; all_day: boolean;
@@ -256,35 +255,11 @@ function parseFrom(v: string | undefined) {
   return m ? { name: m[1] || null, email: m[2] } : { name: null, email: v.trim() };
 }
 
-function addresses(v: string | undefined) {
-  return (v ?? "").match(/[^\s<>"',;:]+@[a-z0-9.-]+\.[a-z]{2,}/gi)?.map((x) => x.toLowerCase()) ?? [];
-}
-
-async function companyDomains(admin: SupabaseClient, userId: string) {
-  const { data } = await admin.from("cc_companies").select("website, identity").eq("user_id", userId);
-  const map = new Map<string, string>();
-  for (const c of data ?? []) {
-    if (!c.website || !c.identity) continue;
-    const host = String(c.website).replace(/^https?:\/\//i, "").split("/")[0].replace(/^www\./i, "").toLowerCase();
-    if (host) map.set(host, c.identity);
-  }
-  return map;
-}
-
-function routeTo(headers: (string | undefined)[], ownEmail: string, domains: Map<string, string>) {
-  const own = ownEmail.split("@")[1];
-  for (const addr of headers.flatMap(addresses)) {
-    const domain = addr.split("@")[1];
-    if (domain !== own && domains.has(domain)) return { to_email: addr.slice(0, 200), identity: domains.get(domain)! };
-  }
-  return { to_email: null, identity: null };
-}
-
-async function googleData(token: string, email: string, from: Date, to: Date, domains: Map<string, string>) {
+async function googleData(token: string, email: string, from: Date, to: Date) {
   const list = await apiGet("https://gmail.googleapis.com/gmail/v1/users/me/messages?labelIds=INBOX&maxResults=30", token);
   const ids: string[] = (list.messages ?? []).map((x: any) => x.id);
   const details = await Promise.all(ids.map((id) =>
-    apiGet(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=To&metadataHeaders=Cc&metadataHeaders=Delivered-To&metadataHeaders=X-Forwarded-To`, token)
+    apiGet(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject`, token)
   ));
   const messages: MessageRow[] = details.map((x: any) => {
     const h = (n: string) => x.payload?.headers?.find((y: any) => y.name?.toLowerCase() === n.toLowerCase())?.value;
@@ -295,7 +270,6 @@ async function googleData(token: string, email: string, from: Date, to: Date, do
       subject: clip(h("Subject"), 500), snippet: clip(x.snippet, 300), received_at: new Date(Number(x.internalDate)).toISOString(),
       is_unread: labels.includes("UNREAD"), is_important: labels.includes("IMPORTANT"),
       web_link: `https://mail.google.com/mail/?authuser=${encodeURIComponent(email)}#all/${x.threadId}`,
-      ...routeTo([h("X-Forwarded-To"), h("To"), h("Cc"), h("Delivered-To")], email, domains),
     };
   });
   const e = await apiGet("https://www.googleapis.com/calendar/v3/calendars/primary/events?" + new URLSearchParams({
@@ -335,7 +309,7 @@ async function syncAccount(admin: SupabaseClient, account: Account) {
     const to = new Date(Date.now() + 14 * 86400_000);
     const { messages, events } = account.provider === "outlook_ics"
       ? { messages: [] as MessageRow[], events: parseIcs(await fetchIcs(token), from, to) }
-      : await googleData(token, account.email, from, to, await companyDomains(admin, account.user_id));
+      : await googleData(token, account.email, from, to);
     await replaceRows(admin, "cc_mail_messages", account, messages, messages.map((m) => m.provider_id));
     await replaceRows(admin, "cc_calendar_events", account, events, events.map((e) => e.provider_id));
     await admin.from("cc_mail_accounts").update({ status: "connected", last_error: null, last_synced_at: new Date().toISOString() }).eq("id", account.id);

@@ -17,13 +17,13 @@ export const IDENTITIES: { value: Identity; label: string; address: string; belo
     value: 'doug_it',
     label: 'Doug IT',
     address: 'doug@theonefor.ai',
-    belongs: 'Your IT working inbox: agent notifications, monitoring alerts, personally-held accounts, trials, newsletters, Krewe & Kin and consulting work, and this console\'s mail.',
+    belongs: 'Your IT working inbox: agent notifications, monitoring alerts, personally-held accounts, trials, newsletters, Krewe & Kin and Krewe of Shamrock IT, consulting work, and this console\'s mail.',
     tone: 'border-accent-500/40 bg-accent-500/10 text-accent-700 dark:text-accent-300',
   },
   {
     value: 'personal',
     label: 'Personal',
-    address: 'dougtully@proton.me',
+    address: 'dougtully@protonmail.com',
     belongs: 'Personal life only. Shown for triage, never used for business sending.',
     tone: 'border-neutral-500/40 bg-neutral-500/10 text-neutral-700 dark:text-neutral-300',
   },
@@ -253,8 +253,6 @@ export interface MailMessage {
   is_unread: boolean;
   is_important: boolean;
   web_link: string | null;
-  to_email: string | null;
-  identity: Identity | null;
 }
 
 export interface CalendarEvent {

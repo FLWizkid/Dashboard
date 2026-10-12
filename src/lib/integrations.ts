@@ -13,10 +13,9 @@ export const SETUP = {
   requests: { phase: 4, what: 'Open IT requests from Melissa.', steps: ['Phase 4 adds Partner IT Requests.'] },
   resend: {
     phase: 3,
-    what: 'Sending alerts, digests and test messages from console@notify.theonefor.ai via Resend.',
+    what: 'Sending alerts, digests and test messages from doug@encountive.com via Resend.',
     steps: [
-      'Create a Resend account and add the sending subdomain notify.theonefor.ai.',
-      'Add the SPF and DKIM records Resend gives you at your DNS host (exact records listed when this is built).',
+      'Sign in to the Resend account where encountive.com is already verified.',
       'Add the Resend API key in Bolt under the database icon, then Secrets. It is stored only on the server.',
     ],
   },

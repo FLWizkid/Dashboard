@@ -1,4 +1,4 @@
-import { MAIL_PROVIDERS, type Identity, type MailAccount, type MailProvider } from '@/lib/types';
+import { MAIL_PROVIDERS, type MailAccount, type MailProvider } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { IdentityBadge } from '@/components/ui/badge';
 
@@ -15,19 +15,13 @@ export function ProviderMark({ provider, className }: { provider: MailProvider; 
   );
 }
 
-export function SourceBadge({ account, compact, toEmail, identity }: {
-  account: MailAccount | undefined; compact?: boolean; toEmail?: string | null; identity?: Identity | null;
-}) {
+export function SourceBadge({ account, compact }: { account: MailAccount | undefined; compact?: boolean }) {
   if (!account) return <span className="text-xs text-subtle">Unknown source</span>;
-  const shownEmail = toEmail ?? account.email;
-  const title = toEmail
-    ? `Sent to ${toEmail}, forwarded into ${MAIL_PROVIDERS[account.provider].app} (${account.email})`
-    : `${MAIL_PROVIDERS[account.provider].app} · ${account.email}`;
   return (
-    <span className="inline-flex min-w-0 items-center gap-1.5" title={title}>
+    <span className="inline-flex min-w-0 items-center gap-1.5" title={`${MAIL_PROVIDERS[account.provider].app} · ${account.email}`}>
       <ProviderMark provider={account.provider} />
-      {!compact && <span className="truncate text-xs text-muted">{toEmail ? `to ${shownEmail} (forwarded)` : shownEmail}</span>}
-      <IdentityBadge identity={identity ?? account.identity} compact />
+      {!compact && <span className="truncate text-xs text-muted">{account.email}</span>}
+      <IdentityBadge identity={account.identity} compact />
     </span>
   );
 }
