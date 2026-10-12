@@ -1,0 +1,128 @@
+# CIO Command Console — status
+
+- **Spec version:** v5 (received 2026-10-12)
+- **Resumed from:** Step 0 addendum for v5. A full Step 0 was delivered for the original spec on 2026-10-11, so v5 needs only an addendum.
+- **Current gate:** v5 Step 0 addendum, awaiting Doug's approval. No code has changed for v5.
+
+## Phase status
+
+The earlier work used its own phase numbers. It is mapped to v5 numbers below.
+
+| v5 phase | Scope | Status | Approved |
+|---|---|---|---|
+| 1 Audit and plan | Step 0, now plus the v5 addendum | Awaiting my approval (addendum) | Original Step 0: 2026-10-11 |
+| 2 Shell and core | Auth, layout, design system, Today, Tasks/Projects, Time & Focus, Settings, demo data | Approved, with gaps (see G-list) | 2026-10-11 |
+| 3 IT Ops lights + console email | RDAP, DNS, uptime, manual systems, history, Health strip; Resend "Send test" | In progress: lights approved 2026-10-11; Resend console email not built | Partial |
+| 4 Assets, Access, Renewals, Security, logs, requests, identity audit, migration tracker | | Not started | |
+| 5 Agent Operations (Claude) | | Not started | |
+| 6 Email and calendar | Graph, Google, Open in Superhuman, local relay | Built early (read-only Graph + Gmail, not yet connected). Awaiting my approval. Superhuman links and local relay not built. | |
+| 7 GitHub/Vercel/Resend status, Weekly report, polish | | Not started | |
+
+## Step 0 addendum (v5)
+
+### Inventory
+
+- **Framework:** Vite 5, React 18 and TypeScript (strict), with Tailwind, Radix and cva (shadcn-style parts), lucide-react, TanStack Query v5, React Router 6, Zod and date-fns. The earlier Next.js 15 app is kept read-only in `legacy-reference/`.
+- **Routes:** `/` Today, `/tasks`, `/projects`, `/time`, `/inbox`, `/calendar`, `/ops`, `/setup`, `/settings`. Later-phase pages show a "Not built yet" screen.
+- **Supabase:** hosted cloud project, connected through Bolt's Supabase integration and reachable. The project ref, region and plan are not visible from inside the workspace; check them in the Bolt database panel.
+  - pg_cron 1.6.4, pgcrypto and supabase_vault are installed. pg_net is available but not installed.
+- **Edge functions:** `ops-check` (signed-in users only) and `mail-connect` (OAuth callback is public; every other action checks the sign-in).
+- **Edge function secrets set:** only the built-in Supabase ones. None of these are set yet: MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_TENANT, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, MAIL_TOKEN_KEY, RESEND_API_KEY.
+- **Git:** this workspace has no git access. Bolt syncs to whichever GitHub branch is connected in Bolt's GitHub settings. A `console-v5` branch cannot be created from inside this workspace; see decision D1.
+- **Hosting:** no Vercel or Netlify project is linked from this workspace.
+
+### Existing data (row counts, 2026-10-12)
+
+| Table group | Rows |
+|---|---|
+| Legacy tables from the old app (tasks, messages, notes, time_entries and 22 others) | All 0, except `profiles` 1 and `activity_categories` 8 |
+| cc_companies / cc_projects | 3 / 5 (real, not demo) |
+| cc_tasks | 11 (all demo) |
+| cc_time_entries | 8 (6 demo, 2 real) |
+| cc_monitors / cc_check_results | 3 / 7 |
+| cc_settings / cc_priorities / cc_audit_log | 1 / 1 / 19 |
+| cc_mail_* / cc_calendar_events | 0 (nothing connected) |
+
+No legacy rows need mapping: the legacy tables are empty apart from the profile and 8 category rows. Legacy tables are left in place, not dropped.
+
+### What v5 changes, and the impact on built work
+
+| # | v5 change | Impact | Proposed action |
+|---|---|---|---|
+| C1 | Supabase is the hosted cloud service | Already true | Add `docs/self-hosting-notes.md` |
+| C2 | All agents are in Claude; Perplexity is history only | Nothing built yet | Phase 5 as specified |
+| C3 | Superhuman is the client for Outlook + Gmail; no REST API | Inbox already uses Graph and Gmail directly (correct) | Add an "Open in" setting per account (Superhuman / native) in Phase 6 |
+| C4 | Dashboard relays agent results by email | Needs Resend (Phase 3 gap) and an ingest endpoint (Phase 5) | Build in phase order |
+| C5 | Identities are Encountive, Doug IT and Personal, plus Retired addresses; Krewe & Kin is a Company, not an identity | **Conflict:** the built identity list includes `krewe_kin` | Map `krewe_kin` to `doug_it` on existing rows (a data change, needs approval) and remove it from pickers |
+| C6 | Gmail = doug@encountive.com (Encountive), Outlook = doug@theonefor.ai (Doug IT); single-tenant Microsoft app; Internal Google app | Code supports this. The Microsoft default is "common" (any tenant). | Set MICROSOFT_TENANT to the theonefor.ai tenant ID; document the Internal Google app |
+| C7 | Email and calendar is Phase 6, after agents | Built early as read-only and unconnected | Keep, mark "Built early", finish Phase 6 items later |
+| C8 | Shortcuts G then A and G then R | Not present | Add with the Agents and Reports pages |
+| C9 | Magic-link sign-in; MFA before email integrations go live | **Conflict:** sign-in is email + password, with no MFA | Add an authenticator-app MFA requirement before any mailbox is connected; magic link optional (D3) |
+| C10 | Mail snippet at most 200 characters; purge after 30 days | **Gap:** snippets are kept up to 300 characters; no purge job | Cut to 200 and add a daily purge (pg_cron) |
+| C11 | Approved destinations list + console notification address | Not built | Phase 3 (with Resend) |
+| C12 | `docs/console-status.md` as source of truth | Did not exist | Created (this file) |
+
+### Gap list (built work vs v5)
+
+- **G1:** Recurring tasks are not built.
+- **G2:** "Where does this belong?" guide and identity tooltips are not built.
+- **G3:** Identity addresses, approved-destinations list and console notification address are not in Settings.
+- **G4:** Resend sender on notify.theonefor.ai and "Send test" are not built.
+- **G5:** Uptime runs when you open IT Ops or press refresh, not every 15 minutes on a schedule.
+- **G6:** VIP senders, IT-signal tagging rules and the "suggest identity" hint in the inbox are not built.
+- **G7:** Inbox filters "Encountive only / Doug IT only / Personal only" are partly covered by source chips; a filter by identity is still needed.
+- **G8:** Items C9 and C10 above.
+
+### Keep / Refactor / Replace
+
+- **Keep:** all approved Phase 1–2 screens and data, IT Ops checks, and the mail and calendar sync code (read-only, server-side, encrypted tokens).
+- **Refactor:** the identity list (C5), the mail snippet limit and purge (C10), and Settings (G3).
+- **Replace:** nothing.
+- **Legacy app:** stays reference-only. Its screens are not reused.
+
+### Database plan (all additive; one item needs approval)
+
+1. `cc_identity_addresses`: address, identity, status (approved / available / personal / retired), approved_at. Seeded with the addresses in the spec. Additive.
+2. `cc_settings`: add a nullable `notify_address` column (default doug@theonefor.ai). Additive.
+3. `cc_outbound_email_log`: recipient, subject, status. No bodies. Additive.
+4. `cc_task_recurrence`, or nullable recurrence columns on `cc_tasks`. Additive.
+5. A daily pg_cron job to purge mail metadata older than 30 days. Deletes only synced mail older than 30 days, as the spec requires.
+6. **Needs approval (data change):** set identity `krewe_kin` to `doug_it` on companies, projects, tasks, monitors and mail accounts. This is reversible: the affected row IDs are logged in cc_audit_log first.
+
+Rollback note per migration: drop the new table or column. For item 6, restore from the audit-log row IDs.
+
+### Plan restatement (v5)
+
+- Finish Phase 3: Resend console email, approved destinations, notification address, Send test, scheduled uptime.
+- Fix the Phase 2 gaps: identity guide, identity cleanup (C5), recurring tasks, MFA before mail.
+- Phase 4: Assets/Access, Renewals/Spend, Security, Change and Incident logs, Partner requests, Identity audit, Migration tracker.
+- Phase 5: Agent Operations, including the registry, Import my agents, run log, ingest endpoints, relay email, Report Library, Locations, Notification Routes, cost, controls and "Run now".
+- Phase 6: finish email and calendar, including Open in Superhuman, the local relay (Proton, Claude Code hook, watch-folder), and drift detection.
+- Phase 7: GitHub, Vercel and Resend status lights, Weekly CIO Report, exports, accessibility pass, production-readiness checklist.
+
+### Decisions needed from Doug
+
+- **D1 Branch:** Bolt pushes to the currently connected GitHub branch. Before the next push, switch Bolt's GitHub connection to a `console-v5` branch, or confirm that pushing to the current branch is acceptable.
+- **D2 Framework:** keep Vite + React 18 (already built and approved in Phase 1), not Next.js.
+- **D3 Sign-in:** keep email + password and add authenticator-app MFA before any mailbox connects, or switch to magic link + MFA.
+- **D4 Identities:** approve mapping Krewe & Kin to Doug IT (database plan item 6).
+- **D5 Data export:** before the first v5 migration, run Settings > Data > Export all. Export files are not committed to the repo, because they would contain your data.
+- **D6 Mail and calendar:** accept the early build as v5 Phase 6 groundwork.
+
+## Acceptance checklist
+
+| # | Status |
+|---|---|
+| A1 Console email only to approved destinations; Send test | Not built (Phase 3) |
+| A2 Identity on every record, nagging, guide | Partial: identity and nagging exist; guide missing |
+| A3 Identity audit view | Not built (Phase 4) |
+| A4 Migration tracker | Not built (Phase 4) |
+| A5 Report screens, library, series, diff | Not built (Phase 5) |
+| A6 Report Locations manager | Not built (Phase 5) |
+| A7 Notification Routes | Not built (Phase 5) |
+| A8 Drift detection | Not built (Phase 5/6) |
+| A9 Seeded Claude agents, Import, no kill-switch claims | Not built (Phase 5) |
+| A10 Data preserved, branch only, no production | Data preserved. Branch: pending D1. No production deploy made. |
+| A11 Graph + Gmail sync; Open in Superhuman; Proton on relay | Partial: sync built, not connected; Superhuman links and relay missing |
+| A12 Hosted Supabase; schema in migrations; self-hosting notes | Partial: notes file missing |
+| A13 This file current | Done |
