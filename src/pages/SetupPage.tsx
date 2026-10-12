@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Building2, Database, FolderKanban, ListTodo, Plug, RefreshCw, ShieldAlert, Trash2, Unplug } from 'lucide-react';
+import { Building2, Database, FolderKanban, ListChecks, ListTodo, Plug, RefreshCw, ShieldAlert, Trash2, Unplug } from 'lucide-react';
 import { IDENTITIES, MAIL_PROVIDERS, type Identity, type MailAccount, type MailProvider } from '@/lib/types';
 import { cn, errorMessage, relativeTime } from '@/lib/utils';
 import { useConnectMail, useDisconnectMail, useMailAccounts, useMailStatus, useSyncMail, useUpdateMailAccount } from '@/data/mail';
@@ -18,8 +18,9 @@ import { Dialog } from '@/components/ui/dialog';
 import { Field, Input, Select } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
 import { ProviderMark } from '@/components/mail/SourceBadge';
+import { CopyRow, GOOGLE_STEPS, MICROSOFT_STEPS, SECRETS_STEPS, SetupSteps } from '@/components/setup/SetupSteps';
 
-type Section = 'connectors' | 'data' | 'dangers';
+type Section = 'steps' | 'connectors' | 'data' | 'dangers';
 
 const RETURN_MESSAGES: Record<string, [string, 'success' | 'error' | 'info']> = {
   connected: ['Account connected. Choose which identity it belongs to below.', 'success'],
@@ -36,56 +37,16 @@ function useReturnToast() {
       if (!result) return;
       const msg = RETURN_MESSAGES[result] ?? RETURN_MESSAGES.error;
       toast(msg[0], msg[1]);
-      window.history.replaceState(null, '', '/setup');
+      window.history.replaceState(null, '', '/setup?section=connectors');
     };
     return read;
   }, [toast]);
 }
 
-const SECRETS_STEP = 'In Bolt, click the database icon at the top of the screen, open Secrets, and add each key below with its exact name. Then come back here and click Connect.';
-
-const MICROSOFT_STEPS = [
-  'Open portal.azure.com and sign in with a theonefor.ai admin account.',
-  'Search for "App registrations" and click New registration.',
-  'Name: CIO Command Console. Supported accounts: "Accounts in this organizational directory only" (single tenant).',
-  'Under Redirect URI, choose Web and paste the redirect address below. Click Register.',
-  'From the overview page, copy the "Application (client) ID" and the "Directory (tenant) ID".',
-  'Under Certificates & secrets, click New client secret (24 months), then copy the Value column right away; it is shown only once.',
-  'Under API permissions, add these Microsoft Graph delegated permissions: User.Read, Mail.Read, Calendars.Read, offline_access, openid, email. Click "Grant admin consent".',
-  SECRETS_STEP,
-];
-
-const GOOGLE_STEPS = [
-  'Open console.cloud.google.com signed in as doug@encountive.com and create a project called "CIO Command Console".',
-  'Under APIs & Services > Library, enable "Gmail API" and "Google Calendar API".',
-  'Under OAuth consent screen, set the user type to Internal (this limits it to encountive.com accounts, so no Google review is needed).',
-  'Under Credentials, click Create credentials > OAuth client ID, type Web application.',
-  'Paste the redirect address below under Authorized redirect URIs, then copy the Client ID and Client secret.',
-  SECRETS_STEP,
-];
-
-function CopyRow({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <div className="flex items-center gap-2 rounded-md border border-line bg-raised p-2">
-      <code className="min-w-0 flex-1 break-all text-xs">{value}</code>
-      <Button size="sm" onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(value);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        } catch { setCopied(false); }
-      }} aria-label="Copy value">
-        {copied ? 'Copied' : 'Copy'}
-      </Button>
-    </div>
-  );
-}
-
 function GuideDialog({ open, onOpenChange, provider, redirectUri }: {
   open: boolean; onOpenChange: (open: boolean) => void; provider: MailProvider; redirectUri: string;
 }) {
-  const steps = provider === 'microsoft' ? MICROSOFT_STEPS : GOOGLE_STEPS;
+  const steps = [...(provider === 'microsoft' ? MICROSOFT_STEPS : GOOGLE_STEPS), ...SECRETS_STEPS];
   const keys = provider === 'microsoft'
     ? [['MICROSOFT_CLIENT_ID', 'the Application (client) ID'], ['MICROSOFT_CLIENT_SECRET', 'the secret Value'], ['MICROSOFT_TENANT', 'the Directory (tenant) ID']]
     : [['GOOGLE_CLIENT_ID', 'the Client ID'], ['GOOGLE_CLIENT_SECRET', 'the Client secret']];
@@ -511,9 +472,10 @@ export function SetupPage() {
   const [params] = useSearchParams();
   const readToast = useReturnToast();
   const sectionParam = params.get('section');
-  const section: Section = sectionParam === 'data' || sectionParam === 'dangers' ? sectionParam : 'connectors';
+  const section: Section = sectionParam === 'connectors' || sectionParam === 'data' || sectionParam === 'dangers' ? sectionParam : 'steps';
   useEffect(() => { readToast(); }, [readToast]);
   const tabs: PageTab[] = [
+    { key: 'steps', label: 'Your steps', to: '/setup', icon: ListChecks },
     { key: 'connectors', label: 'Connectors', to: '/setup?section=connectors', icon: Plug },
     { key: 'data', label: 'Enter data', to: '/setup?section=data', icon: Database },
     { key: 'dangers', label: 'Reset', to: '/setup?section=dangers', icon: Trash2 },
@@ -527,6 +489,7 @@ export function SetupPage() {
         activeTab={section}
       />
       <div key={section} className="animate-fade-in space-y-4">
+        {section === 'steps' && <SetupSteps />}
         {section === 'connectors' && <ConnectorsSection />}
         {section === 'data' && <DataSection />}
         {section === 'dangers' && <DangersSection />}

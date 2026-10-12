@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Fingerprint, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
-import { passkeyError, passkeySupported } from '@/auth/passkey';
+import { passkeyError, passkeySupported, useAuthSettings } from '@/auth/passkey';
 import { Button } from '@/components/ui/button';
 import { StatusPill } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast';
@@ -14,8 +14,11 @@ export function PasskeySettings() {
   const qc = useQueryClient();
   const toast = useToast();
   const [error, setError] = useState<string | null>(null);
+  const settings = useAuthSettings();
+  const enabled = settings.data?.passkeys_enabled === true;
   const list = useQuery({
     queryKey: KEY,
+    enabled,
     queryFn: async () => {
       const { data, error: err } = await supabase.auth.passkey.list();
       if (err) throw err;
@@ -52,24 +55,27 @@ export function PasskeySettings() {
   }
 
   const keys = list.data ?? [];
-  const unavailable = list.isError;
+  const unavailable = !enabled || list.isError;
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <Fingerprint className="size-4 text-muted" />
         <span className="text-sm font-medium">Windows Hello</span>
-        {list.isLoading ? null : unavailable ? (
+        {settings.isLoading || list.isLoading ? null : unavailable ? (
           <StatusPill status="unknown" label="Not switched on for this app yet" />
         ) : keys.length ? (
           <StatusPill status="healthy" label={`On · ${keys.length} device${keys.length > 1 ? 's' : ''}`} />
         ) : (
           <StatusPill status="unknown" label="Not set up" />
         )}
-        <Button variant="secondary" size="sm" className="ml-auto" onClick={() => add.mutate()} disabled={add.isPending}>
+        <Button variant="secondary" size="sm" className="ml-auto" onClick={() => add.mutate()} disabled={add.isPending || !enabled}>
           <Plus /> {add.isPending ? 'Waiting for Windows Hello...' : 'Add this PC'}
         </Button>
       </div>
+      {!enabled && !settings.isLoading && (
+        <p className="text-sm text-muted">Windows Hello has to be switched on for this app first. See Setup, Your steps, step 5.</p>
+      )}
       {error && <p className="rounded-md border border-error-500/40 bg-error-500/10 p-2 text-sm text-error-700 dark:text-error-300" role="alert">{error}</p>}
       {keys.length > 0 && (
         <ul className="divide-y divide-line rounded-md border border-line">

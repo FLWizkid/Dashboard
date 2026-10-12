@@ -10,3 +10,9 @@ if (!url || !anonKey) {
 export const supabase = createClient(url, anonKey, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 });
+
+export async function fetchAuthSettings(): Promise<{ passkeys_enabled?: boolean; disable_signup?: boolean }> {
+  const res = await fetch(`${url}/auth/v1/settings`, { headers: { apikey: anonKey } });
+  if (!res.ok) throw new Error(`Sign-in settings unavailable (${res.status})`);
+  return res.json();
+}

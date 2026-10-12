@@ -18,7 +18,10 @@ export function useSaveCompany() {
   return useMutation({
     mutationFn: async (c: Partial<Company> & { name: string }) => {
       const slug = c.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      const payload = { name: c.name.trim(), slug, identity: c.identity ?? null };
+      const profile = Object.fromEntries(
+        (['website', 'my_role', 'key_contact'] as const).filter((k) => k in c).map((k) => [k, c[k]?.trim() || null]),
+      );
+      const payload = { name: c.name.trim(), slug, identity: c.identity ?? null, ...profile };
       if (c.id) {
         check(await supabase.from('cc_companies').update(payload).eq('id', c.id));
         await recordAudit('company.update', 'company', c.id);

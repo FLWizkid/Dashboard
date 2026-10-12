@@ -95,6 +95,9 @@ export interface Company {
   identity: Identity | null;
   color: string;
   is_demo: boolean;
+  website: string | null;
+  my_role: string | null;
+  key_contact: string | null;
 }
 
 export interface Project {

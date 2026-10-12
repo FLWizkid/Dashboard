@@ -109,6 +109,16 @@ Rollback note per migration: drop the new table or column. For item 6, restore f
 - **D5 Data export:** not needed, because there is no live data yet.
 - **D6 Mail and calendar:** the early build is accepted. The calendar and inbox are empty because no accounts are connected. Connecting needs Doug's admin sign-in to create the Azure app (single tenant, theonefor.ai) and the Google Internal app (encountive.com), then the keys go in Bolt Secrets: MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_TENANT, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET. Empty screens now link to Setup.
 
+### Session 2026-10-12 (afternoon)
+
+- Companies gained website, my role and key contact (migration `cc_company_profile_fields`). Krewe & Kin: kreweandkin.com, Doug is co-founder for IT only, Melissa (Missy) is co-founder and CEO. Added Krewe of Shamrock (Doug IT, IT support only; website not yet known).
+- Monitors: the 3 website checks were relabelled and linked to their companies. Added domain-renewal and email-security checks for encountive.com (SiteGround DNS, Google Workspace), theonefor.ai (GoDaddy DNS, Microsoft 365 via GoDaddy, Proofpoint) and kreweandkin.com (Cloudflare, Email Routing).
+- DNS findings: theonefor.ai has no DKIM and no DMARC; kreweandkin.com has no DMARC; encountive.com has no Google DKIM (its Resend DKIM and DMARC exist).
+- Sign-up limited to doug@theonefor.ai and doug@encountive.com (migration `cc_signup_allowlist`).
+- Passkeys are disabled on the auth server and Bolt's auth settings have no passkey switch. Turning them on means claiming the database into Supabase. The Windows Hello button stays hidden until passkeys are enabled.
+- The OAuth return now lands on Setup > Connectors.
+- Setup now has a "Your steps" tab, which is the single checklist for everything Doug has to do.
+
 ## Acceptance checklist
 
 | # | Status |

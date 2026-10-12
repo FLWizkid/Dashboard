@@ -144,7 +144,7 @@ async function handleCallback(admin: SupabaseClient, url: URL) {
   if (!row) return new Response("This sign-in link has expired. Close this tab and try connecting again from the console.", { status: 400 });
   await admin.from("cc_oauth_states").delete().eq("state", state);
   const back = (result: string) =>
-    new Response(null, { status: 302, headers: { Location: `${row.return_to}/settings/connections?mail=${result}` } });
+    new Response(null, { status: 302, headers: { Location: `${row.return_to}/setup?section=connectors&mail=${result}` } });
   if (Date.now() - new Date(row.created_at).getTime() > 10 * 60_000) return back("expired");
   const code = url.searchParams.get("code");
   if (!code) return back(url.searchParams.get("error") === "access_denied" ? "denied" : "error");

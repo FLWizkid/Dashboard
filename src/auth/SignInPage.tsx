@@ -6,13 +6,14 @@ import { cn } from '@/lib/utils';
 import { useAuth } from './AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
-import { passkeyError, passkeySupported } from './passkey';
+import { passkeyError, passkeySupported, useAuthSettings } from './passkey';
 
 type Mode = 'signin' | 'signup';
 
 function friendly(msg: string) {
   if (/invalid login/i.test(msg)) return 'That email and password do not match. Check them, or create an account first.';
   if (/already registered/i.test(msg)) return 'An account already exists for this email. Sign in instead.';
+  if (/database error saving new user|signup_not_allowed/i.test(msg)) return 'This console is private. Only approved email addresses can create an account.';
   if (/password/i.test(msg) && /6/.test(msg)) return 'Use a password of at least 8 characters.';
   if (/fetch/i.test(msg)) return 'Could not reach the server. Check your internet connection.';
   return msg;
@@ -27,6 +28,9 @@ export function SignInPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const authSettings = useAuthSettings();
+  const helloReady = passkeySupported() && authSettings.data?.passkeys_enabled === true;
+  const signupOpen = authSettings.data?.disable_signup !== true;
 
   if (!loading && user) return <Navigate to="/" replace />;
 
@@ -75,6 +79,7 @@ export function SignInPage() {
           </div>
         </div>
         <div className="rounded-lg border border-line bg-surface p-6">
+          {signupOpen && (
           <div className="mb-4 grid grid-cols-2 rounded-md bg-raised p-1 text-sm">
             {(['signin', 'signup'] as const).map((m) => (
               <button key={m} onClick={() => setMode(m)} className={cn('rounded py-1.5 font-medium transition-colors', mode === m ? 'bg-surface text-fg shadow-sm' : 'text-muted hover:text-fg')}>
@@ -82,6 +87,7 @@ export function SignInPage() {
               </button>
             ))}
           </div>
+          )}
           <form onSubmit={submit} className="space-y-3">
             <Field label="Email">
               <input className="input" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -115,7 +121,7 @@ export function SignInPage() {
               {mode === 'signin' ? 'Sign in' : 'Create account'}
             </Button>
           </form>
-          {mode === 'signin' && passkeySupported() && (
+          {mode === 'signin' && helloReady && (
             <>
               <div className="my-4 flex items-center gap-3 text-xs text-subtle">
                 <span className="h-px flex-1 bg-line" />or<span className="h-px flex-1 bg-line" />
@@ -131,7 +137,7 @@ export function SignInPage() {
             </Button>
           )}
         </div>
-        <p className="mt-4 text-center text-xs text-subtle">First time? Sign in with your password, then turn on Windows Hello in Settings, Account.</p>
+        <p className="mt-4 text-center text-xs text-subtle">{helloReady ? 'First time on this PC? Sign in with your password, then add Windows Hello in Settings, Account.' : 'Windows Hello sign-in appears here once it is switched on.'}</p>
       </div>
     </div>
   );
