@@ -52,6 +52,20 @@ export function GoogleRow({ configured, redirectUri, showGuide = true }: { confi
         )}
         {showGuide && <Button size="sm" onClick={() => setGuide(true)}>Steps</Button>}
       </div>
+      {connect.data?.framedUrl && (
+        <div className="mt-3 rounded-md border border-line bg-raised/50 p-3 text-sm">
+          <p className="mb-2">Google can't open inside this preview window. Click below to sign in on a new tab, then come back here and refresh.</p>
+          <a
+            href={connect.data.framedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => connect.reset()}
+            className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-500"
+          >
+            Open Google sign-in
+          </a>
+        </div>
+      )}
       <StepsDialog open={guide} onOpenChange={setGuide} title="Connect Google Workspace / Gmail" steps={[...GOOGLE_STEPS, ...SECRETS_STEPS]}>
         <p className="label mt-4">Redirect address</p>
         <CopyRow value={redirectUri} />
