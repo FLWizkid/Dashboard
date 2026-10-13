@@ -124,7 +124,6 @@ export function useSaveMonitor() {
     mutationFn: async ({ id, ...m }: MonitorInput) => {
       if (id) {
         check(await supabase.from('cc_monitors').update(m).eq('id', id));
-        await recordAudit('monitor.update', 'monitor', id);
         return id;
       }
       const row = unwrap(await supabase.from('cc_monitors').insert(m).select('id').single());

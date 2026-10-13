@@ -36,7 +36,7 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Agents',
     items: [
-      { to: '/agents', label: 'Agent Operations', icon: Bot, phase: 4, summary: 'Registry, run log, reporting endpoint, cost and seats, controls checklists, Notification Routes and Identity audit.' },
+      { to: '/agents', label: 'Agent Operations', icon: Bot, phase: 3, summary: 'Each Claude agent with its status and when it last ran.' },
       { to: '/library', label: 'Report Library', icon: Library, phase: 4, summary: 'Every agent output as its own screen with search, source location, and compare-with-previous-run.' },
     ],
   },

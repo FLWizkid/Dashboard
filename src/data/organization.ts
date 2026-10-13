@@ -24,7 +24,6 @@ export function useSaveCompany() {
       const payload = { name: c.name.trim(), slug, identity: c.identity ?? null, ...profile };
       if (c.id) {
         check(await supabase.from('cc_companies').update(payload).eq('id', c.id));
-        await recordAudit('company.update', 'company', c.id);
         return c.id;
       }
       const row = unwrap(await supabase.from('cc_companies').insert(payload).select('id').single()) as { id: string };
@@ -63,7 +62,6 @@ export function useSaveProject() {
     mutationFn: async ({ id, ...p }: ProjectInput) => {
       if (id) {
         check(await supabase.from('cc_projects').update(p).eq('id', id));
-        await recordAudit('project.update', 'project', id);
       } else {
         const row = unwrap(await supabase.from('cc_projects').insert(p).select('id').single()) as { id: string };
         await recordAudit('project.create', 'project', row.id);

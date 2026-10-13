@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Activity, Database, Globe, LayoutGrid, Mail, MonitorSmartphone, Plug, Plus, RefreshCw } from 'lucide-react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { Activity, Bot, Database, Globe, LayoutGrid, Mail, MonitorSmartphone, Plug, Plus, RefreshCw } from 'lucide-react';
 import { MONITOR_KINDS, type CheckStatus, type MonitorKind } from '@/lib/types';
 import { cn, errorMessage, relativeTime } from '@/lib/utils';
 import { SETUP } from '@/lib/integrations';
@@ -116,7 +116,10 @@ export function OpsPage() {
           </div>
           <div>
             <p className="label">Agent runs</p>
-            <NotConnected title="Agent monitoring" info={SETUP.agents} compact />
+            <div className="flex items-center justify-between gap-2 rounded-md border border-line p-3 text-sm">
+              <span className="text-muted">Claude agent status now has its own page.</span>
+              <Button asChild size="sm"><Link to="/agents"><Bot /> Agent Operations</Link></Button>
+            </div>
           </div>
         </div>
       </Panel>}

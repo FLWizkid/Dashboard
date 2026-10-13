@@ -166,12 +166,33 @@ export interface PriorityPick {
   rank: number;
 }
 
+export interface AuditChange {
+  field: string;
+  before: unknown;
+  after: unknown;
+}
+
 export interface AuditEntry {
   id: string;
   action: string;
   entity: string;
   entity_id: string | null;
+  changes: AuditChange[] | null;
   created_at: string;
+}
+
+export type AgentStatus = 'running' | 'succeeded' | 'failed';
+
+export interface Agent {
+  id: string;
+  name: string;
+  notes: string | null;
+  last_status: AgentStatus | null;
+  last_started_at: string | null;
+  last_finished_at: string | null;
+  last_message: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export type MonitorKind = 'domain' | 'email_auth' | 'website' | 'database' | 'manual';

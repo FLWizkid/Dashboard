@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Settings } from '@/lib/types';
-import { check, recordAudit, unwrap } from './core';
+import { check, unwrap } from './core';
 
 export function useSettings() {
   return useQuery({
@@ -28,8 +28,6 @@ export function useUpdateSettings() {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) throw new Error('Not signed in.');
       check(await supabase.from('cc_settings').update(patch).eq('user_id', auth.user.id));
-      const keys = Object.keys(patch).filter((k) => !k.startsWith('last_time'));
-      if (keys.length) await recordAudit(`settings.update:${keys.join(',')}`.slice(0, 80), 'settings');
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['settings'] }),
   });

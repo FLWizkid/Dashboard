@@ -55,7 +55,6 @@ export function useUpdateTask() {
       const next = { ...patch };
       if (patch.status && patch.status !== 'done') next.completed_at = null;
       check(await supabase.from('cc_tasks').update(next).eq('id', id));
-      await recordAudit('task.update', 'task', id);
     },
     onMutate: async ({ id, ...patch }) => {
       await qc.cancelQueries({ queryKey: ['tasks'] });
@@ -79,7 +78,6 @@ export function useCompleteTask() {
         .neq('status', 'done')
         .select('id');
       check(res);
-      await recordAudit('task.complete', 'task', task.id);
       if (task.recurrence !== 'none' && res.data && res.data.length > 0) {
         const base = task.due_date ?? toDateKey(new Date());
         const due = nextOccurrence(base, task.recurrence);

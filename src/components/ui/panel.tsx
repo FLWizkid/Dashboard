@@ -16,6 +16,7 @@ interface PanelProps {
   title: string;
   icon?: ReactNode;
   subtitle?: ReactNode;
+  subtitleInline?: boolean;
   demo?: boolean;
   updatedAt?: number;
   onRefresh?: () => void;
@@ -31,18 +32,20 @@ interface PanelProps {
 }
 
 export function Panel(props: PanelProps) {
-  const { title, icon, subtitle, demo, updatedAt, onRefresh, refreshing, actions, loading, error, empty, emptyState, className, bodyClassName, children } = props;
+  const { title, icon, subtitle, subtitleInline, demo, updatedAt, onRefresh, refreshing, actions, loading, error, empty, emptyState, className, bodyClassName, children } = props;
   useTick();
+  const hasBody = children !== undefined || !!loading || !!error || !!empty;
   return (
     <section className={cn('flex min-w-0 flex-col rounded-lg border border-line bg-surface animate-fade-in', className)}>
-      <header className="flex min-h-[36px] items-center gap-2 border-b border-line px-3 py-1">
+      <header className={cn('flex min-h-[36px] flex-wrap items-center gap-2 px-3 py-1', hasBody && 'border-b border-line')}>
         {icon && <span className="text-subtle [&_svg]:size-4">{icon}</span>}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="truncate text-sm font-semibold">{title}</h2>
             {demo && <DemoBadge />}
+            {subtitle && subtitleInline && <p className="min-w-0 truncate text-xs text-subtle">{subtitle}</p>}
           </div>
-          {subtitle && <p className="truncate text-xs text-subtle">{subtitle}</p>}
+          {subtitle && !subtitleInline && <p className="truncate text-xs text-subtle">{subtitle}</p>}
         </div>
         {actions}
         {updatedAt !== undefined && (
@@ -56,7 +59,7 @@ export function Panel(props: PanelProps) {
           </Button>
         )}
       </header>
-      <div className={cn('flex-1 p-3', bodyClassName)}>
+      {hasBody && <div className={cn('flex-1 p-3', bodyClassName)}>
         {loading ? (
           <PanelSkeleton />
         ) : error ? (
@@ -66,7 +69,7 @@ export function Panel(props: PanelProps) {
         ) : (
           children
         )}
-      </div>
+      </div>}
     </section>
   );
 }

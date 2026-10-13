@@ -43,7 +43,6 @@ export function useSaveTimeEntry() {
     mutationFn: async ({ id, ...input }: TimeEntryInput) => {
       if (id) {
         check(await supabase.from('cc_time_entries').update(input).eq('id', id));
-        await recordAudit('time.update', 'time_entry', id);
         return;
       }
       const row = unwrap(await supabase.from('cc_time_entries').insert(input).select('id').single());

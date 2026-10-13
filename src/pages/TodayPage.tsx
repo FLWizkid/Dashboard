@@ -1,11 +1,11 @@
 import { format } from 'date-fns';
-import { Bot } from 'lucide-react';
 import { useAuth } from '@/auth/AuthProvider';
 import { PageHeader } from '@/components/ui/page-header';
 import { QuickLogStrip } from '@/components/today/QuickLogStrip';
 import { SummaryCards } from '@/components/today/SummaryCards';
 import { TopPriorities } from '@/components/today/TopPriorities';
-import { DueToday, NeedsAttention, NotConnectedPanel } from '@/components/today/TodayPanels';
+import { DueToday, NeedsAttention } from '@/components/today/TodayPanels';
+import { AgentDigest } from '@/components/today/AgentDigest';
 import { HealthStrip } from '@/components/today/HealthStrip';
 import { MeetingsPanel } from '@/components/today/MeetingsPanel';
 
@@ -35,7 +35,7 @@ export function TodayPage() {
         <div className="space-y-3 lg:col-span-5">
           <NeedsAttention />
           <MeetingsPanel />
-          <NotConnectedPanel title="Agent digest" icon={<Bot />} setup="agents" />
+          <AgentDigest />
         </div>
       </div>
     </div>

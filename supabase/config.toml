@@ -3,3 +3,6 @@ verify_jwt = true
 
 [functions.mail-connect]
 verify_jwt = false
+
+[functions.agent-report]
+verify_jwt = false

@@ -20,7 +20,6 @@ import { AuditLogPanel, DemoDataSettings, ExportSettings } from '@/components/se
 import { PasskeySettings } from '@/components/settings/PasskeySettings';
 
 const INTEGRATIONS: { key: keyof typeof SETUP; title: string }[] = [
-  { key: 'agents', title: 'Agent digest' },
   { key: 'resend', title: 'Email sending (Resend)' },
   { key: 'github', title: 'GitHub' },
   { key: 'vercel', title: 'Vercel' },

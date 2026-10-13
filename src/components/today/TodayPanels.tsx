@@ -1,14 +1,11 @@
-import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Activity, AlertTriangle, BellRing, CircleDashed, Fingerprint, ListTodo, Mail } from 'lucide-react';
 import { toDateKey } from '@/lib/utils';
-import { SETUP } from '@/lib/integrations';
 import { useTasks, isOverdue } from '@/data/tasks';
 import { useCompanies } from '@/data/organization';
 import { useOpsHealth } from '@/data/ops';
 import { useMailAccounts, useMailMessages } from '@/data/mail';
 import { Panel, EmptyState } from '@/components/ui/panel';
-import { NotConnected } from '@/components/ui/field';
 import { StatusPill } from '@/components/ui/badge';
 import { TaskRow } from '@/components/tasks/TaskRow';
 import { QuickAdd } from '@/components/tasks/QuickAdd';
@@ -143,14 +140,6 @@ export function DueToday() {
       ) : (
         <div className="-mx-2">{rows.map((t) => <TaskRow key={t.id} task={t} companies={companies} />)}</div>
       )}
-    </Panel>
-  );
-}
-
-export function NotConnectedPanel({ title, icon, setup }: { title: string; icon: ReactNode; setup: keyof typeof SETUP }) {
-  return (
-    <Panel title={title} icon={icon} subtitle={`Phase ${SETUP[setup].phase}`}>
-      <NotConnected title={title} info={SETUP[setup]} />
     </Panel>
   );
 }
