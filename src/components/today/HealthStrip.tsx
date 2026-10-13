@@ -11,7 +11,7 @@ export function HealthStrip() {
   const shown = ops.health.slice(0, 6);
 
   return (
-    <section className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface px-4 py-2">
+    <section className="flex flex-wrap items-center gap-2 rounded-lg border border-line bg-surface px-3 py-1.5">
       <Activity className="size-4 text-subtle" />
       <h2 className="text-sm font-semibold">Health lights</h2>
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">

@@ -23,11 +23,11 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, actions, tabs, activeTab, children }: PageHeaderProps) {
   return (
-    <div className={cn('space-y-4', tabs && 'border-b border-line')}>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          {description && <p className="mt-1 text-sm text-muted">{description}</p>}
+    <div className={cn('space-y-2', tabs && 'border-b border-line')}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
+          <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+          {description && <p className="text-sm text-muted">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
@@ -43,7 +43,7 @@ export function PageHeader({ title, description, actions, tabs, activeTab, child
                 replace
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex h-10 shrink-0 items-center gap-2 border-b-2 px-3 text-sm transition-colors',
+                  'flex h-9 shrink-0 items-center gap-2 border-b-2 px-3 text-sm transition-colors',
                   active ? 'border-primary-500 font-medium text-fg' : 'border-transparent text-muted hover:border-line hover:text-fg',
                 )}
               >

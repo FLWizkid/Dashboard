@@ -63,7 +63,7 @@ export function TasksPage() {
   const anyFilter = q || identity || company || project || priority;
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-6">
+    <div className="mx-auto max-w-[1600px] space-y-3">
       <PageHeader
         title="Tasks"
         description={tasks.isLoading ? 'Loading your tasks' : `${(tasks.data ?? []).filter((t) => t.status !== 'done').length} open across all companies. Press N anywhere to add one.`}

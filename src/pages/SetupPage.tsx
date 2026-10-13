@@ -299,7 +299,7 @@ export function SetupPage() {
     { key: 'dangers', label: 'Reset', to: '/setup?section=dangers', icon: Trash2 },
   ];
   return (
-    <div className="mx-auto max-w-[960px] space-y-6">
+    <div className="mx-auto max-w-[960px] space-y-3">
       <PageHeader
         title="Setup"
         description="Connect accounts, enter raw data, or start over. Open it any time from Setup in the left menu or the top bar."

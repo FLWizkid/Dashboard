@@ -51,7 +51,7 @@ export function TimePage() {
   const max = Math.max(1, ...byCategory.map((c) => c.minutes));
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-6">
+    <div className="mx-auto max-w-[1600px] space-y-3">
       <PageHeader
         title="Time & Focus"
         description={`${formatMinutes(total)} logged ${isThisWeek ? 'this week' : `the week of ${format(start, 'MMM d')}`}.`}

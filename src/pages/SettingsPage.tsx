@@ -185,7 +185,7 @@ export function SettingsPage() {
   if (!current) return <Navigate to="/settings/general" replace />;
 
   return (
-    <div className="mx-auto max-w-[960px] space-y-6">
+    <div className="mx-auto max-w-[960px] space-y-3">
       <PageHeader title="Settings" description={current.description} tabs={SECTIONS} activeTab={current.key} />
       <div className="space-y-4 animate-fade-in" key={current.key}>
         {current.key === 'general' && (

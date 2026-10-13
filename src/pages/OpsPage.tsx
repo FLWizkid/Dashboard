@@ -53,7 +53,7 @@ export function OpsPage() {
   const counts = SUMMARY.map((s) => ({ ...s, n: ops.health.filter((h) => h.status === s.status).length }));
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-6">
+    <div className="mx-auto max-w-[1600px] space-y-3">
       <PageHeader
         title="IT Operations"
         description={`Live checks against public registries and DNS. Last automatic run ${relativeTime(ops.lastChecked)}.`}
@@ -96,7 +96,7 @@ export function OpsPage() {
           />
         }
       >
-        <div className="space-y-6">
+        <div className="space-y-3">
           {groups.map((g) => (
             <section key={g.value}>
               <h3 className="label">{g.label}</h3>

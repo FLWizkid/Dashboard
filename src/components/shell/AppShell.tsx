@@ -256,7 +256,7 @@ export function AppShell() {
           </Button>
         </header>
 
-        <main className="flex-1 px-4 pb-24 pt-6 sm:px-8 lg:pb-12">
+        <main className="flex-1 px-3 pb-24 pt-3 sm:px-4 lg:pb-6">
           <Outlet />
         </main>
       </div>

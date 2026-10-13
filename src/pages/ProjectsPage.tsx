@@ -31,7 +31,7 @@ export function ProjectsPage() {
 
   const rows = projects.data ?? [];
   return (
-    <div className="mx-auto max-w-[1440px] space-y-6">
+    <div className="mx-auto max-w-[1600px] space-y-3">
       <PageHeader
         title="Projects"
         description="Projects group related tasks and time so you can see progress per company."

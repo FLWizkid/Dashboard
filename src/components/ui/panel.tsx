@@ -35,11 +35,11 @@ export function Panel(props: PanelProps) {
   useTick();
   return (
     <section className={cn('flex min-w-0 flex-col rounded-lg border border-line bg-surface animate-fade-in', className)}>
-      <header className="flex min-h-[48px] items-center gap-2 border-b border-line px-4 py-2">
+      <header className="flex min-h-[36px] items-center gap-2 border-b border-line px-3 py-1">
         {icon && <span className="text-subtle [&_svg]:size-4">{icon}</span>}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-base font-semibold">{title}</h2>
+            <h2 className="truncate text-sm font-semibold">{title}</h2>
             {demo && <DemoBadge />}
           </div>
           {subtitle && <p className="truncate text-xs text-subtle">{subtitle}</p>}
@@ -56,7 +56,7 @@ export function Panel(props: PanelProps) {
           </Button>
         )}
       </header>
-      <div className={cn('flex-1 p-4', bodyClassName)}>
+      <div className={cn('flex-1 p-3', bodyClassName)}>
         {loading ? (
           <PanelSkeleton />
         ) : error ? (
@@ -73,7 +73,7 @@ export function Panel(props: PanelProps) {
 
 export function PanelSkeleton({ rows = 3 }: { rows?: number }) {
   return (
-    <div className="space-y-3" aria-busy="true" aria-label="Loading">
+    <div className="space-y-2" aria-busy="true" aria-label="Loading">
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="skeleton h-5" style={{ width: `${90 - i * 15}%` }} />
       ))}
@@ -100,11 +100,11 @@ export function PanelError({ error, onRetry }: { error: unknown; onRetry?: () =>
 
 export function EmptyState({ icon, title, text, action }: { icon?: ReactNode; title: string; text?: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+    <div className="flex flex-col items-center justify-center gap-1 py-2 text-center">
       {icon && <div className="text-subtle [&_svg]:size-6">{icon}</div>}
       <p className="font-medium">{title}</p>
       {text && <p className="max-w-sm text-sm text-muted">{text}</p>}
-      {action && <div className="mt-2">{action}</div>}
+      {action && <div className="mt-1">{action}</div>}
     </div>
   );
 }

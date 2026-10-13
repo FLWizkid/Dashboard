@@ -38,7 +38,7 @@ export function CalendarPage() {
   const noAccounts = !accounts.isLoading && !accounts.error && list.length === 0;
 
   return (
-    <div className="mx-auto max-w-[1100px] space-y-6">
+    <div className="mx-auto max-w-[1100px] space-y-3">
       <PageHeader
         title="Calendar"
         description="Read-only merge of your Outlook and Google calendars. Each event shows its calendar and identity."

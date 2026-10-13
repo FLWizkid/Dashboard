@@ -18,7 +18,7 @@ export function TodayPage() {
   const { user } = useAuth();
   const name = user?.email?.startsWith('doug') ? 'Doug' : '';
   return (
-    <div className="mx-auto max-w-[1440px] space-y-6">
+    <div className="mx-auto max-w-[1600px] space-y-3">
       <PageHeader title={`${greeting()}${name ? `, ${name}` : ''}`} description={format(new Date(), 'EEEE, MMMM d')} />
 
       <SummaryCards />
@@ -27,12 +27,12 @@ export function TodayPage() {
 
       <HealthStrip />
 
-      <div className="grid gap-4 lg:grid-cols-12">
-        <div className="space-y-4 lg:col-span-7">
+      <div className="grid gap-3 lg:grid-cols-12">
+        <div className="space-y-3 lg:col-span-7">
           <TopPriorities />
           <DueToday />
         </div>
-        <div className="space-y-4 lg:col-span-5">
+        <div className="space-y-3 lg:col-span-5">
           <NeedsAttention />
           <MeetingsPanel />
           <NotConnectedPanel title="Agent digest" icon={<Bot />} setup="agents" />

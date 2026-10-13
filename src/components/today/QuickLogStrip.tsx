@@ -22,8 +22,8 @@ export function QuickLogStrip() {
   }, [rows, companies]);
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
-      <Panel title="Quick time log" subtitle="Press T anywhere to log time" bodyClassName="py-3">
+    <div className="grid gap-3 xl:grid-cols-[1fr_320px]">
+      <Panel title="Quick time log" subtitle="Press T anywhere to log time" bodyClassName="py-2">
         <LogTimeForm layout="strip" />
       </Panel>
       <Panel
@@ -38,12 +38,12 @@ export function QuickLogStrip() {
         empty={rows.length === 0}
         emptyState={<EmptyState title="No hours logged this week" text="Log time on the left or finish a focus session." />}
         actions={<span className="font-mono text-base font-semibold tabular-nums">{formatMinutes(total)}</span>}
-        bodyClassName="py-3"
+        bodyClassName="py-2"
       >
-        <ul className="space-y-2">
+        <ul className="space-y-1.5">
           {byCompany.map((c) => (
             <li key={c.id} className="text-sm">
-              <div className="mb-1 flex justify-between">
+              <div className="mb-0.5 flex justify-between">
                 <span className="text-muted">{c.name}</span>
                 <span className="font-mono tabular-nums">{formatMinutes(c.minutes)}</span>
               </div>

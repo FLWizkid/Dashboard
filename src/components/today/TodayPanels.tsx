@@ -66,7 +66,7 @@ export function NeedsAttention() {
       loading={tasks.isLoading}
       error={tasks.error}
     >
-      <div className="space-y-4">
+      <div className="space-y-2">
         <div>
           <div className="mb-1 flex items-center gap-2">
             <AlertTriangle className="size-4 text-error-500" />
@@ -102,7 +102,7 @@ export function NeedsAttention() {
           </Link>
         )}
         <ImportantMail />
-        <ul className="space-y-1 border-t border-line pt-3">
+        <ul className="space-y-0.5 border-t border-line pt-2">
           {PENDING_SOURCES.map((s) => (
             <li key={s.label} className="flex items-center gap-2 text-sm text-subtle">
               <CircleDashed className="size-3.5" />
@@ -135,7 +135,7 @@ export function DueToday() {
       loading={tasks.isLoading}
       error={tasks.error}
     >
-      <div className="mb-3">
+      <div className="mb-2">
         <QuickAdd defaultDue={today} />
       </div>
       {rows.length === 0 ? (

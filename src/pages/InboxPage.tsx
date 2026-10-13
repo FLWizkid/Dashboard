@@ -92,7 +92,7 @@ export function InboxPage() {
   const noAccounts = !accounts.isLoading && !accounts.error && list.length === 0;
 
   return (
-    <div className="mx-auto max-w-[1100px] space-y-6">
+    <div className="mx-auto max-w-[1100px] space-y-3">
       <PageHeader
         title="Unified Inbox"
         description="Triage only. Every message shows which inbox it arrived in and which identity it belongs to."
