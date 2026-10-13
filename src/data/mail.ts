@@ -80,12 +80,26 @@ function invalidateMail(qc: ReturnType<typeof useQueryClient>) {
 export function useConnectGoogle() {
   return useMutation({
     mutationFn: async () => {
-      const { url } = await callMail<{ url?: string }>({ action: 'start', provider: 'google' });
-      if (typeof url !== 'string' || !url.startsWith(SIGN_IN_HOST)) {
-        throw new Error('The sign-in page address looked wrong, so it was not opened.');
+      // Google refuses to render its sign-in page inside a frame (e.g. an editor preview), so use a new tab there.
+      const framed = window.self !== window.top;
+      const tab = framed ? window.open('', '_blank') : null;
+      if (framed && !tab) throw new Error('Your browser blocked the Google sign-in tab. Allow pop-ups for this site and try again.');
+      try {
+        const { url } = await callMail<{ url?: string }>({ action: 'start', provider: 'google' });
+        if (typeof url !== 'string' || !url.startsWith(SIGN_IN_HOST)) {
+          throw new Error('The sign-in page address looked wrong, so it was not opened.');
+        }
+        await recordAudit('mail.connect_start', 'mail_account');
+        if (tab) {
+          tab.opener = null;
+          tab.location.href = url;
+        } else {
+          window.location.assign(url);
+        }
+      } catch (e) {
+        tab?.close();
+        throw e;
       }
-      await recordAudit('mail.connect_start', 'mail_account');
-      window.location.assign(url);
     },
   });
 }
