@@ -85,7 +85,19 @@ export interface Settings {
   last_time_company_id: string | null;
   focus_minutes: number;
   break_minutes: number;
+  approved_destinations: string[];
+  alert_emails: boolean;
   updated_at: string;
+}
+
+export interface OutboundEmail {
+  id: string;
+  recipient: string;
+  subject: string;
+  kind: 'test' | 'alert';
+  status: 'sent' | 'failed' | 'blocked';
+  error: string | null;
+  created_at: string;
 }
 
 export interface Company {
@@ -289,4 +301,111 @@ export interface CalendarEvent {
   organizer: string | null;
   web_link: string | null;
   is_cancelled: boolean;
+}
+
+export type BillingCycle = 'monthly' | 'annual' | 'none';
+
+export interface SaasTool {
+  id: string;
+  name: string;
+  url: string | null;
+  category: string | null;
+  login_account: string | null;
+  company_id: string | null;
+  identity: Identity | null;
+  cost_amount: number;
+  billing_cycle: BillingCycle;
+  renewal_date: string | null;
+  auto_renews: boolean;
+  status: 'active' | 'trial' | 'cancelled';
+  last_used_on: string | null;
+  notes: string | null;
+}
+
+export interface Hardware {
+  id: string;
+  name: string;
+  kind: string | null;
+  serial: string | null;
+  assigned_to: string | null;
+  company_id: string | null;
+  purchased_on: string | null;
+  warranty_until: string | null;
+  status: 'in_use' | 'spare' | 'retired';
+  notes: string | null;
+}
+
+export interface AccessGrant {
+  id: string;
+  person: string;
+  tool_id: string;
+  level: string | null;
+  granted_on: string | null;
+  last_reviewed_on: string | null;
+  notes: string | null;
+}
+
+export interface ChecklistItem {
+  label: string;
+  done: boolean;
+}
+
+export interface Checklist {
+  id: string;
+  kind: 'onboarding' | 'offboarding';
+  person: string;
+  company_id: string | null;
+  items: ChecklistItem[];
+  started_on: string;
+  completed_at: string | null;
+}
+
+export type SecurityArea = 'accounts' | 'devices' | 'data' | 'email' | 'customer_readiness' | 'agent_governance' | 'other';
+
+export interface SecurityItem {
+  id: string;
+  title: string;
+  area: SecurityArea;
+  status: 'todo' | 'done' | 'not_applicable';
+  company_id: string | null;
+  last_checked_on: string | null;
+  notes: string | null;
+}
+
+export interface Incident {
+  id: string;
+  title: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  status: 'open' | 'resolved';
+  occurred_at: string;
+  summary: string | null;
+  resolution: string | null;
+  resolved_at: string | null;
+}
+
+export interface ChangeRecord {
+  id: string;
+  title: string;
+  system: string | null;
+  changed_at: string;
+  description: string | null;
+  rollback_steps: string;
+  outcome: 'planned' | 'done' | 'rolled_back';
+}
+
+export type RequestStatus = 'new' | 'in_progress' | 'waiting' | 'done';
+
+export interface PartnerRequest {
+  id: string;
+  title: string;
+  details: string | null;
+  requested_by: string;
+  priority: Priority;
+  status: RequestStatus;
+  due_date: string | null;
+  resolution: string | null;
+  company_id: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
 }

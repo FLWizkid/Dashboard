@@ -8,6 +8,7 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   phase: number;
+  built?: boolean;
   summary?: string;
 }
 
@@ -27,10 +28,10 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: 'Operations',
     items: [
       { to: '/ops', label: 'IT Operations', icon: Activity, phase: 2, summary: 'Status lights for domains, email authentication, uptime and certificates, Supabase, Resend, agents and manual systems, with history.' },
-      { to: '/assets', label: 'Assets & Access', icon: HardDrive, phase: 4, summary: 'SaaS and hardware registers, access reviews, offboarding and onboarding checklists.' },
-      { to: '/spend', label: 'Renewals & Spend', icon: Receipt, phase: 4, summary: 'Monthly and annual spend by company, renewal timeline with 30/14/7-day alerts, unused-tool flags.' },
-      { to: '/security', label: 'Security', icon: ShieldCheck, phase: 4, summary: 'Security checklist, incident log, change log with rollback steps, customer-readiness and agent governance.' },
-      { to: '/requests', label: 'Partner Requests', icon: LifeBuoy, phase: 4, summary: 'Helpdesk-lite for Melissa plus a plain-English printable status page.' },
+      { to: '/assets', built: true, label: 'Assets & Access', icon: HardDrive, phase: 4, summary: 'SaaS and hardware registers, access reviews, offboarding and onboarding checklists.' },
+      { to: '/spend', built: true, label: 'Renewals & Spend', icon: Receipt, phase: 4, summary: 'Monthly and annual spend by company, renewal timeline with 30/14/7-day alerts, unused-tool flags.' },
+      { to: '/security', built: true, label: 'Security', icon: ShieldCheck, phase: 4, summary: 'Security checklist, incident log, change log with rollback steps, customer-readiness and agent governance.' },
+      { to: '/requests', built: true, label: 'Partner Requests', icon: LifeBuoy, phase: 4, summary: 'Helpdesk-lite for Melissa plus a plain-English printable status page.' },
     ],
   },
   {
@@ -59,4 +60,4 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
 export const ALL_NAV = NAV_GROUPS.flatMap((g) => g.items);
 
 export const BUILT_THROUGH_PHASE = 3;
-export const isBuilt = (n: NavItem) => n.phase <= BUILT_THROUGH_PHASE;
+export const isBuilt = (n: NavItem) => n.built ?? n.phase <= BUILT_THROUGH_PHASE;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { Activity, BellRing, Building2, Database, Fingerprint, Keyboard, LogOut, Plug, Send, SlidersHorizontal, Timer, UserRound, Wrench } from 'lucide-react';
+import { Activity, BellRing, Building2, Database, Fingerprint, Keyboard, LogOut, Plug, SlidersHorizontal, Timer, UserRound, Wrench } from 'lucide-react';
 import { z } from 'zod';
 import { IDENTITIES } from '@/lib/types';
 import { SETUP } from '@/lib/integrations';
@@ -18,9 +18,9 @@ import { SHORTCUTS } from '@/components/shell/shortcuts';
 import { CompaniesSettings } from '@/components/settings/CompaniesSettings';
 import { AuditLogPanel, DemoDataSettings, ExportSettings } from '@/components/settings/DataSettings';
 import { PasskeySettings } from '@/components/settings/PasskeySettings';
+import { EmailSettings } from '@/components/settings/EmailSettings';
 
 const INTEGRATIONS: { key: keyof typeof SETUP; title: string }[] = [
-  { key: 'resend', title: 'Email sending (Resend)' },
   { key: 'github', title: 'GitHub' },
   { key: 'vercel', title: 'Vercel' },
 ];
@@ -70,13 +70,9 @@ function GeneralSettings() {
       error={settings.error}
     >
       <div className="space-y-4">
-        <Field label="Console notification address" hint={addressValid ? 'Where the console sends alerts and the weekly report.' : 'Enter a valid email address.'}>
-          <div className="flex gap-2">
-            <input className="input flex-1" type="email" value={address} onChange={(e) => setAddress(e.target.value)} aria-invalid={!addressValid} />
-            <Button variant="secondary" disabled title="Needs email sending, set up in Phase 5"><Send /> Send test</Button>
-          </div>
+        <Field label="Console notification address" hint={addressValid ? 'Where the console sends alerts and the weekly report. It must also be on the approved list below.' : 'Enter a valid email address.'}>
+          <input className="input w-full sm:max-w-md" type="email" value={address} onChange={(e) => setAddress(e.target.value)} aria-invalid={!addressValid} />
         </Field>
-        <NotConnected title="Email sending" info={SETUP.resend} compact />
         <div className="grid grid-cols-2 gap-3 sm:max-w-sm">
           <Field label="Focus length (min)"><input className="input font-mono" inputMode="numeric" value={focusMin} onChange={(e) => setFocusMin(e.target.value)} /></Field>
           <Field label="Break length (min)"><input className="input font-mono" inputMode="numeric" value={breakMin} onChange={(e) => setBreakMin(e.target.value)} /></Field>
@@ -117,7 +113,7 @@ function IdentitiesPanel() {
 
 function ConnectionsPanel() {
   return (
-    <Panel icon={<Plug />} title="Other connections" subtitle="Each grey item arrives in a later phase.">
+    <Panel icon={<Plug />} title="Other connections" subtitle="Each grey item arrives in a later phase. Console email is set up under General.">
       <ul className="space-y-2">
         <li className="flex items-center gap-3 rounded-md border border-primary-500/40 p-2">
           <Wrench className="size-4 shrink-0 text-primary-600 dark:text-primary-400" />
@@ -190,6 +186,7 @@ export function SettingsPage() {
         {current.key === 'general' && (
           <>
             <GeneralSettings />
+            <EmailSettings />
             <IdentitiesPanel />
           </>
         )}

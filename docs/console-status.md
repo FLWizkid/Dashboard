@@ -12,8 +12,8 @@ The earlier work used its own phase numbers. It is mapped to v5 numbers below.
 |---|---|---|---|
 | 1 Audit and plan | Step 0, now plus the v5 addendum | Awaiting my approval (addendum) | Original Step 0: 2026-10-11 |
 | 2 Shell and core | Auth, layout, design system, Today, Tasks/Projects, Time & Focus, Settings, demo data | Approved, with gaps (see G-list) | 2026-10-11 |
-| 3 IT Ops lights + console email | RDAP, DNS, uptime, manual systems, history, Health strip; Resend "Send test" | In progress: lights approved 2026-10-11; Resend console email not built | Partial |
-| 4 Assets, Access, Renewals, Security, logs, requests, identity audit, migration tracker | | Not started | |
+| 3 IT Ops lights + console email | RDAP, DNS, uptime, manual systems, history, Health strip; Resend "Send test" | Built 2026-10-13: console email (Resend, from doug@encountive.com), approved destinations, notification address, Send test, alert emails when a light turns red, checks every 15 minutes (pg_cron + pg_net, shared secret). Waiting on Doug: RESEND_API_KEY in Bolt Secrets. | Awaiting my approval |
+| 4 Assets, Access, Renewals, Security, logs, requests, identity audit, migration tracker | | Built 2026-10-13: Assets & Access (software, hardware, access reviews every 90 days, onboarding/offboarding checklists), Renewals & Spend (monthly/yearly totals, by company, 90-day timeline with 30/14/7-day alerts, unused after 60 days), Security (starter checklist incl. customer readiness and agent governance, incident log, change log with required undo steps), Partner Requests (helpdesk-lite + printable plain-English status at /requests/status). Not built: Identity audit (A3), Migration tracker (A4), Report Library, Runbooks & Notes. | Awaiting my approval |
 | 5 Agent Operations (Claude) | | Not started | |
 | 6 Email and calendar | Graph, Google, Open in Superhuman, local relay | Built early (read-only Graph + Gmail, not yet connected). Awaiting my approval. Superhuman links and local relay not built. | |
 | 7 GitHub/Vercel/Resend status, Weekly report, polish | | Not started | |
@@ -119,11 +119,18 @@ Rollback note per migration: drop the new table or column. For item 6, restore f
 - The OAuth return now lands on Setup > Connectors.
 - Setup now has a "Your steps" tab, which is the single checklist for everything Doug has to do.
 
+### Session 2026-10-13
+
+- **D7 Mail inside the console:** set aside (Doug chose option 3). Only the Outlook calendar link stays. Proton Bridge runs on Doug's PC (127.0.0.1) and cannot be reached from the cloud.
+- Phase 3 finished (see table). Migration `cc_phase3_console_email_and_schedule`; edge functions `ops-check` (cron + alerts) and `console-email`.
+- Phase 4 core built. Migrations `cc_phase4_assets_access` and `cc_phase4_security_and_requests`: 8 new tables, owner-only RLS (4 policies each), user_id defaults to auth.uid().
+- Renewal alerts show in the app only; they do not send email yet.
+
 ## Acceptance checklist
 
 | # | Status |
 |---|---|
-| A1 Console email only to approved destinations; Send test | Not built (Phase 3) |
+| A1 Console email only to approved destinations; Send test | Built; works once RESEND_API_KEY is added |
 | A2 Identity on every record, nagging, guide | Partial: identity and nagging exist; guide missing |
 | A3 Identity audit view | Not built (Phase 4) |
 | A4 Migration tracker | Not built (Phase 4) |

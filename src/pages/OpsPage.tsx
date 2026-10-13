@@ -3,12 +3,11 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { Activity, Bot, Database, Globe, LayoutGrid, Mail, MonitorSmartphone, Plug, Plus, RefreshCw } from 'lucide-react';
 import { MONITOR_KINDS, type CheckStatus, type MonitorKind } from '@/lib/types';
 import { cn, errorMessage, relativeTime } from '@/lib/utils';
-import { SETUP } from '@/lib/integrations';
 import { useAutoRunStaleChecks, useOpsHealth } from '@/data/ops';
+import { useEmailStatus } from '@/data/email';
 import { Panel, EmptyState } from '@/components/ui/panel';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { NotConnected } from '@/components/ui/field';
 import { StatusPill } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/toast';
 import { HealthLight } from '@/components/ops/HealthLight';
@@ -35,6 +34,7 @@ export function OpsPage() {
   const tab = TABS.find((t) => t.key === params.get('tab')) ?? TABS[0];
   const ops = useOpsHealth();
   const run = useAutoRunStaleChecks();
+  const email = useEmailStatus();
   const toast = useToast();
   const [openId, setOpenId] = useState<string | null>(null);
   const [form, setForm] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
@@ -111,8 +111,11 @@ export function OpsPage() {
       {tab.key === 'overview' && <Panel title="Not connected yet" icon={<Plug />} subtitle="These need an account link first, so they stay grey">
         <div className="grid gap-3 lg:grid-cols-2">
           <div>
-            <p className="label">Resend email delivery</p>
-            <NotConnected title="Resend" info={SETUP.resend} compact />
+            <p className="label">Email alerts</p>
+            <div className="flex items-center justify-between gap-2 rounded-md border border-line p-3 text-sm">
+              <span className="text-muted">{email.data?.configured ? 'Red checks are emailed to you. Checks run every 15 minutes.' : 'Checks run every 15 minutes. Email alerts are not set up yet.'}</span>
+              <Button asChild size="sm"><Link to="/settings/general"><Mail /> Email settings</Link></Button>
+            </div>
           </div>
           <div>
             <p className="label">Agent runs</p>

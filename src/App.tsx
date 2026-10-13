@@ -18,6 +18,11 @@ import { InboxPage } from '@/pages/InboxPage';
 import { CalendarPage } from '@/pages/CalendarPage';
 import { SetupPage } from '@/pages/SetupPage';
 import { AgentsPage } from '@/pages/AgentsPage';
+import { AssetsPage } from '@/pages/AssetsPage';
+import { SpendPage } from '@/pages/SpendPage';
+import { SecurityPage } from '@/pages/SecurityPage';
+import { RequestsPage } from '@/pages/RequestsPage';
+import { RequestStatusPrint } from '@/pages/RequestStatusPrint';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: true } },
@@ -46,6 +51,7 @@ export default function App() {
             <UiProvider>
               <Routes>
                 <Route path="/login" element={<SignInPage />} />
+                <Route path="/requests/status" element={<RequireAuth><RequestStatusPrint /></RequireAuth>} />
                 <Route element={<RequireAuth><AppShell /></RequireAuth>}>
                   <Route index element={<TodayPage />} />
                   <Route path="tasks" element={<TasksPage />} />
@@ -57,6 +63,10 @@ export default function App() {
                   <Route path="calendar" element={<CalendarPage />} />
                   <Route path="setup" element={<SetupPage />} />
                   <Route path="agents" element={<AgentsPage />} />
+                  <Route path="assets/:section?" element={<AssetsPage />} />
+                  <Route path="spend" element={<SpendPage />} />
+                  <Route path="security/:section?" element={<SecurityPage />} />
+                  <Route path="requests" element={<RequestsPage />} />
                   {ALL_NAV.filter((n) => !isBuilt(n)).map((n) => (
                     <Route key={n.to} path={n.to.slice(1)} element={<PhasePage />} />
                   ))}

@@ -1,8 +1,11 @@
 [functions.ops-check]
-verify_jwt = true
+verify_jwt = false
 
 [functions.mail-connect]
 verify_jwt = false
 
 [functions.agent-report]
 verify_jwt = false
+
+[functions.console-email]
+verify_jwt = true

@@ -326,19 +326,133 @@ function runCheck(m: Monitor, admin: SupabaseClient): Promise<Outcome> {
 }
 
 const MANUAL_STATUSES = new Set(["healthy", "attention", "action"]);
+const EMAIL_RE = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+const FROM = "CIO Console <doug@encountive.com>";
+
+function safeEqual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+const esc = (v: string) => v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+
+async function sendAlert(admin: SupabaseClient, userId: string, turnedRed: { label: string; summary: string }[]) {
+  const key = Deno.env.get("RESEND_API_KEY");
+  if (!key || !turnedRed.length) return;
+  const { data: settings } = await admin.from("cc_settings").select("notification_address, approved_destinations, alert_emails").eq("user_id", userId).maybeSingle();
+  if (!settings?.alert_emails) return;
+  const to = String(settings.notification_address ?? "").trim().toLowerCase();
+  const approved = ((settings.approved_destinations ?? []) as string[]).map((a) => a.toLowerCase());
+  const subject = `Console alert: ${turnedRed.length} check${turnedRed.length === 1 ? "" : "s"} need action`;
+  if (!EMAIL_RE.test(to) || !approved.includes(to)) {
+    await admin.from("cc_outbound_email_log").insert({ user_id: userId, recipient: to || "(none)", subject, kind: "alert", status: "blocked", error: "Address is not an approved destination" });
+    return;
+  }
+  const items = turnedRed.map((r) => `<li><strong>${esc(r.label)}</strong>: ${esc(r.summary)}</li>`).join("");
+  let status = "sent";
+  let error: string | null = null;
+  try {
+    const r = await fetchWithTimeout("https://api.resend.com/emails", 10000, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: FROM, to: [to], subject, html: `<p>These checks just turned red in IT Operations:</p><ul>${items}</ul>` }),
+    });
+    if (!r.ok) {
+      status = "failed";
+      error = `Resend answered HTTP ${r.status}`;
+    }
+  } catch (e) {
+    status = "failed";
+    error = errText(e);
+  }
+  await admin.from("cc_outbound_email_log").insert({ user_id: userId, recipient: to, subject, kind: "alert", status, error });
+}
+
+async function runForUser(admin: SupabaseClient, userId: string, ids: string[] | null) {
+  let q = admin.from("cc_monitors").select("*").eq("user_id", userId).eq("enabled", true).neq("kind", "manual");
+  if (ids) q = q.in("id", ids);
+  const { data: monitors, error: mErr } = await q;
+  if (mErr) throw mErr;
+
+  const { data: recent } = await admin
+    .from("cc_check_results")
+    .select("monitor_id")
+    .eq("user_id", userId)
+    .eq("source", "auto")
+    .gte("checked_at", new Date(Date.now() - 60_000).toISOString());
+  const skip = new Set((recent ?? []).map((r: { monitor_id: string }) => r.monitor_id));
+  const todo = (monitors as Monitor[]).filter((m) => !skip.has(m.id)).slice(0, 25);
+
+  const previous = new Map<string, string>();
+  if (todo.length) {
+    const { data: prev } = await admin.from("cc_check_results").select("monitor_id, status")
+      .in("monitor_id", todo.map((m) => m.id)).order("checked_at", { ascending: false }).limit(500);
+    for (const p of (prev ?? []) as { monitor_id: string; status: string }[]) {
+      if (!previous.has(p.monitor_id)) previous.set(p.monitor_id, p.status);
+    }
+  }
+
+  const rows = await Promise.all(
+    todo.map(async (m) => {
+      const t0 = Date.now();
+      let out: Outcome;
+      try {
+        out = await runCheck(m, admin);
+      } catch (e) {
+        out = { status: "unknown", summary: "The check could not run", checks: [{ name: "Checker", status: "unknown", message: errText(e) }] };
+      }
+      return {
+        monitor_id: m.id,
+        user_id: userId,
+        status: out.status,
+        summary: out.summary.slice(0, 400),
+        details: { checks: out.checks, meta: out.meta ?? {} },
+        duration_ms: Date.now() - t0,
+        source: "auto",
+      };
+    }),
+  );
+  if (rows.length) {
+    const { error } = await admin.from("cc_check_results").insert(rows);
+    if (error) throw error;
+  }
+  await admin.from("cc_check_results").delete().eq("user_id", userId).lt("checked_at", new Date(Date.now() - 180 * 86_400_000).toISOString());
+
+  const labels = new Map(todo.map((m) => [m.id, m.label]));
+  const turnedRed = rows
+    .filter((r) => r.status === "action" && previous.get(r.monitor_id) !== "action")
+    .map((r) => ({ label: labels.get(r.monitor_id) ?? "Check", summary: r.summary }));
+  await sendAlert(admin, userId, turnedRed);
+  return { checked: rows.length, skipped: (monitors?.length ?? 0) - rows.length };
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
   try {
     if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const admin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    const cronHeader = req.headers.get("x-cron-secret");
+    if (cronHeader) {
+      const { data: row } = await admin.from("cc_cron_secrets").select("secret").eq("name", "ops-check").maybeSingle();
+      if (!row?.secret || !safeEqual(cronHeader, row.secret)) return json({ error: "Not allowed" }, 401);
+      const { data: owners, error } = await admin.from("cc_monitors").select("user_id").eq("enabled", true).neq("kind", "manual");
+      if (error) throw error;
+      const users = [...new Set((owners ?? []).map((o: { user_id: string }) => o.user_id))];
+      let checked = 0;
+      for (const u of users) checked += (await runForUser(admin, u, null)).checked;
+      return json({ checked, users: users.length });
+    }
+
     const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
     });
     const { data: auth } = await userClient.auth.getUser();
     const user = auth?.user;
     if (!user) return json({ error: "Please sign in again." }, 401);
-    const admin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const body = await req.json().catch(() => ({}));
 
     if (body?.action === "manual") {
@@ -362,46 +476,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const ids: string[] | null = Array.isArray(body?.monitor_ids) ? body.monitor_ids.filter((x: unknown) => typeof x === "string").slice(0, 50) : null;
-    let q = admin.from("cc_monitors").select("*").eq("user_id", user.id).eq("enabled", true).neq("kind", "manual");
-    if (ids) q = q.in("id", ids);
-    const { data: monitors, error: mErr } = await q;
-    if (mErr) throw mErr;
-
-    const { data: recent } = await admin
-      .from("cc_check_results")
-      .select("monitor_id")
-      .eq("user_id", user.id)
-      .eq("source", "auto")
-      .gte("checked_at", new Date(Date.now() - 60_000).toISOString());
-    const skip = new Set((recent ?? []).map((r: { monitor_id: string }) => r.monitor_id));
-    const todo = (monitors as Monitor[]).filter((m) => !skip.has(m.id)).slice(0, 25);
-
-    const rows = await Promise.all(
-      todo.map(async (m) => {
-        const t0 = Date.now();
-        let out: Outcome;
-        try {
-          out = await runCheck(m, admin);
-        } catch (e) {
-          out = { status: "unknown", summary: "The check could not run", checks: [{ name: "Checker", status: "unknown", message: errText(e) }] };
-        }
-        return {
-          monitor_id: m.id,
-          user_id: user.id,
-          status: out.status,
-          summary: out.summary.slice(0, 400),
-          details: { checks: out.checks, meta: out.meta ?? {} },
-          duration_ms: Date.now() - t0,
-          source: "auto",
-        };
-      }),
-    );
-    if (rows.length) {
-      const { error } = await admin.from("cc_check_results").insert(rows);
-      if (error) throw error;
-    }
-    await admin.from("cc_check_results").delete().eq("user_id", user.id).lt("checked_at", new Date(Date.now() - 180 * 86_400_000).toISOString());
-    return json({ checked: rows.length, skipped: (monitors?.length ?? 0) - rows.length });
+    return json(await runForUser(admin, user.id, ids));
   } catch (e) {
     console.error("ops-check failed", e);
     return json({ error: "The health check could not run. Try again shortly." }, 500);

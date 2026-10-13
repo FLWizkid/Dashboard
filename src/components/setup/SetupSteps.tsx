@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react';
 import { ChevronDown, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useMailAccounts, useMailStatus } from '@/data/mail';
+import { useMailAccounts } from '@/data/mail';
+import { useEmailStatus } from '@/data/email';
 import { Panel } from '@/components/ui/panel';
 import { Button } from '@/components/ui/button';
 import { StatusPill, type HealthStatus } from '@/components/ui/badge';
-import { OAuthRow, OutlookLinkRow } from './ConnectorsSection';
+import { OutlookLinkRow } from './ConnectorsSection';
 
 export const SECRETS_STEPS = [
   'In Bolt (the editor window you are chatting with me in), click the database icon at the top center of the screen.',
@@ -13,6 +14,13 @@ export const SECRETS_STEPS = [
   'Type GOOGLE_CLIENT_ID in Name, paste the Client ID in Value, click Create secret.',
   'Type GOOGLE_CLIENT_SECRET in Name, paste the Client secret in Value, click Create secret.',
   'Leave any other suggested rows with empty values alone.',
+];
+
+export const RESEND_STEPS = [
+  'Open resend.com and sign in (or create a free account) with doug@encountive.com.',
+  'Domains: encountive.com is already verified there (its Resend signing record exists). If it is not listed, add it and follow the DNS steps shown.',
+  'API Keys > Create API key. Name it CIO Console, permission "Sending access", domain encountive.com. Copy the key (it starts with re_).',
+  'In Bolt, click the database icon at the top center, then Secrets. Type RESEND_API_KEY in Name, paste the key in Value, click Create secret.',
 ];
 
 export const MICROSOFT_STEPS = [
@@ -74,10 +82,6 @@ function Steps({ items }: { items: string[] }) {
   return <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed">{items.map((s) => <li key={s}>{s}</li>)}</ol>;
 }
 
-function Sub({ children }: { children: ReactNode }) {
-  return <p className="label mt-5">{children}</p>;
-}
-
 type Status = { status: HealthStatus; label: string };
 const YOURS: Status = { status: 'unknown', label: 'Your action' };
 const DONE: Status = { status: 'healthy', label: 'Done' };
@@ -105,72 +109,44 @@ function Step({ n, title, where, status, children, defaultOpen }: {
 }
 
 const SET_ASIDE = [
+  ['Email inside the console (Outlook and Gmail)', 'Set aside as you chose. Both need a one-time registration with Microsoft or Google before any app can read mail. If you change your mind, Setup > Connectors has the steps.'],
   ['Publishing', 'Optional. The console is this app, the screen you see in Bolt\'s preview. Publishing only gives it its own web address so you can open it in a normal browser tab.'],
   ['Windows Hello', 'Set aside as you asked. Password sign-in keeps working.'],
   ['Email signing and spoofing records (DKIM, DMARC)', 'Nothing changes on your domains. The IT Operations page only reports what it sees; you can ignore those notes.'],
-  ['Email alerts (Resend)', 'Not needed while the console is monitoring only.'],
 ] as const;
 
 export function SetupSteps() {
-  const mail = useMailStatus();
   const accounts = useMailAccounts();
-  const redirectUri = mail.data?.redirectUri ?? '';
-  const gReady = mail.data?.providers.google?.configured ?? false;
-  const mReady = mail.data?.providers.microsoft?.configured ?? false;
-  const list = accounts.data ?? [];
-  const connected = (p: string) => list.some((a) => a.provider === p && a.status === 'connected');
-  const googleStatus: Status = connected('google') ? DONE : gReady ? { status: 'attention', label: 'Keys in place, click Connect' } : YOURS;
-  const msStatus: Status = connected('microsoft') ? DONE : mReady ? { status: 'attention', label: 'Keys in place, click Connect' } : YOURS;
+  const email = useEmailStatus();
+  const connected = (accounts.data ?? []).some((a) => a.provider === 'outlook_ics' && a.status === 'connected');
+  const emailStatus: Status = email.data?.configured ? DONE : YOURS;
 
   return (
     <div className="space-y-4">
       <Panel title="Your steps" icon={<ListChecks />}
-        subtitle="All read-only. Your email keeps working exactly as it does today; the console just shows a copy."
-        loading={mail.isLoading} error={mail.error}
-        onRefresh={() => { mail.refetch(); accounts.refetch(); }}
-        refreshing={mail.isFetching || accounts.isFetching}>
+        subtitle="Everything the console needs from you, in order."
+        loading={accounts.isLoading} error={accounts.error}
+        onRefresh={() => { accounts.refetch(); email.refetch(); }}
+        refreshing={accounts.isFetching || email.isFetching}>
         <ol className="space-y-2">
-          <Step n={1} title="Sign in to Microsoft 365 for mail and calendar (doug@theonefor.ai)" where="Microsoft Entra, then Bolt, then the Connect button in this step" status={msStatus} defaultOpen={!connected('microsoft')}>
-            <p className="mb-3 text-sm text-muted">
-              Microsoft only lets an outside program read Outlook mail after you sign in and approve it, using Microsoft's own sign-in. You register the console once with Microsoft, the same way as Google in step 3. Mail is read-only: nothing is sent, moved or deleted.
-            </p>
-            <Sub>Part A: register the console with Microsoft</Sub>
-            <Steps items={MICROSOFT_STEPS} />
-            <Sub>Address to paste in Part A, item 3</Sub>
-            <CopyRow value={redirectUri} />
-            <Sub>Part B: give the three values to the console</Sub>
-            <Steps items={MICROSOFT_SECRETS_STEPS} />
-            <Sub>Part C: connect</Sub>
-            <p className="mb-2 text-sm text-muted">Click Refresh at the top of this box. The button below turns into Connect. Click it, sign in as doug@theonefor.ai and approve. Once connected, you can remove the calendar link from step 2 so events do not show twice.</p>
-            {mail.data && <OAuthRow provider="microsoft" configured={mReady} redirectUri={redirectUri} showGuide={false} />}
-          </Step>
-
-          <Step n={2} title="Or: show only your Outlook calendar with a link (doug@theonefor.ai)" where="Your Outlook tab, then the box in this step" status={connected('outlook_ics') || connected('microsoft') ? DONE : YOURS}>
+          <Step n={1} title="Show your Outlook calendar here (doug@theonefor.ai)" where="Your Outlook tab, then the box in this step" status={connected ? DONE : YOURS} defaultOpen={!connected}>
             <p className="mb-3 text-sm text-muted">Outlook gives you a private read-only link to your calendar. Paste it here and the console reads it on every refresh. Nothing in Outlook changes.</p>
             <Steps items={OUTLOOK_CALENDAR_STEPS} />
             <div className="mt-4"><OutlookLinkRow showGuide={false} /></div>
             <p className="mt-3 text-xs text-subtle">Do not share this link. To stop it later, go back to Shared calendars in Outlook and click Unpublish.</p>
           </Step>
 
-          <Step n={3} title="Show your Gmail and Google Calendar here (doug@encountive.com)" where="Google Cloud, then Bolt, then the Connect button in this step" status={googleStatus} defaultOpen={connected('microsoft') && !connected('google')}>
+          <Step n={2} title="Let the console send you alerts by email (optional)" where="resend.com, then Bolt Secrets" status={emailStatus} defaultOpen={connected && !email.data?.configured}>
             <p className="mb-3 text-sm text-muted">
-              Google does not let any outside program read Gmail until its owner registers that program with Google. Apps like Superhuman did this for themselves; this console is your own, so you register it once.
-              It is a permission slip, not a new app or mailbox. Mail is read-only: nothing is sent, moved, forwarded or deleted.
+              The console uses Resend, an email-sending service, to send alerts and test messages from doug@encountive.com. It can only send to addresses you list under Settings &gt; General &gt; Approved destinations.
             </p>
-            <Sub>Part A: register the console with Google</Sub>
-            <Steps items={GOOGLE_STEPS} />
-            <Sub>Address to paste in Part A, item 6</Sub>
-            <CopyRow value={redirectUri} />
-            <Sub>Part B: give the two values to the console</Sub>
-            <Steps items={SECRETS_STEPS} />
-            <Sub>Part C: connect</Sub>
-            <p className="mb-2 text-sm text-muted">Click Refresh at the top of this box. The button below turns into Connect. Click it, sign in as doug@encountive.com and approve. You come back here and your mail and calendar fill in.</p>
-            {mail.data && <OAuthRow provider="google" configured={gReady} redirectUri={redirectUri} showGuide={false} />}
+            <Steps items={RESEND_STEPS} />
+            <p className="mt-3 text-sm text-muted">Then click Refresh at the top of this box, and use Send test in Settings &gt; General.</p>
           </Step>
         </ol>
       </Panel>
 
-      <Panel title="Set aside for now" subtitle="Not needed for monitoring. Nothing to do here.">
+      <Panel title="Set aside for now" subtitle="Not needed right now. Nothing to do here.">
         <ul className="space-y-3">
           {SET_ASIDE.map(([title, text]) => (
             <li key={title} className="text-sm">
