@@ -1,5 +1,5 @@
 import {
-  Activity, BookOpen, Bot, CalendarDays, CheckSquare, Clock, FileBarChart, FolderKanban, HardDrive,
+  Activity, BookOpen, Bot, CalendarDays, CheckSquare, Clock, FileBarChart, Fingerprint, FolderKanban, HardDrive,
   Inbox, LayoutDashboard, LifeBuoy, Library, Receipt, Settings, ShieldCheck, Wrench, type LucideIcon,
 } from 'lucide-react';
 
@@ -31,6 +31,7 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { to: '/assets', built: true, label: 'Assets & Access', icon: HardDrive, phase: 4, summary: 'SaaS and hardware registers, access reviews, offboarding and onboarding checklists.' },
       { to: '/spend', built: true, label: 'Renewals & Spend', icon: Receipt, phase: 4, summary: 'Monthly and annual spend by company, renewal timeline with 30/14/7-day alerts, unused-tool flags.' },
       { to: '/security', built: true, label: 'Security', icon: ShieldCheck, phase: 4, summary: 'Security checklist, incident log, change log with rollback steps, customer-readiness and agent governance.' },
+      { to: '/identity', built: true, label: 'Identity', icon: Fingerprint, phase: 4, summary: 'Identity review (wrong or missing identity on companies, projects, tasks and tools) and a step-by-step migration tracker.' },
       { to: '/requests', built: true, label: 'Partner Requests', icon: LifeBuoy, phase: 4, summary: 'Helpdesk-lite for Melissa plus a plain-English printable status page.' },
     ],
   },

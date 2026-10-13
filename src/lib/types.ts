@@ -409,3 +409,19 @@ export interface PartnerRequest {
   created_at: string;
   updated_at: string;
 }
+
+export type MigrationStatus = 'planned' | 'in_progress' | 'blocked' | 'done';
+
+export interface IdentityMigration {
+  id: string;
+  title: string;
+  tool_id: string | null;
+  from_address: string | null;
+  to_address: string | null;
+  to_identity: Identity | null;
+  status: MigrationStatus;
+  due_date: string | null;
+  steps: ChecklistItem[];
+  notes: string | null;
+  completed_at: string | null;
+}

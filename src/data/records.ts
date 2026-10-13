@@ -10,7 +10,8 @@ export type RecordTable =
   | 'cc_security_items'
   | 'cc_incidents'
   | 'cc_changes'
-  | 'cc_requests';
+  | 'cc_requests'
+  | 'cc_identity_migrations';
 
 const ORDER: Record<RecordTable, { column: string; ascending: boolean }> = {
   cc_saas_tools: { column: 'name', ascending: true },
@@ -21,6 +22,7 @@ const ORDER: Record<RecordTable, { column: string; ascending: boolean }> = {
   cc_incidents: { column: 'occurred_at', ascending: false },
   cc_changes: { column: 'changed_at', ascending: false },
   cc_requests: { column: 'created_at', ascending: false },
+  cc_identity_migrations: { column: 'created_at', ascending: false },
 };
 
 const entityOf = (table: RecordTable) => table.replace(/^cc_/, '').replace(/s$/, '');

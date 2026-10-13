@@ -21,6 +21,7 @@ import { AgentsPage } from '@/pages/AgentsPage';
 import { AssetsPage } from '@/pages/AssetsPage';
 import { SpendPage } from '@/pages/SpendPage';
 import { SecurityPage } from '@/pages/SecurityPage';
+import { IdentityPage } from '@/pages/IdentityPage';
 import { RequestsPage } from '@/pages/RequestsPage';
 import { RequestStatusPrint } from '@/pages/RequestStatusPrint';
 
@@ -67,6 +68,7 @@ export default function App() {
                   <Route path="spend" element={<SpendPage />} />
                   <Route path="security/:section?" element={<SecurityPage />} />
                   <Route path="requests" element={<RequestsPage />} />
+                  <Route path="identity/:section?" element={<IdentityPage />} />
                   {ALL_NAV.filter((n) => !isBuilt(n)).map((n) => (
                     <Route key={n.to} path={n.to.slice(1)} element={<PhasePage />} />
                   ))}
