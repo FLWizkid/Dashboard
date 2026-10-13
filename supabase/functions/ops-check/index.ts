@@ -72,13 +72,29 @@ function expiryStatus(days: number, warn: number, critical: number): Status {
   return "healthy";
 }
 
+async function rdapLookup(domain: string): Promise<Response> {
+  const init = { headers: { accept: "application/rdap+json, application/json", "user-agent": UA } };
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const r = await fetchWithTimeout(`https://rdap.org/domain/${domain}`, 12000, init);
+      if (r.status < 500 && r.status !== 429) return r;
+      lastErr = new Error(`HTTP ${r.status}`);
+    } catch (e) {
+      lastErr = e;
+    }
+    await new Promise((res) => setTimeout(res, 1500 * (attempt + 1)));
+  }
+  throw lastErr;
+}
+
 async function checkDomain(m: Monitor): Promise<Outcome> {
   const domain = m.target!;
   let r: Response;
   try {
-    r = await fetchWithTimeout(`https://rdap.org/domain/${domain}`, 12000, { headers: { accept: "application/rdap+json, application/json", "user-agent": UA } });
-  } catch (e) {
-    const c = { name: "Registry lookup", status: "unknown" as Status, message: `Registry lookup ${errText(e)}` };
+    r = await rdapLookup(domain);
+  } catch {
+    const c = { name: "Registry lookup", status: "unknown" as Status, message: "The domain registry did not answer after 3 tries. This is usually temporary; it will retry on the next check." };
     return { status: "unknown", summary: c.message, checks: [c] };
   }
   if (r.status === 404) {
