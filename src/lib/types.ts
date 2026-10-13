@@ -243,10 +243,12 @@ export interface CheckResult {
   source: 'auto' | 'manual';
 }
 
-export type MailProvider = 'google' | 'outlook_ics';
+export type MailProvider = 'google' | 'microsoft' | 'outlook_ics';
+export type OAuthMailProvider = Exclude<MailProvider, 'outlook_ics'>;
 
 export const MAIL_PROVIDERS: Record<MailProvider, { label: string; app: string; short: string; mark: string }> = {
   google: { label: 'Google Workspace / Gmail', app: 'Gmail', short: 'G', mark: 'bg-error-600 text-white' },
+  microsoft: { label: 'Microsoft 365 / Outlook', app: 'Outlook', short: 'M', mark: 'bg-secondary-600 text-white' },
   outlook_ics: { label: 'Outlook calendar (published link)', app: 'Outlook', short: 'O', mark: 'bg-primary-600 text-white' },
 };
 

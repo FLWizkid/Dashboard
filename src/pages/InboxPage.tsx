@@ -123,7 +123,7 @@ export function InboxPage() {
         error={accounts.error ?? messages.error}
         empty={noAccounts || shown.length === 0}
         emptyState={noAccounts ? (
-          <EmptyState icon={<Mail />} title="Not connected yet, so there is no mail to show" text="Connect Gmail (doug@encountive.com) from Setup to see your Encountive inbox here."
+          <EmptyState icon={<Mail />} title="Not connected yet, so there is no mail to show" text="Connect Microsoft 365 (doug@theonefor.ai) or Gmail (doug@encountive.com) from Setup to see your inbox here."
             action={<Button asChild variant="primary"><Link to="/setup">Open setup steps</Link></Button>} />
         ) : (
           <EmptyState icon={<Inbox />} title={tab === 'all' ? 'Inbox is empty' : `Nothing ${tab}`} text="New mail appears after the next sync." />

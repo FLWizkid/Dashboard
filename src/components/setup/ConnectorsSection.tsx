@@ -1,9 +1,9 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { CalendarPlus, Plug, RefreshCw, Unplug } from 'lucide-react';
-import { IDENTITIES, MAIL_PROVIDERS, type Identity, type MailAccount } from '@/lib/types';
+import { IDENTITIES, MAIL_PROVIDERS, type Identity, type MailAccount, type OAuthMailProvider } from '@/lib/types';
 import { cn, errorMessage, relativeTime } from '@/lib/utils';
 import {
-  useAddCalendarLink, useConnectGoogle, useDisconnectMail, useMailAccounts, useMailStatus, useSyncMail, useUpdateMailAccount,
+  useAddCalendarLink, useConnectMail, useDisconnectMail, useMailAccounts, useMailStatus, useSyncMail, useUpdateMailAccount,
 } from '@/data/mail';
 import { Panel } from '@/components/ui/panel';
 import { Button } from '@/components/ui/button';
@@ -12,10 +12,26 @@ import { Dialog } from '@/components/ui/dialog';
 import { Field, Input, Select } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
 import { ProviderMark } from '@/components/mail/SourceBadge';
-import { CopyRow, GOOGLE_STEPS, OUTLOOK_CALENDAR_STEPS, SECRETS_STEPS } from './SetupSteps';
+import { CopyRow, GOOGLE_STEPS, MICROSOFT_SECRETS_STEPS, MICROSOFT_STEPS, OUTLOOK_CALENDAR_STEPS, SECRETS_STEPS } from './SetupSteps';
+
+const OAUTH_ROW: Record<OAuthMailProvider, { account: string; name: string; ready: string; notReady: string; steps: () => string[] }> = {
+  microsoft: {
+    account: 'doug@theonefor.ai', name: 'Microsoft',
+    ready: 'Ready. Click Connect and sign in as doug@theonefor.ai.',
+    notReady: 'Not ready yet. Finish Parts A and B of step 1 on the Your steps tab, then Connect appears here.',
+    steps: () => [...MICROSOFT_STEPS, ...MICROSOFT_SECRETS_STEPS],
+  },
+  google: {
+    account: 'doug@encountive.com', name: 'Google',
+    ready: 'Ready. Click Connect and sign in as doug@encountive.com.',
+    notReady: 'Not ready yet. Finish Parts A and B of step 3 on the Your steps tab, then Connect appears here.',
+    steps: () => [...GOOGLE_STEPS, ...SECRETS_STEPS],
+  },
+};
 
 const REVOKE_HINT: Record<MailAccount['provider'], string> = {
   google: 'To fully revoke access, also remove "CIO Command Console" from your Google account third-party access page.',
+  microsoft: 'To fully revoke access, also remove "CIO Command Console" at myapps.microsoft.com or delete its app registration in Microsoft Entra.',
   outlook_ics: 'To stop sharing completely, also click Unpublish under Settings > Calendar > Shared calendars in Outlook on the web.',
 };
 
@@ -30,18 +46,19 @@ function StepsDialog({ open, onOpenChange, title, steps, children }: {
   );
 }
 
-export function GoogleRow({ configured, redirectUri, showGuide = true }: { configured: boolean; redirectUri: string; showGuide?: boolean }) {
+export function OAuthRow({ provider, configured, redirectUri, showGuide = true }: { provider: OAuthMailProvider; configured: boolean; redirectUri: string; showGuide?: boolean }) {
   const [guide, setGuide] = useState(false);
-  const connect = useConnectGoogle();
+  const connect = useConnectMail();
   const toast = useToast();
-  const onConnect = () => connect.mutate(undefined, { onError: (e) => toast(errorMessage(e), 'error') });
+  const info = OAUTH_ROW[provider];
+  const onConnect = () => connect.mutate(provider, { onError: (e) => toast(errorMessage(e), 'error') });
   return (
     <div className={cn('rounded-md border p-3', configured ? 'border-line' : 'border-dashed border-line bg-raised/50')}>
       <div className="flex flex-wrap items-center gap-3">
-        <ProviderMark provider="google" />
+        <ProviderMark provider={provider} />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">{MAIL_PROVIDERS.google.label}</p>
-          <p className="text-xs text-subtle">{configured ? 'Ready. Click Connect and sign in as doug@encountive.com.' : 'Not ready yet. Finish Parts A and B of step 2 on the Your steps tab, then Connect appears here.'}</p>
+          <p className="text-sm font-medium">{MAIL_PROVIDERS[provider].label} ({info.account})</p>
+          <p className="text-xs text-subtle">{configured ? info.ready : info.notReady}</p>
         </div>
         {configured ? (
           <Button variant="primary" size="sm" onClick={onConnect} disabled={connect.isPending}>
@@ -54,7 +71,7 @@ export function GoogleRow({ configured, redirectUri, showGuide = true }: { confi
       </div>
       {connect.data?.framedUrl && (
         <div className="mt-3 rounded-md border border-line bg-raised/50 p-3 text-sm">
-          <p className="mb-2">Google can't open inside this preview window. Click below to sign in on a new tab, then come back here and refresh.</p>
+          <p className="mb-2">{info.name} can't open inside this preview window. Click below to sign in on a new tab, then come back here and refresh.</p>
           <a
             href={connect.data.framedUrl}
             target="_blank"
@@ -62,11 +79,11 @@ export function GoogleRow({ configured, redirectUri, showGuide = true }: { confi
             onClick={() => connect.reset()}
             className="inline-flex items-center gap-2 rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-500"
           >
-            Open Google sign-in
+            Open {info.name} sign-in
           </a>
         </div>
       )}
-      <StepsDialog open={guide} onOpenChange={setGuide} title="Connect Google Workspace / Gmail" steps={[...GOOGLE_STEPS, ...SECRETS_STEPS]}>
+      <StepsDialog open={guide} onOpenChange={setGuide} title={`Connect ${MAIL_PROVIDERS[provider].label}`} steps={info.steps()}>
         <p className="label mt-4">Redirect address</p>
         <CopyRow value={redirectUri} />
       </StepsDialog>
@@ -93,7 +110,7 @@ export function OutlookLinkRow({ showGuide = true }: { showGuide?: boolean }) {
         <ProviderMark provider="outlook_ics" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">Outlook calendar link (doug@theonefor.ai)</p>
-          <p className="text-xs text-subtle">No Microsoft app or Azure needed. Publish your calendar in Outlook and paste the ICS link.</p>
+          <p className="text-xs text-subtle">Calendar only. Not needed once Microsoft 365 is connected.</p>
         </div>
         {showGuide && <Button size="sm" onClick={() => setGuide(true)}>Steps</Button>}
       </div>
@@ -120,7 +137,7 @@ function AccountRow({ account }: { account: MailAccount }) {
   const update = useUpdateMailAccount();
   const sync = useSyncMail();
   const disconnect = useDisconnectMail();
-  const connect = useConnectGoogle();
+  const connect = useConnectMail();
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
   const isLink = account.provider === 'outlook_ics';
@@ -166,7 +183,7 @@ function AccountRow({ account }: { account: MailAccount }) {
         </Button>
         {account.status === 'error' && !isLink && (
           <Button variant="primary" size="sm" disabled={connect.isPending}
-            onClick={() => connect.mutate(undefined, { onError: (e) => toast(errorMessage(e), 'error') })}>
+            onClick={() => connect.mutate(account.provider as OAuthMailProvider, { onError: (e) => toast(errorMessage(e), 'error') })}>
             <Plug /> Reconnect
           </Button>
         )}
@@ -223,12 +240,13 @@ export function ConnectorsSection() {
         <div>
           <p className="label">Add a source</p>
           <div className="space-y-2">
+            {status.data && <OAuthRow provider="microsoft" configured={status.data.providers.microsoft?.configured ?? false} redirectUri={status.data.redirectUri} />}
+            {status.data && <OAuthRow provider="google" configured={status.data.providers.google?.configured ?? false} redirectUri={status.data.redirectUri} />}
             <OutlookLinkRow />
-            {status.data && <GoogleRow configured={status.data.providers.google?.configured ?? false} redirectUri={status.data.redirectUri} />}
           </div>
         </div>
         <p className="rounded-md bg-raised p-3 text-sm text-muted">
-          doug@theonefor.ai mail stays in its own Outlook mailbox and is kept separate from Encountive; reading it here would need a Microsoft app, which is skipped because you do not use Azure. Its calendar comes in through the link above.
+          Every outside service is reached through its maker's own sign-in and official connection (Microsoft and Google), never by storing your password.
           Proton Mail (dougtully@protonmail.com) needs Proton Mail Bridge on your Windows PC and arrives in a later phase.
         </p>
       </div>

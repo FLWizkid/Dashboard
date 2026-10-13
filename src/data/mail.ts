@@ -2,11 +2,14 @@ import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import type { CalendarEvent, Identity, MailAccount, MailMessage, MailProvider } from '@/lib/types';
+import type { CalendarEvent, Identity, MailAccount, MailMessage, MailProvider, OAuthMailProvider } from '@/lib/types';
 import { check, recordAudit, unwrap } from './core';
 
 const STALE_AFTER_MS = 10 * 60_000;
-const SIGN_IN_HOST = 'https://accounts.google.com/';
+const SIGN_IN_HOST: Record<OAuthMailProvider, string> = {
+  google: 'https://accounts.google.com/',
+  microsoft: 'https://login.microsoftonline.com/',
+};
 
 async function callMail<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke('mail-connect', { body });
@@ -77,15 +80,15 @@ function invalidateMail(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: ['calendar-events'] });
 }
 
-export function useConnectGoogle() {
+export function useConnectMail() {
   return useMutation({
-    mutationFn: async (): Promise<{ framedUrl: string | null }> => {
-      const { url } = await callMail<{ url?: string }>({ action: 'start', provider: 'google' });
-      if (typeof url !== 'string' || !url.startsWith(SIGN_IN_HOST)) {
+    mutationFn: async (provider: OAuthMailProvider): Promise<{ framedUrl: string | null }> => {
+      const { url } = await callMail<{ url?: string }>({ action: 'start', provider });
+      if (typeof url !== 'string' || !url.startsWith(SIGN_IN_HOST[provider])) {
         throw new Error('The sign-in page address looked wrong, so it was not opened.');
       }
       await recordAudit('mail.connect_start', 'mail_account');
-      // Google refuses to render inside a frame (e.g. an editor preview); the caller shows a link that opens a real tab.
+      // Google and Microsoft refuse to render inside a frame (e.g. an editor preview); the caller shows a link that opens a real tab.
       if (window.self !== window.top) return { framedUrl: url };
       window.location.assign(url);
       return { framedUrl: null };

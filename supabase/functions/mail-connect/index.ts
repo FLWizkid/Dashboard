@@ -7,7 +7,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-type Provider = "google" | "outlook_ics";
+type Provider = "google" | "microsoft" | "outlook_ics";
+type OAuthProvider = "google" | "microsoft";
 interface TokenSet { access_token: string; refresh_token?: string; expires_in: number; scope?: string }
 interface Account { id: string; user_id: string; provider: Provider; email: string }
 interface MessageRow {
@@ -28,14 +29,20 @@ const ICS_HOSTS = new Set(["outlook.office365.com", "outlook.office.com", "outlo
 const ICS_MAX_BYTES = 5_000_000;
 const LINK_NEVER_EXPIRES = "9999-12-31T00:00:00Z";
 const GOOGLE_SCOPES = "openid email https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly";
+const MICROSOFT_SCOPES = "openid email offline_access User.Read Mail.Read Calendars.Read";
+const MS_TENANT = Deno.env.get("MICROSOFT_TENANT_ID")?.trim() ?? "";
+const MS_AUTH = `https://login.microsoftonline.com/${encodeURIComponent(MS_TENANT)}/oauth2/v2.0`;
+const GRAPH = "https://graph.microsoft.com/v1.0";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
 
-function creds() {
-  const id = Deno.env.get("GOOGLE_CLIENT_ID");
-  const secret = Deno.env.get("GOOGLE_CLIENT_SECRET");
+function creds(provider: OAuthProvider) {
+  const prefix = provider === "google" ? "GOOGLE" : "MICROSOFT";
+  const id = Deno.env.get(`${prefix}_CLIENT_ID`);
+  const secret = Deno.env.get(`${prefix}_CLIENT_SECRET`);
+  if (provider === "microsoft" && !/^[A-Za-z0-9.-]{1,100}$/.test(MS_TENANT)) return null;
   return id && secret ? { id, secret } : null;
 }
 
@@ -79,13 +86,15 @@ function safeReturnOrigin(origin: string | null) {
   return null;
 }
 
-async function tokenRequest(params: Record<string, string>): Promise<TokenSet> {
-  const c = creds();
-  if (!c) throw new UserError("Google is not set up yet.");
-  const r = await fetch("https://oauth2.googleapis.com/token", {
+async function tokenRequest(provider: OAuthProvider, params: Record<string, string>): Promise<TokenSet> {
+  const c = creds(provider);
+  if (!c) throw new UserError(`${provider === "google" ? "Google" : "Microsoft"} is not set up yet.`);
+  const endpoint = provider === "google" ? "https://oauth2.googleapis.com/token" : `${MS_AUTH}/token`;
+  const extra: Record<string, string> = provider === "microsoft" ? { scope: MICROSOFT_SCOPES } : {};
+  const r = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ client_id: c.id, client_secret: c.secret, ...params }),
+    body: new URLSearchParams({ client_id: c.id, client_secret: c.secret, ...extra, ...params }),
   });
   const body = await r.json().catch(() => ({}));
   if (!r.ok || typeof body.access_token !== "string") {
@@ -164,13 +173,17 @@ async function addCalendarLink(admin: SupabaseClient, userId: string, link: unkn
   return syncAccount(admin, account as Account);
 }
 
-async function accountEmail(token: string): Promise<string> {
+async function accountEmail(provider: OAuthProvider, token: string): Promise<string> {
+  if (provider === "microsoft") {
+    const me = await apiGet(`${GRAPH}/me?$select=mail,userPrincipalName`, token);
+    return String(me.mail || me.userPrincipalName || "").toLowerCase().slice(0, 200);
+  }
   const me = await apiGet("https://openidconnect.googleapis.com/v1/userinfo", token);
   return String(me.email || "").toLowerCase();
 }
 
-async function startConnect(admin: SupabaseClient, userId: string, origin: string | null) {
-  const c = creds();
+async function startConnect(admin: SupabaseClient, userId: string, provider: OAuthProvider, origin: string | null) {
+  const c = creds(provider);
   if (!c) throw new UserError("This provider is not set up yet. Follow the setup steps first.");
   const returnTo = safeReturnOrigin(origin);
   if (!returnTo) throw new UserError("Open the console from its normal web address and try again.");
@@ -178,9 +191,14 @@ async function startConnect(admin: SupabaseClient, userId: string, origin: strin
   const state = randomToken();
   const verifier = randomToken(48);
   const challenge = b64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))));
-  const { error } = await admin.from("cc_oauth_states").insert({ state, user_id: userId, provider: "google", code_verifier: verifier, return_to: returnTo });
+  const { error } = await admin.from("cc_oauth_states").insert({ state, user_id: userId, provider, code_verifier: verifier, return_to: returnTo });
   if (error) throw error;
   const common = { client_id: c.id, redirect_uri: REDIRECT_URI, response_type: "code", state, code_challenge: challenge, code_challenge_method: "S256" };
+  if (provider === "microsoft") {
+    return { url: `${MS_AUTH}/authorize?` + new URLSearchParams({
+      ...common, scope: MICROSOFT_SCOPES, response_mode: "query", prompt: "select_account", login_hint: "doug@theonefor.ai", domain_hint: "theonefor.ai",
+    }) };
+  }
   const url = "https://accounts.google.com/o/oauth2/v2/auth?" +
       new URLSearchParams({ ...common, scope: GOOGLE_SCOPES, access_type: "offline", prompt: "consent select_account", login_hint: "doug@encountive.com", hd: "encountive.com", include_granted_scopes: "true" });
   return { url };
@@ -199,17 +217,20 @@ async function handleCallback(admin: SupabaseClient, url: URL) {
   const code = url.searchParams.get("code");
   if (!code) return back(url.searchParams.get("error") === "access_denied" ? "denied" : "error");
   try {
-    const provider = "google";
-    const tokens = await tokenRequest({
+    const provider = row.provider as OAuthProvider;
+    const tokens = await tokenRequest(provider, {
       grant_type: "authorization_code", code, redirect_uri: REDIRECT_URI, code_verifier: row.code_verifier,
     });
-    const email = await accountEmail(tokens.access_token);
+    const email = await accountEmail(provider, tokens.access_token);
     if (!email) return back("error");
     const { data: account, error } = await admin.from("cc_mail_accounts")
       .upsert({ user_id: row.user_id, provider, email, status: "connected", last_error: null, scopes: tokens.scope ?? null },
         { onConflict: "user_id,provider,email" })
-      .select("id, user_id, provider, email").single();
+      .select("id, user_id, provider, email, identity").single();
     if (error) throw error;
+    if (!account.identity && email.endsWith("@theonefor.ai")) {
+      await admin.from("cc_mail_accounts").update({ identity: "doug_it" }).eq("id", account.id);
+    }
     const { data: existing } = await admin.from("cc_mail_tokens").select("refresh_token_enc").eq("account_id", account.id).maybeSingle();
     const { error: tErr } = await admin.from("cc_mail_tokens").upsert({
       account_id: account.id,
@@ -234,7 +255,7 @@ async function accessToken(admin: SupabaseClient, account: Account) {
   if (new Date(t.expires_at).getTime() - Date.now() > 120_000) return decrypt(t.access_token_enc);
   if (!t.refresh_token_enc) throw new UserError("Sign-in for this account expired. Reconnect it.");
   const refresh = await decrypt(t.refresh_token_enc);
-  const tokens = await tokenRequest({ grant_type: "refresh_token", refresh_token: refresh }).catch(() => {
+  const tokens = await tokenRequest(account.provider, { grant_type: "refresh_token", refresh_token: refresh }).catch(() => {
     throw new UserError("Sign-in for this account expired. Reconnect it.");
   });
   await admin.from("cc_mail_tokens").update({
@@ -284,6 +305,31 @@ async function googleData(token: string, email: string, from: Date, to: Date) {
   return { messages, events };
 }
 
+async function microsoftData(token: string, from: Date, to: Date) {
+  const list = await apiGet(`${GRAPH}/me/mailFolders/inbox/messages?` + new URLSearchParams({
+    $top: "30", $orderby: "receivedDateTime desc",
+    $select: "id,conversationId,from,subject,bodyPreview,receivedDateTime,isRead,importance,webLink",
+  }), token);
+  const messages: MessageRow[] = (list.value ?? []).map((x: any) => ({
+    provider_id: x.id, thread_id: x.conversationId ?? null,
+    from_name: clip(x.from?.emailAddress?.name, 200), from_email: clip(x.from?.emailAddress?.address, 200),
+    subject: clip(x.subject, 500), snippet: clip(x.bodyPreview, 300), received_at: new Date(x.receivedDateTime).toISOString(),
+    is_unread: x.isRead === false, is_important: x.importance === "high",
+    web_link: typeof x.webLink === "string" && x.webLink.startsWith("https://") ? x.webLink.slice(0, 2000) : null,
+  }));
+  const e = await apiGet(`${GRAPH}/me/calendarView?` + new URLSearchParams({
+    startDateTime: from.toISOString(), endDateTime: to.toISOString(), $top: "250", $orderby: "start/dateTime",
+    $select: "id,subject,start,end,isAllDay,location,organizer,webLink,isCancelled",
+  }), token, { Prefer: 'outlook.timezone="UTC"' });
+  const events: EventRow[] = (e.value ?? []).filter((x: any) => x.start?.dateTime).map((x: any) => ({
+    provider_id: x.id, title: clip(x.subject, 500),
+    starts_at: new Date(utc(x.start.dateTime)).toISOString(), ends_at: new Date(utc(x.end?.dateTime ?? x.start.dateTime)).toISOString(),
+    all_day: !!x.isAllDay, location: clip(x.location?.displayName, 300), organizer: clip(x.organizer?.emailAddress?.name ?? x.organizer?.emailAddress?.address, 200),
+    web_link: typeof x.webLink === "string" && x.webLink.startsWith("https://") ? x.webLink.slice(0, 2000) : null, is_cancelled: !!x.isCancelled,
+  }));
+  return { messages, events };
+}
+
 async function replaceRows(admin: SupabaseClient, table: string, account: Account, rows: object[], ids: string[]) {
   if (rows.length) {
     const { error } = await admin.from(table).upsert(
@@ -309,6 +355,8 @@ async function syncAccount(admin: SupabaseClient, account: Account) {
     const to = new Date(Date.now() + 14 * 86400_000);
     const { messages, events } = account.provider === "outlook_ics"
       ? { messages: [] as MessageRow[], events: parseIcs(await fetchIcs(token), from, to) }
+      : account.provider === "microsoft"
+      ? await microsoftData(token, from, to)
       : await googleData(token, account.email, from, to);
     await replaceRows(admin, "cc_mail_messages", account, messages, messages.map((m) => m.provider_id));
     await replaceRows(admin, "cc_calendar_events", account, events, events.map((e) => e.provider_id));
@@ -339,12 +387,12 @@ Deno.serve(async (req: Request) => {
     if (action === "status") {
       return json({
         redirectUri: REDIRECT_URI,
-        providers: { google: { configured: !!creds() }, outlook_ics: { configured: true } },
+        providers: { google: { configured: !!creds("google") }, microsoft: { configured: !!creds("microsoft") }, outlook_ics: { configured: true } },
       });
     }
     if (action === "start") {
-      if (body.provider !== "google") return json({ error: "Unknown provider." }, 400);
-      return json(await startConnect(admin, user.id, req.headers.get("Origin")));
+      if (body.provider !== "google" && body.provider !== "microsoft") return json({ error: "Unknown provider." }, 400);
+      return json(await startConnect(admin, user.id, body.provider, req.headers.get("Origin")));
     }
     if (action === "add_calendar_link") {
       const result = await addCalendarLink(admin, user.id, body.link);
