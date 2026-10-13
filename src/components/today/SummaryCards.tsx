@@ -22,25 +22,22 @@ function SummaryCard({ to, icon, label, loading, error, value, status, statusLab
   return (
     <Link
       to={to}
-      className="group flex flex-col gap-2 rounded-lg border border-line bg-surface p-4 transition-all hover:-translate-y-0.5 hover:border-primary-500/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+      className="group flex min-w-0 flex-col gap-1 rounded-lg border border-line bg-surface px-3 py-2.5 transition-all hover:-translate-y-0.5 hover:border-primary-500/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
     >
-      <div className="flex items-center gap-2 text-sm text-muted [&_svg]:size-4">
+      <div className="flex items-center gap-1.5 text-xs text-muted [&_svg]:size-3.5">
         {icon}
-        <span className="flex-1">{label}</span>
+        <span className="flex-1 truncate">{label}</span>
         <ChevronRight className="opacity-0 transition-opacity group-hover:opacity-100" />
       </div>
       {loading ? (
-        <>
-          <div className="skeleton h-8 w-20" aria-label="Loading" />
-          <div className="skeleton h-6 w-28" />
-        </>
+        <div className="skeleton h-7 w-28" aria-label="Loading" />
       ) : error ? (
-        <p className="text-sm text-error-700 dark:text-error-300">Could not load. Open to retry.</p>
+        <p className="text-xs text-error-700 dark:text-error-300">Could not load. Open to retry.</p>
       ) : (
-        <>
-          <p className="text-2xl font-semibold tabular-nums text-fg">{value}</p>
-          <div><StatusPill status={status} label={statusLabel} /></div>
-        </>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <p className="text-xl font-semibold leading-tight tabular-nums text-fg">{value}</p>
+          <StatusPill status={status} label={statusLabel} />
+        </div>
       )}
     </Link>
   );
@@ -68,7 +65,7 @@ export function SummaryCards() {
   const healthy = ops.health.filter((h) => h.status === 'healthy').length;
 
   return (
-    <section aria-label="Today at a glance" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section aria-label="Today at a glance" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <SummaryCard
         to="/tasks"
         icon={<CalendarCheck />}

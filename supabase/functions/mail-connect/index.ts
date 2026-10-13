@@ -182,7 +182,7 @@ async function startConnect(admin: SupabaseClient, userId: string, origin: strin
   if (error) throw error;
   const common = { client_id: c.id, redirect_uri: REDIRECT_URI, response_type: "code", state, code_challenge: challenge, code_challenge_method: "S256" };
   const url = "https://accounts.google.com/o/oauth2/v2/auth?" +
-      new URLSearchParams({ ...common, scope: GOOGLE_SCOPES, access_type: "offline", prompt: "consent select_account", include_granted_scopes: "true" });
+      new URLSearchParams({ ...common, scope: GOOGLE_SCOPES, access_type: "offline", prompt: "consent select_account", login_hint: "doug@encountive.com", hd: "encountive.com", include_granted_scopes: "true" });
   return { url };
 }
 
