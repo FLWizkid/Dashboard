@@ -17,7 +17,7 @@ export const IDENTITIES: { value: Identity; label: string; address: string; belo
     value: 'doug_it',
     label: 'Doug IT',
     address: 'doug@theonefor.ai',
-    belongs: 'Your IT working inbox: agent notifications, monitoring alerts, personally-held accounts, trials, newsletters, Krewe & Kin and Krewe of Shamrock IT, consulting work, and this console\'s mail.',
+    belongs: 'Your IT working inbox: agent notifications, monitoring alerts, personally-held accounts, trials, newsletters, consulting work, and this console\'s mail.',
     tone: 'border-accent-500/40 bg-accent-500/10 text-accent-700 dark:text-accent-300',
   },
   {
