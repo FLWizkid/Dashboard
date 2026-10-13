@@ -13,6 +13,7 @@ import { Badge, IdentityBadge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
 import { Field, Select } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
+import { CompanyPicker } from '@/components/companies/CompanyPicker';
 
 const STATUS_TONE: Record<ProjectStatus, string> = {
   planned: 'text-muted',
@@ -95,7 +96,6 @@ function ProjectForm({ initial, onDone }: { initial: ProjectInput | Project; onD
     next_milestone: initial.next_milestone, milestone_date: initial.milestone_date, company_id: initial.company_id, identity: initial.identity,
   });
   const [confirm, setConfirm] = useState(false);
-  const { data: companies = [] } = useCompanies();
   const save = useSaveProject();
   const del = useDeleteProject();
   const toast = useToast();
@@ -124,10 +124,7 @@ function ProjectForm({ initial, onDone }: { initial: ProjectInput | Project; onD
         </Field>
         <Field label="Owner"><input className="input" value={f.owner} onChange={(e) => set({ owner: e.target.value })} /></Field>
         <Field label="Company">
-          <Select value={f.company_id ?? ''} onChange={(e) => { const c = companies.find((x) => x.id === e.target.value); set({ company_id: c?.id ?? null, identity: f.identity ?? c?.identity ?? null }); }}>
-            <option value="">None</option>
-            {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
+          <CompanyPicker value={f.company_id ?? ''} noneLabel="None" onChange={(id, c) => set({ company_id: id || null, identity: f.identity ?? c?.identity ?? null })} />
         </Field>
         <Field label="Identity">
           <Select value={f.identity ?? ''} onChange={(e) => set({ identity: (e.target.value || null) as Identity | null })}>

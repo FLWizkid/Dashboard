@@ -4,7 +4,7 @@ import { TIME_CATEGORIES, type FocusSession, type TimeCategory } from '@/lib/typ
 import { cn, errorMessage, formatMinutes } from '@/lib/utils';
 import { useSettings } from '@/data/settings';
 import { useTasks } from '@/data/tasks';
-import { useCompanies } from '@/data/organization';
+import { CompanyPicker } from '@/components/companies/CompanyPicker';
 import { useFinishFocus, useRunningFocus, useStartFocus } from '@/data/time';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
@@ -107,7 +107,6 @@ export function FocusStartDialog() {
   const { state, close } = useUi();
   const { data: settings } = useSettings();
   const { data: tasks = [] } = useTasks();
-  const { data: companies = [] } = useCompanies();
   const { data: running } = useRunningFocus();
   const start = useStartFocus();
   const toast = useToast();
@@ -166,10 +165,7 @@ export function FocusStartDialog() {
               </Select>
             </Field>
             <Field label="Company">
-              <Select value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
-                <option value="">None</option>
-                {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </Select>
+              <CompanyPicker value={companyId} noneLabel="None" onChange={(id) => setCompanyId(id)} />
             </Field>
           </div>
           <div>

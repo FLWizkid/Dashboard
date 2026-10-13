@@ -25,10 +25,11 @@ export function useSaveCompany() {
       if (c.id) {
         check(await supabase.from('cc_companies').update(payload).eq('id', c.id));
         await recordAudit('company.update', 'company', c.id);
-      } else {
-        const row = unwrap(await supabase.from('cc_companies').insert(payload).select('id').single());
-        await recordAudit('company.create', 'company', row.id);
+        return c.id;
       }
+      const row = unwrap(await supabase.from('cc_companies').insert(payload).select('id').single()) as { id: string };
+      await recordAudit('company.create', 'company', row.id);
+      return row.id;
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['companies'] }),
   });

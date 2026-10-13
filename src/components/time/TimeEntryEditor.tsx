@@ -3,15 +3,15 @@ import { format } from 'date-fns';
 import { Trash2 } from 'lucide-react';
 import { TIME_CATEGORIES, type TimeCategory, type TimeEntry } from '@/lib/types';
 import { errorMessage, formatMinutes, parseDuration, toDateKey } from '@/lib/utils';
-import { useCompanies, useUsageRank } from '@/data/organization';
+import { useUsageRank } from '@/data/organization';
 import { ProjectPicker } from '@/components/projects/ProjectPicker';
+import { CompanyPicker } from '@/components/companies/CompanyPicker';
 import { useDeleteTimeEntry, useSaveTimeEntry } from '@/data/time';
 import { Button } from '@/components/ui/button';
 import { Field, Select } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
 
 export function TimeEntryEditor({ entry, onDone }: { entry: TimeEntry; onDone: () => void }) {
-  const { data: companies = [] } = useCompanies();
   const rank = useUsageRank();
   const save = useSaveTimeEntry();
   const del = useDeleteTimeEntry();
@@ -69,10 +69,7 @@ export function TimeEntryEditor({ entry, onDone }: { entry: TimeEntry; onDone: (
           />
         </Field>
         <Field label="Company">
-          <Select value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
-            <option value="">No company</option>
-            {rank(companies, 'company', (c) => c.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
+          <CompanyPicker value={companyId} onChange={(id) => setCompanyId(id)} />
         </Field>
         <Field label="Date"><input type="date" className="input" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} /></Field>
       </div>

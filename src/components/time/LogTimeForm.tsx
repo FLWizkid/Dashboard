@@ -3,18 +3,18 @@ import { Clock, CornerDownLeft } from 'lucide-react';
 import { TIME_CATEGORIES, type TimeCategory } from '@/lib/types';
 import { cn, errorMessage, formatMinutes, parseDuration } from '@/lib/utils';
 import { useSettings } from '@/data/settings';
-import { useCompanies, useUsageRank } from '@/data/organization';
+import { useUsageRank } from '@/data/organization';
 import { useSaveTimeEntry } from '@/data/time';
 import { Button } from '@/components/ui/button';
 import { Field, Select } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
 import { ProjectPicker } from '@/components/projects/ProjectPicker';
+import { CompanyPicker } from '@/components/companies/CompanyPicker';
 
 const PRESETS = [15, 30, 60, 90];
 
 export function LogTimeForm({ layout = 'stack', onSaved, autoFocus }: { layout?: 'strip' | 'stack'; onSaved?: () => void; autoFocus?: boolean }) {
   const { data: settings } = useSettings();
-  const { data: companies = [] } = useCompanies();
   const rank = useUsageRank();
   const save = useSaveTimeEntry();
   const toast = useToast();
@@ -103,10 +103,7 @@ export function LogTimeForm({ layout = 'stack', onSaved, autoFocus }: { layout?:
         />
       </Field>
       <Field label="Company" className={layout === 'strip' ? 'min-w-[130px] flex-1' : ''}>
-        <Select value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
-          <option value="">No company</option>
-          {rank(companies, 'company', (c) => c.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </Select>
+        <CompanyPicker value={companyId} onChange={(id) => setCompanyId(id)} />
       </Field>
       {descField}
       <Field label="Duration" className={layout === 'strip' ? 'w-[96px]' : ''} hint={layout === 'stack' ? (minutes ? formatMinutes(minutes) : 'e.g. 45, 1h30, 1.5h') : undefined}>

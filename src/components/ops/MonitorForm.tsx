@@ -4,7 +4,7 @@ import { Trash2 } from 'lucide-react';
 import { IDENTITIES, MONITOR_KINDS, type Identity, type Monitor, type MonitorKind } from '@/lib/types';
 import { errorMessage } from '@/lib/utils';
 import { useSaveMonitor, useDeleteMonitor, useRunChecks, type MonitorInput } from '@/data/ops';
-import { useCompanies } from '@/data/organization';
+import { CompanyPicker } from '@/components/companies/CompanyPicker';
 import { Dialog } from '@/components/ui/dialog';
 import { Field, Select, focusFirstError } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
@@ -70,7 +70,6 @@ export function MonitorForm({ open, onOpenChange, monitor }: { open: boolean; on
   const save = useSaveMonitor();
   const remove = useDeleteMonitor();
   const run = useRunChecks();
-  const { data: companies = [] } = useCompanies();
   const toast = useToast();
 
   useEffect(() => {
@@ -215,10 +214,7 @@ export function MonitorForm({ open, onOpenChange, monitor }: { open: boolean; on
             </Select>
           </Field>
           <Field label="Company">
-            <Select value={draft.company_id ?? ''} onChange={(e) => set('company_id', e.target.value || null)}>
-              <option value="">None</option>
-              {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </Select>
+            <CompanyPicker value={draft.company_id ?? ''} noneLabel="None" onChange={(id) => set('company_id', id || null)} />
           </Field>
         </div>
         <Field label="Notes">

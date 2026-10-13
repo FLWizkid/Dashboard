@@ -4,8 +4,8 @@ import { format } from 'date-fns';
 import { IDENTITIES, PRIORITIES, RECURRENCES, TASK_STATUSES, type Identity, type Priority, type Recurrence, type Task, type TaskStatus } from '@/lib/types';
 import { errorMessage } from '@/lib/utils';
 import { useTasks, useUpdateTask, useDeleteTask } from '@/data/tasks';
-import { useCompanies, useUsageRank } from '@/data/organization';
 import { ProjectPicker } from '@/components/projects/ProjectPicker';
+import { CompanyPicker } from '@/components/companies/CompanyPicker';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Field, Select } from '@/components/ui/field';
@@ -27,8 +27,6 @@ export function TaskDrawer() {
 function TaskForm({ task, onDone }: { task: Task; onDone: () => void }) {
   const [form, setForm] = useState(task);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const { data: companies = [] } = useCompanies();
-  const rank = useUsageRank();
   const update = useUpdateTask();
   const del = useDeleteTask();
   const toast = useToast();
@@ -88,16 +86,11 @@ function TaskForm({ task, onDone }: { task: Task; onDone: () => void }) {
           </Select>
         </Field>
         <Field label="Company">
-          <Select
+          <CompanyPicker
             value={form.company_id ?? ''}
-            onChange={(e) => {
-              const c = companies.find((x) => x.id === e.target.value);
-              set({ company_id: c?.id ?? null, identity: form.identity ?? c?.identity ?? null });
-            }}
-          >
-            <option value="">None</option>
-            {rank(companies, 'company', (c) => c.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
+            noneLabel="None"
+            onChange={(id, c) => set({ company_id: id || null, identity: form.identity ?? c?.identity ?? null })}
+          />
         </Field>
         <Field label="Identity" hint={!form.identity ? <span className="text-warning-700 dark:text-warning-400">Choose who this belongs to</span> : undefined}>
           <Select value={form.identity ?? ''} onChange={(e) => set({ identity: (e.target.value || null) as Identity | null })}>
