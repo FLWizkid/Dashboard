@@ -1,5 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { CalendarPlus, Plug, RefreshCw, Unplug } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { CalendarPlus, Plug, RefreshCw, ShieldCheck, Unplug } from 'lucide-react';
+import { useAssurance } from '@/auth/mfa';
 import { IDENTITIES, MAIL_PROVIDERS, type Identity, type MailAccount, type OAuthMailProvider } from '@/lib/types';
 import { cn, errorMessage, relativeTime } from '@/lib/utils';
 import {
@@ -50,6 +52,8 @@ export function OAuthRow({ provider, configured, redirectUri, showGuide = true }
   const [guide, setGuide] = useState(false);
   const connect = useConnectMail();
   const toast = useToast();
+  const aal = useAssurance();
+  const needsTwoStep = aal.data ? !aal.data.verified : false;
   const info = OAUTH_ROW[provider];
   const onConnect = () => connect.mutate(provider, { onError: (e) => toast(errorMessage(e), 'error') });
   return (
@@ -60,7 +64,11 @@ export function OAuthRow({ provider, configured, redirectUri, showGuide = true }
           <p className="text-sm font-medium">{MAIL_PROVIDERS[provider].label} ({info.account})</p>
           <p className="text-xs text-subtle">{configured ? info.ready : info.notReady}</p>
         </div>
-        {configured ? (
+        {configured && needsTwoStep ? (
+          <Button asChild variant="secondary" size="sm">
+            <Link to="/settings/account"><ShieldCheck /> Turn on two-step first</Link>
+          </Button>
+        ) : configured ? (
           <Button variant="primary" size="sm" onClick={onConnect} disabled={connect.isPending}>
             <Plug /> {connect.isPending ? 'Opening sign-in...' : 'Connect'}
           </Button>
@@ -69,6 +77,9 @@ export function OAuthRow({ provider, configured, redirectUri, showGuide = true }
         )}
         {showGuide && <Button size="sm" onClick={() => setGuide(true)}>Steps</Button>}
       </div>
+      {configured && needsTwoStep && (
+        <p className="mt-2 text-xs text-muted">For safety, connecting a mailbox needs two-step sign-in (a code from your phone). Turn it on under Settings, Account, then come back.</p>
+      )}
       {connect.data?.framedUrl && (
         <div className="mt-3 rounded-md border border-line bg-raised/50 p-3 text-sm">
           <p className="mb-2">{info.name} can't open inside this preview window. Click below to sign in on a new tab, then come back here and refresh.</p>
@@ -177,6 +188,21 @@ function AccountRow({ account }: { account: MailAccount }) {
             {IDENTITIES.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
           </Select>
         </Field>
+        {!isLink && (
+          <Field label="Open messages in" className="min-w-44">
+            <Select
+              value={account.open_in}
+              onChange={(e) => update.mutate({ id: account.id, open_in: e.target.value as MailAccount['open_in'] }, {
+                onSuccess: () => toast('Saved.'),
+                onError: () => toast('Could not save. Try again.', 'error'),
+              })}
+              aria-label={`Open messages from ${account.email} in`}
+            >
+              <option value="provider">{MAIL_PROVIDERS[account.provider].app}</option>
+              <option value="superhuman">Superhuman</option>
+            </Select>
+          </Field>
+        )}
         <span className="flex-1" />
         <Button size="sm" onClick={onSync} disabled={sync.isPending}>
           <RefreshCw className={cn(sync.isPending && 'animate-spin')} /> Sync now

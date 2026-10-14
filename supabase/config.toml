@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.console-email]
 verify_jwt = true
+
+[functions.dev-status]
+verify_jwt = true

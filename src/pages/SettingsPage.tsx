@@ -8,6 +8,7 @@ import { errorMessage } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/auth/AuthProvider';
 import { useSettings, useUpdateSettings } from '@/data/settings';
+import { useDevStatus } from '@/data/devstatus';
 import { Panel } from '@/components/ui/panel';
 import { Button } from '@/components/ui/button';
 import { Badge, StatusPill } from '@/components/ui/badge';
@@ -18,6 +19,7 @@ import { SHORTCUTS } from '@/components/shell/shortcuts';
 import { CompaniesSettings } from '@/components/settings/CompaniesSettings';
 import { AuditLogPanel, DemoDataSettings, ExportSettings } from '@/components/settings/DataSettings';
 import { PasskeySettings } from '@/components/settings/PasskeySettings';
+import { TwoStepSettings } from '@/components/settings/TwoStepSettings';
 import { EmailSettings } from '@/components/settings/EmailSettings';
 
 const INTEGRATIONS: { key: keyof typeof SETUP; title: string }[] = [
@@ -112,8 +114,9 @@ function IdentitiesPanel() {
 }
 
 function ConnectionsPanel() {
+  const dev = useDevStatus();
   return (
-    <Panel icon={<Plug />} title="Other connections" subtitle="Each grey item arrives in a later phase. Console email is set up under General.">
+    <Panel icon={<Plug />} title="Other connections" subtitle="GitHub and Vercel connect with a token from Setup, Your steps. Console email is set up under General.">
       <ul className="space-y-2">
         <li className="flex items-center gap-3 rounded-md border border-primary-500/40 p-2">
           <Wrench className="size-4 shrink-0 text-primary-600 dark:text-primary-400" />
@@ -132,11 +135,26 @@ function ConnectionsPanel() {
           <StatusPill status="healthy" label="Connected" />
           <Button asChild size="sm"><Link to="/ops">Manage</Link></Button>
         </li>
-        {INTEGRATIONS.map((i) => (
-          <li key={i.key}>
-            <NotConnected title={i.title} info={SETUP[i.key]} compact />
-          </li>
-        ))}
+        {INTEGRATIONS.map((i) => {
+          const svc = dev.data?.find((d) => d.key === i.key);
+          return (
+            <li key={i.key}>
+              {svc?.configured ? (
+                <div className="flex items-center gap-3 rounded-md border border-line p-2">
+                  <Activity className="size-4 shrink-0 text-subtle" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">{i.title}</p>
+                    <p className="text-xs text-subtle">{svc.error ?? svc.summary}</p>
+                  </div>
+                  <StatusPill status={svc.error ? 'action' : 'healthy'} label={svc.error ? 'Needs attention' : 'Connected'} />
+                  <Button asChild size="sm"><Link to="/ops">View</Link></Button>
+                </div>
+              ) : (
+                <NotConnected title={i.title} info={SETUP[i.key]} compact />
+              )}
+            </li>
+          );
+        })}
       </ul>
     </Panel>
   );
@@ -158,6 +176,7 @@ function AccountPanels() {
             <Button variant="secondary" onClick={signOut}><LogOut /> Sign out</Button>
           </div>
           <PasskeySettings />
+          <TwoStepSettings />
         </div>
       </Panel>
       <Panel title="Keyboard shortcuts" icon={<Keyboard />}>

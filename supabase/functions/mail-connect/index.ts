@@ -288,7 +288,7 @@ async function googleData(token: string, email: string, from: Date, to: Date) {
     const labels: string[] = x.labelIds ?? [];
     return {
       provider_id: x.id, thread_id: x.threadId ?? null, from_name: clip(f.name, 200), from_email: clip(f.email, 200),
-      subject: clip(h("Subject"), 500), snippet: clip(x.snippet, 300), received_at: new Date(Number(x.internalDate)).toISOString(),
+      subject: clip(h("Subject"), 500), snippet: clip(x.snippet, 200), received_at: new Date(Number(x.internalDate)).toISOString(),
       is_unread: labels.includes("UNREAD"), is_important: labels.includes("IMPORTANT"),
       web_link: `https://mail.google.com/mail/?authuser=${encodeURIComponent(email)}#all/${x.threadId}`,
     };
@@ -313,7 +313,7 @@ async function microsoftData(token: string, from: Date, to: Date) {
   const messages: MessageRow[] = (list.value ?? []).map((x: any) => ({
     provider_id: x.id, thread_id: x.conversationId ?? null,
     from_name: clip(x.from?.emailAddress?.name, 200), from_email: clip(x.from?.emailAddress?.address, 200),
-    subject: clip(x.subject, 500), snippet: clip(x.bodyPreview, 300), received_at: new Date(x.receivedDateTime).toISOString(),
+    subject: clip(x.subject, 500), snippet: clip(x.bodyPreview, 200), received_at: new Date(x.receivedDateTime).toISOString(),
     is_unread: x.isRead === false, is_important: x.importance === "high",
     web_link: typeof x.webLink === "string" && x.webLink.startsWith("https://") ? x.webLink.slice(0, 2000) : null,
   }));
@@ -370,6 +370,16 @@ async function syncAccount(admin: SupabaseClient, account: Account) {
   }
 }
 
+// Only called after admin.auth.getUser has validated the token, so the payload is trusted.
+function jwtAal(jwt: string): string | null {
+  try {
+    const part = jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(part.padEnd(part.length + ((4 - (part.length % 4)) % 4), "="))).aal ?? null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
   const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
@@ -392,6 +402,7 @@ Deno.serve(async (req: Request) => {
     }
     if (action === "start") {
       if (body.provider !== "google" && body.provider !== "microsoft") return json({ error: "Unknown provider." }, 400);
+      if (jwtAal(jwt) !== "aal2") return json({ error: "Turn on two-step sign-in under Settings, Account, then try connecting again." }, 403);
       return json(await startConnect(admin, user.id, body.provider, req.headers.get("Origin")));
     }
     if (action === "add_calendar_link") {

@@ -87,6 +87,8 @@ export interface Settings {
   break_minutes: number;
   approved_destinations: string[];
   alert_emails: boolean;
+  console_url: string | null;
+  vip_senders: string[];
   updated_at: string;
 }
 
@@ -94,7 +96,7 @@ export interface OutboundEmail {
   id: string;
   recipient: string;
   subject: string;
-  kind: 'test' | 'alert';
+  kind: 'test' | 'alert' | 'report';
   status: 'sent' | 'failed' | 'blocked';
   error: string | null;
   created_at: string;
@@ -203,6 +205,36 @@ export interface Agent {
   last_started_at: string | null;
   last_finished_at: string | null;
   last_message: string | null;
+  email_on: AgentEmailOn;
+  expected_every_hours: number | null;
+  last_report_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AgentEmailOn = 'never' | 'failure' | 'always';
+
+export interface Report {
+  id: string;
+  agent_id: string | null;
+  agent_name: string;
+  title: string;
+  status: 'succeeded' | 'failed';
+  summary: string | null;
+  body: string;
+  source_url: string | null;
+  received_at: string;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface Note {
+  id: string;
+  title: string;
+  body: string;
+  kind: 'note' | 'runbook';
+  company_id: string | null;
+  pinned: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -270,6 +302,7 @@ export interface MailAccount {
   email: string;
   identity: Identity | null;
   label: string | null;
+  open_in: 'provider' | 'superhuman';
   status: 'connected' | 'error';
   last_synced_at: string | null;
   last_error: string | null;

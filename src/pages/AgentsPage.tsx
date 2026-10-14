@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import { Bot, Plug, Plus, Trash2 } from 'lucide-react';
-import { agentState, lastRunAt, useAgents, useDeleteAgent, useSaveAgent, type AgentState } from '@/data/agents';
+import { Link } from 'react-router-dom';
+import { AlarmClock, Bot, FileText, Library, Plug, Plus, Settings2, Trash2 } from 'lucide-react';
+import { agentState, isOverdue, lastRunAt, useAgents, useDeleteAgent, useSaveAgent, type AgentState } from '@/data/agents';
+import { useReports } from '@/data/reports';
+import type { Agent } from '@/lib/types';
 import { cn, errorMessage, relativeTime } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel, EmptyState } from '@/components/ui/panel';
@@ -9,6 +12,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Field, Input } from '@/components/ui/field';
 import { useToast } from '@/components/ui/toast';
 import { ConnectClaudeDialog } from '@/components/agents/ConnectClaudeDialog';
+import { AgentSettingsDialog } from '@/components/agents/AgentSettingsDialog';
 
 const STATE: Record<AgentState, { label: string; cls: string; dot: string }> = {
   running: { label: 'Running', cls: 'bg-primary-500/15 text-primary-700 dark:text-primary-300', dot: 'bg-primary-500 animate-pulse' },
@@ -61,9 +65,14 @@ export function AgentsPage() {
   const [adding, setAdding] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Agent | null>(null);
+  const reports = useReports('');
+  const unreadByAgent = new Map<string, number>();
+  for (const r of reports.data ?? []) if (!r.read_at) unreadByAgent.set(r.agent_name, (unreadByAgent.get(r.agent_name) ?? 0) + 1);
 
   const list = agents.data ?? [];
   const states = list.map((a) => ({ agent: a, state: agentState(a) }));
+  const overdue = list.filter((a) => isOverdue(a) && agentState(a) !== 'running').length;
   const counts = (['running', 'failed', 'stalled'] as AgentState[]).map((s) => ({ s, n: states.filter((x) => x.state === s).length })).filter((c) => c.n);
 
   const del = (id: string) => {
@@ -75,18 +84,20 @@ export function AgentsPage() {
     <div className="mx-auto max-w-[1600px] space-y-3">
       <PageHeader
         title="Agent Operations"
-        description="Your Claude agents: whether they are running and when they last ran. Manage the agents themselves in Claude."
+        description="Your Claude agents: whether they are running, when they last ran, and their latest report. Manage the agents themselves in Claude."
         actions={
           <>
+            <Button asChild><Link to="/library"><Library /> Reports</Link></Button>
             <Button onClick={() => setAdding(true)}><Plus /> Add agent</Button>
             <Button variant="primary" onClick={() => setConnecting(true)}><Plug /> Connect Claude</Button>
           </>
         }
       />
 
-      {counts.length > 0 && (
+      {(counts.length > 0 || overdue > 0) && (
         <div className="flex flex-wrap gap-2" aria-label="Agent summary">
           {counts.map((c) => <span key={c.s} className={cn('rounded-full px-2 py-0.5 text-xs font-medium', STATE[c.s].cls)}>{c.n} {STATE[c.s].label}</span>)}
+          {overdue > 0 && <span className="rounded-full bg-warning-500/15 px-2 py-0.5 text-xs font-medium text-warning-700 dark:text-warning-300">{overdue} overdue</span>}
         </div>
       )}
 
@@ -121,6 +132,7 @@ export function AgentsPage() {
                 <th className="px-3 py-2 font-medium">Status</th>
                 <th className="px-3 py-2 font-medium">Last run</th>
                 <th className="hidden px-3 py-2 font-medium md:table-cell">Last message</th>
+                <th className="px-3 py-2 font-medium">Report</th>
                 <th className="w-px px-3 py-2"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
@@ -130,15 +142,37 @@ export function AgentsPage() {
                 return (
                   <tr key={a.id} className="group border-b border-line last:border-0 transition-colors hover:bg-raised/60">
                     <td className="px-3 py-2 font-medium">{a.name}</td>
-                    <td className="px-3 py-2"><StatePill state={state} /></td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <StatePill state={state} />
+                        {isOverdue(a) && state !== 'running' && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-warning-500/15 px-2 py-0.5 text-xs font-medium text-warning-700 dark:text-warning-300" title={`Expected every ${a.expected_every_hours} hours`}>
+                            <AlarmClock className="size-3" /> Overdue
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-3 py-2 text-muted" title={at ? new Date(at).toLocaleString() : undefined}>
                       {at ? relativeTime(at) : 'Never'}
                       {a.last_finished_at && state !== 'running' && state !== 'stalled' && a.last_started_at && (
                         <span className="ml-1 text-xs text-subtle">({Math.max(1, Math.round((new Date(a.last_finished_at).getTime() - new Date(a.last_started_at).getTime()) / 60000))} min)</span>
                       )}
                     </td>
-                    <td className="hidden max-w-md truncate px-3 py-2 text-muted md:table-cell" title={a.last_message ?? undefined}>{a.last_message ?? ''}</td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="hidden max-w-md truncate px-3 py-2 text-muted md:table-cell" title={a.last_message ?? undefined}>
+                      {a.last_report_id ? <Link to={`/library/${a.last_report_id}`} className="hover:text-fg hover:underline">{a.last_message ?? 'Open report'}</Link> : (a.last_message ?? '')}
+                    </td>
+                    <td className="px-3 py-2">
+                      {a.last_report_id ? (
+                        <Link to={`/library/${a.last_report_id}`} className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium text-primary-600 hover:underline dark:text-primary-400">
+                          <FileText className="size-3.5" /> Latest
+                          {(unreadByAgent.get(a.name) ?? 0) > 0 && <span className="rounded-full bg-primary-600 px-1.5 text-[10px] text-white">{unreadByAgent.get(a.name)} new</span>}
+                        </Link>
+                      ) : <span className="text-xs text-subtle">None yet</span>}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-right">
+                      <Button size="iconSm" variant="ghost" className="opacity-60 group-hover:opacity-100" onClick={() => setEditing(a)} aria-label={`${a.name} settings`}>
+                        <Settings2 />
+                      </Button>
                       <Button
                         size={confirmId === a.id ? 'sm' : 'iconSm'}
                         variant={confirmId === a.id ? 'danger' : 'ghost'}
@@ -161,6 +195,7 @@ export function AgentsPage() {
 
       <AddAgentDialog open={adding} onOpenChange={setAdding} />
       <ConnectClaudeDialog open={connecting} onOpenChange={setConnecting} />
+      <AgentSettingsDialog agent={editing} onClose={() => setEditing(null)} />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 - **Spec version:** v5 (received 2026-10-12)
 - **Resumed from:** Step 0 addendum for v5. A full Step 0 was delivered for the original spec on 2026-10-11, so v5 needs only an addendum.
-- **Current gate:** v5 Step 0 addendum, awaiting Doug's approval. No code has changed for v5.
+- **Current gate:** Phases 3 to 7 built, awaiting Doug's review.
 
 ## Phase status
 
@@ -13,10 +13,10 @@ The earlier work used its own phase numbers. It is mapped to v5 numbers below.
 | 1 Audit and plan | Step 0, now plus the v5 addendum | Awaiting my approval (addendum) | Original Step 0: 2026-10-11 |
 | 2 Shell and core | Auth, layout, design system, Today, Tasks/Projects, Time & Focus, Settings, demo data | Approved, with gaps (see G-list) | 2026-10-11 |
 | 3 IT Ops lights + console email | RDAP, DNS, uptime, manual systems, history, Health strip; Resend "Send test" | Built 2026-10-13: console email (Resend, from doug@encountive.com), approved destinations, notification address, Send test, alert emails when a light turns red, checks every 15 minutes (pg_cron + pg_net, shared secret). Waiting on Doug: RESEND_API_KEY in Bolt Secrets. | Awaiting my approval |
-| 4 Assets, Access, Renewals, Security, logs, requests, identity audit, migration tracker | | Built 2026-10-13: Assets & Access (software, hardware, access reviews every 90 days, onboarding/offboarding checklists), Renewals & Spend (monthly/yearly totals, by company, 90-day timeline with 30/14/7-day alerts, unused after 60 days), Security (starter checklist incl. customer readiness and agent governance, incident log, change log with required undo steps), Partner Requests (helpdesk-lite + printable plain-English status at /requests/status). Identity review (A3) and Migration tracker (A4) built. Not built: Report Library, Runbooks & Notes. | Awaiting my approval |
-| 5 Agent Operations (Claude) | | Not started | |
-| 6 Email and calendar | Graph, Google, Open in Superhuman, local relay | Built early (read-only Graph + Gmail, not yet connected). Awaiting my approval. Superhuman links and local relay not built. | |
-| 7 GitHub/Vercel/Resend status, Weekly report, polish | | Not started | |
+| 4 Assets, Access, Renewals, Security, logs, requests, identity audit, migration tracker | | Built 2026-10-13: Assets & Access (software, hardware, access reviews every 90 days, onboarding/offboarding checklists), Renewals & Spend (monthly/yearly totals, by company, 90-day timeline with 30/14/7-day alerts, unused after 60 days), Security (starter checklist incl. customer readiness and agent governance, incident log, change log with required undo steps), Partner Requests (helpdesk-lite + printable plain-English status at /requests/status). Identity review (A3) and Migration tracker (A4) built. Report Library and Runbooks & Notes built 2026-10-14. | Awaiting my approval |
+| 5 Agent Operations (Claude) | | Built 2026-10-14: agents POST full Markdown reports to the agent-report check-in URL (same key); Report Library /library with search, unread, per-agent filter, compare-with-previous diff, make task; per-agent email setting (never / on failure / always) sends a short note linking to the report; expected-every-N-hours overdue flag. | Awaiting my approval |
+| 6 Email and calendar | Graph, Google, Open in Superhuman, local relay | Built: read-only Graph + Gmail (not yet connected), per-account Open in Superhuman, identity filter, VIP senders tab, previews capped at 200 characters and purged after 30 days (pg_cron cc-purge-old-mail), two-step sign-in (TOTP) required to connect a mailbox (checked in UI and in mail-connect). Local relay not built (D7: mail set aside). | Awaiting my approval |
+| 7 GitHub/Vercel/Resend status, Weekly report, polish | | Built 2026-10-14: dev-status edge function (GitHub builds + PRs, Vercel latest deploys, Resend domain), shown on IT Operations; Weekly CIO Report /weekly with copy-as-Markdown and Word download; shortcuts G A / G R / G W. Waiting on Doug: GITHUB_TOKEN, VERCEL_TOKEN (optional). | Awaiting my approval |
 
 ## Step 0 addendum (v5)
 
@@ -127,6 +127,13 @@ Rollback note per migration: drop the new table or column. For item 6, restore f
 - Phase 4 core built. Migrations `cc_phase4_assets_access` and `cc_phase4_security_and_requests`: 8 new tables, owner-only RLS (4 policies each), user_id defaults to auth.uid().
 - Renewal alerts show in the app only; they do not send email yet.
 
+### Session 2026-10-14
+
+- Migration `cc_phase5_reports_and_notes`: cc_reports, cc_notes (owner-only RLS), cc_agents.email_on / expected_every_hours / last_report_id, cc_settings.console_url.
+- Migration `cc_phase6_inbox_privacy`: cc_settings.vip_senders, cc_mail_accounts.open_in (column grant), daily purge job.
+- Edge functions: agent-report (accepts report/title/summary/source_url; emails via Resend per email_on), mail-connect (200-char previews, aal2 required to start a connection), dev-status (new).
+- Decision: agents send the full report to the console instead of emailing it. Email becomes an optional short pointer to the report.
+
 ## Acceptance checklist
 
 | # | Status |
@@ -135,12 +142,12 @@ Rollback note per migration: drop the new table or column. For item 6, restore f
 | A2 Identity on every record, nagging, guide | Partial: identity and nagging exist; guide missing |
 | A3 Identity audit view | Built 2026-10-13: /identity/review flags missing identity, identity that disagrees with its company/project, and tools whose login address belongs to a different identity. One-click fix or Plan a move. |
 | A4 Migration tracker | Built 2026-10-13: /identity/moves, table cc_identity_migrations, 7-step standard checklist; finishing a move updates the linked tool's login and identity. |
-| A5 Report screens, library, series, diff | Not built (Phase 5) |
+| A5 Report screens, library, series, diff | Built 2026-10-14: /library/:id, series by agent, compare with previous run |
 | A6 Report Locations manager | Not built (Phase 5) |
-| A7 Notification Routes | Not built (Phase 5) |
-| A8 Drift detection | Not built (Phase 5/6) |
-| A9 Seeded Claude agents, Import, no kill-switch claims | Not built (Phase 5) |
+| A7 Notification Routes | Built (simple): per-agent email on never / failure / always, approved destinations only |
+| A8 Drift detection | Partial: overdue flag from expected run interval; report diff |
+| A9 Seeded Claude agents, Import, no kill-switch claims | Partial: agents auto-created on first check-in; no kill-switch claims made; no bulk import |
 | A10 Data preserved, branch only, no production | Data preserved (identity change audited). Work stays on main by decision D1. No production deploy made. |
-| A11 Graph + Gmail sync; Open in Superhuman; Proton on relay | Partial: sync built, not connected; Superhuman links and relay missing |
+| A11 Graph + Gmail sync; Open in Superhuman; Proton on relay | Partial: sync built, not connected; Open in Superhuman built; relay set aside (D7) |
 | A12 Hosted Supabase; schema in migrations; self-hosting notes | Partial: notes file missing |
 | A13 This file current | Done |

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import type { Agent } from '@/lib/types';
+import type { Agent, AgentEmailOn } from '@/lib/types';
 import { check, recordAudit, unwrap } from './core';
 
 const STALE_RUN_MS = 6 * 3_600_000;
@@ -16,6 +16,12 @@ export function agentState(a: Agent): AgentState {
     return Date.now() - started > STALE_RUN_MS ? 'stalled' : 'running';
   }
   return a.last_status;
+}
+
+export function isOverdue(a: Agent) {
+  if (!a.expected_every_hours) return false;
+  const last = a.last_finished_at ?? a.last_started_at ?? a.created_at;
+  return Date.now() - new Date(last).getTime() > a.expected_every_hours * 3_600_000 * 1.25;
 }
 
 export const lastRunAt = (a: Agent) => a.last_started_at ?? a.last_finished_at;
@@ -36,6 +42,17 @@ export function useSaveAgent() {
       const row = unwrap(await supabase.from('cc_agents').insert(payload).select('id').single()) as { id: string };
       await recordAudit('agent.create', 'agent', row.id);
       return row.id;
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['agents'] }),
+  });
+}
+
+export function useUpdateAgent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...patch }: { id: string; email_on?: AgentEmailOn; expected_every_hours?: number | null; notes?: string | null }) => {
+      check(await supabase.from('cc_agents').update(patch).eq('id', id));
+      await recordAudit('agent.update', 'agent', id);
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['agents'] }),
   });

@@ -18,6 +18,34 @@ const LOG_TONE = {
   blocked: 'text-warning-800 dark:text-warning-400',
 } as const;
 
+function ConsoleUrlField({ saved }: { saved: string | null }) {
+  const update = useUpdateSettings();
+  const toast = useToast();
+  const [value, setValue] = useState(saved ?? '');
+  useEffect(() => setValue(saved ?? ''), [saved]);
+
+  const save = (next: string) => {
+    const clean = next.trim().replace(/\/+$/, '');
+    if (clean && !/^https?:\/\/[^\s]+$/i.test(clean)) return toast('Enter a web address starting with https://', 'error');
+    update.mutate({ console_url: clean || null }, {
+      onSuccess: () => toast(clean ? 'Console address saved' : 'Console address cleared'),
+      onError: (e) => toast(errorMessage(e), 'error'),
+    });
+  };
+
+  return (
+    <Field label="Console web address" hint="Used for the 'Open the full report' link in agent emails. Use the address you open the console at.">
+      <div className="flex flex-wrap gap-2 sm:max-w-xl">
+        <input className="input min-w-0 flex-1" type="url" placeholder="https://your-console.example.com" value={value} onChange={(e) => setValue(e.target.value)} />
+        <Button variant="secondary" onClick={() => save(value)} disabled={update.isPending || value.trim() === (saved ?? '')}>Save</Button>
+        {window.location.origin !== saved && (
+          <Button variant="ghost" onClick={() => save(window.location.origin)} disabled={update.isPending}>Use this page's address</Button>
+        )}
+      </div>
+    </Field>
+  );
+}
+
 export function EmailSettings() {
   const settings = useSettings();
   const update = useUpdateSettings();
@@ -122,6 +150,8 @@ export function EmailSettings() {
             <span className="block text-muted">Checks run every 15 minutes. You get one email when something newly needs action, not a repeat every time.</span>
           </span>
         </label>
+
+        <ConsoleUrlField saved={settings.data?.console_url ?? null} />
 
         <div className="flex flex-wrap items-center gap-3 rounded-md border border-line p-3">
           <div className="min-w-0 flex-1 text-sm">

@@ -3,6 +3,7 @@ import { ChevronDown, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMailAccounts } from '@/data/mail';
 import { useEmailStatus } from '@/data/email';
+import { useDevStatus } from '@/data/devstatus';
 import { Panel } from '@/components/ui/panel';
 import { Button } from '@/components/ui/button';
 import { StatusPill, type HealthStatus } from '@/components/ui/badge';
@@ -21,6 +22,20 @@ export const RESEND_STEPS = [
   'Domains: encountive.com is already verified there (its Resend signing record exists). If it is not listed, add it and follow the DNS steps shown.',
   'API Keys > Create API key. Name it CIO Console, permission "Sending access", domain encountive.com. Copy the key (it starts with re_).',
   'In Bolt, click the database icon at the top center, then Secrets. Type RESEND_API_KEY in Name, paste the key in Value, click Create secret.',
+];
+
+export const GITHUB_STEPS = [
+  'Open github.com, sign in, click your picture (top right) > Settings > Developer settings > Personal access tokens > Fine-grained tokens > Generate new token.',
+  'Name it CIO Console, expiry 1 year. Resource owner: you (or your organization). Repository access: All repositories.',
+  'Permissions > Repository: set Actions, Contents, Metadata and Pull requests to Read-only. Click Generate token and copy it.',
+  'In Bolt, click the database icon at the top center, then Secrets. Type GITHUB_TOKEN in Name, paste the token in Value, click Create secret.',
+];
+
+export const VERCEL_STEPS = [
+  'Open vercel.com, sign in, click your picture > Account Settings > Tokens.',
+  'Create a token named CIO Console, scope your team (or Full Account), expiry 1 year. Copy it.',
+  'In Bolt, click the database icon at the top center, then Secrets. Type VERCEL_TOKEN in Name, paste the token, click Create secret.',
+  'If your projects live under a Vercel team, also add VERCEL_TEAM_ID (Team Settings > General > Team ID).',
 ];
 
 export const MICROSOFT_STEPS = [
@@ -120,6 +135,8 @@ export function SetupSteps() {
   const email = useEmailStatus();
   const connected = (accounts.data ?? []).some((a) => a.provider === 'outlook_ics' && a.status === 'connected');
   const emailStatus: Status = email.data?.configured ? DONE : YOURS;
+  const dev = useDevStatus();
+  const devReady = (dev.data ?? []).filter((x) => x.key !== 'resend').every((x) => x.configured);
 
   return (
     <div className="space-y-4">
@@ -141,7 +158,15 @@ export function SetupSteps() {
               The console uses Resend, an email-sending service, to send alerts and test messages from doug@encountive.com. It can only send to addresses you list under Settings &gt; General &gt; Approved destinations.
             </p>
             <Steps items={RESEND_STEPS} />
-            <p className="mt-3 text-sm text-muted">Then click Refresh at the top of this box, and use Send test in Settings &gt; General.</p>
+            <p className="mt-3 text-sm text-muted">Then click Refresh at the top of this box, and use Send test in Settings &gt; General. The same setup lets agents email you a short "report ready" or "agent failed" note with a button that opens the full report.</p>
+          </Step>
+
+          <Step n={3} title="Show GitHub builds and Vercel deploys (optional)" where="github.com and vercel.com, then Bolt Secrets" status={devReady ? DONE : YOURS}>
+            <p className="mb-3 text-sm text-muted">Adds read-only status lights on the IT Operations page: failing builds, open pull requests, and whether each site's latest deploy is live. Do either one, or both.</p>
+            <p className="label">GitHub</p>
+            <Steps items={GITHUB_STEPS} />
+            <p className="label mt-4">Vercel</p>
+            <Steps items={VERCEL_STEPS} />
           </Step>
         </ol>
       </Panel>

@@ -39,14 +39,14 @@ export const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: 'Agents',
     items: [
       { to: '/agents', label: 'Agent Operations', icon: Bot, phase: 3, summary: 'Each Claude agent with its status and when it last ran.' },
-      { to: '/library', label: 'Report Library', icon: Library, phase: 4, summary: 'Every agent output as its own screen with search, source location, and compare-with-previous-run.' },
+      { to: '/library', built: true, label: 'Report Library', icon: Library, phase: 4, summary: 'Every agent output as its own screen with search, source location, and compare-with-previous-run.' },
     ],
   },
   {
     label: 'Knowledge',
     items: [
-      { to: '/notes', label: 'Runbooks & Notes', icon: BookOpen, phase: 4, summary: 'Markdown notes and runbook templates with make-task-from-selection and ZIP export. (Not assigned to a phase in your brief; proposed for Phase 4 alongside agent runbooks.)' },
-      { to: '/weekly', label: 'Weekly CIO Report', icon: FileBarChart, phase: 5, summary: 'One-click Monday report with copy-as-Markdown and .docx export.' },
+      { to: '/notes', built: true, label: 'Runbooks & Notes', icon: BookOpen, phase: 4, summary: 'Markdown notes and runbook templates with make-task-from-selection and ZIP export. (Not assigned to a phase in your brief; proposed for Phase 4 alongside agent runbooks.)' },
+      { to: '/weekly', built: true, label: 'Weekly CIO Report', icon: FileBarChart, phase: 5, summary: 'One-click Monday report with copy-as-Markdown and .docx export.' },
     ],
   },
   {

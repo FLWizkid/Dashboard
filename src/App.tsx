@@ -22,6 +22,11 @@ import { AssetsPage } from '@/pages/AssetsPage';
 import { SpendPage } from '@/pages/SpendPage';
 import { SecurityPage } from '@/pages/SecurityPage';
 import { IdentityPage } from '@/pages/IdentityPage';
+import { LibraryPage } from '@/pages/LibraryPage';
+import { useAssurance } from '@/auth/mfa';
+import { MfaChallenge } from '@/auth/MfaChallenge';
+import { NotesPage } from '@/pages/NotesPage';
+import { WeeklyPage } from '@/pages/WeeklyPage';
 import { RequestsPage } from '@/pages/RequestsPage';
 import { RequestStatusPrint } from '@/pages/RequestStatusPrint';
 
@@ -40,6 +45,19 @@ function RequireAuth({ children }: { children: ReactNode }) {
     );
   }
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  return <MfaGate>{children}</MfaGate>;
+}
+
+function MfaGate({ children }: { children: ReactNode }) {
+  const aal = useAssurance();
+  if (aal.isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-bg">
+        <div className="skeleton h-2 w-40 rounded-full" aria-label="Loading" />
+      </div>
+    );
+  }
+  if (aal.data && aal.data.next === 'aal2' && aal.data.current !== 'aal2') return <MfaChallenge />;
   return <>{children}</>;
 }
 
@@ -69,6 +87,9 @@ export default function App() {
                   <Route path="security/:section?" element={<SecurityPage />} />
                   <Route path="requests" element={<RequestsPage />} />
                   <Route path="identity/:section?" element={<IdentityPage />} />
+                  <Route path="library/:id?" element={<LibraryPage />} />
+                  <Route path="notes/:id?" element={<NotesPage />} />
+                  <Route path="weekly" element={<WeeklyPage />} />
                   {ALL_NAV.filter((n) => !isBuilt(n)).map((n) => (
                     <Route key={n.to} path={n.to.slice(1)} element={<PhasePage />} />
                   ))}

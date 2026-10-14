@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/toast';
 import { HealthLight } from '@/components/ops/HealthLight';
 import { MonitorDetail } from '@/components/ops/MonitorDetail';
 import { MonitorForm } from '@/components/ops/MonitorForm';
+import { DevStatusPanel } from '@/components/ops/DevStatusPanel';
 
 const SUMMARY: { status: CheckStatus; label: string }[] = [
   { status: 'action', label: 'Action needed' },
@@ -107,6 +108,8 @@ export function OpsPage() {
           ))}
         </div>
       </Panel>
+
+      {tab.key === 'overview' && <DevStatusPanel />}
 
       {tab.key === 'overview' && <Panel title="Not connected yet" icon={<Plug />} subtitle="These need an account link first, so they stay grey">
         <div className="grid gap-3 lg:grid-cols-2">

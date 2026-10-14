@@ -15,6 +15,9 @@ export const SHORTCUTS: { keys: string; action: string }[] = [
   { keys: 'F', action: 'Start focus' },
   { keys: 'G then T', action: 'Go to Today' },
   { keys: 'G then I', action: 'Go to Inbox' },
+  { keys: 'G then A', action: 'Go to Agent Operations' },
+  { keys: 'G then R', action: 'Go to Report Library' },
+  { keys: 'G then W', action: 'Go to Weekly CIO Report' },
 ];
 
 export function useGlobalShortcuts() {
@@ -36,6 +39,9 @@ export function useGlobalShortcuts() {
         pendingG.current = 0;
         if (k === 't') navigate('/');
         else if (k === 'i') navigate('/inbox');
+        else if (k === 'a') navigate('/agents');
+        else if (k === 'r') navigate('/library');
+        else if (k === 'w') navigate('/weekly');
         else return;
         e.preventDefault();
         return;

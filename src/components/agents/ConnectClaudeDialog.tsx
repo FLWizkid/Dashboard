@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Check, Copy, KeyRound } from 'lucide-react';
-import { checkInUrl, useAgentKey, useCreateAgentKey } from '@/data/agents';
+import { AGENT_REPORT_URL, checkInUrl, useAgentKey, useCreateAgentKey } from '@/data/agents';
 import { errorMessage, relativeTime } from '@/lib/utils';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -42,11 +42,16 @@ export function ConnectClaudeDialog({ open, onOpenChange }: { open: boolean; onO
   const instructions = `At the very start of this task, open this address once:
 ${checkInUrl(shownKey, 'AGENT NAME', 'started')}
 
-When the task is finished, open:
-${checkInUrl(shownKey, 'AGENT NAME', 'succeeded')}
+When the task is finished, instead of emailing your report, send it to the console with an HTTP POST to:
+${AGENT_REPORT_URL}
 
-If the task fails, open this instead (you may add &message=short+reason):
-${checkInUrl(shownKey, 'AGENT NAME', 'failed')}`;
+with a JSON body like this (the "report" can be the full report in Markdown):
+${JSON.stringify({ key: shownKey, agent: 'AGENT NAME', status: 'succeeded', title: 'Short title for this run', summary: 'One or two sentence summary', report: '# Full report\n\nEverything you would normally email.' }, null, 2)}
+
+If the task fails, send the same thing with "status": "failed" and explain what went wrong in "summary".
+
+If you cannot send a POST, open this address instead (no full report):
+${checkInUrl(shownKey, 'AGENT NAME', 'succeeded')}`;
 
   return (
     <Dialog
@@ -57,7 +62,7 @@ ${checkInUrl(shownKey, 'AGENT NAME', 'failed')}`;
       }}
       side="right"
       title="Connect Claude"
-      description="Each Claude agent checks in at the start and end of a run. Agents appear here automatically the first time they check in."
+      description="Each Claude agent checks in when it starts and sends its full report here when it finishes. Agents appear automatically the first time they check in."
     >
       <div className="space-y-4 text-sm">
         <section className="space-y-2">
@@ -85,6 +90,8 @@ ${checkInUrl(shownKey, 'AGENT NAME', 'failed')}`;
 
         <section className="space-y-1 text-muted">
           <h3 className="font-semibold text-fg">Good to know</h3>
+          <p>Reports land in the Report Library, where you can search them and compare each run with the one before.</p>
+          <p>Want an email too? Use the gear next to an agent to choose "only when it fails" or "every time". The email is a short note with a button that opens the full report here. For that button to work, set the console web address under Settings, Email.</p>
           <p>Claude does not let other apps look inside it, so this page only knows what your agents report. An agent that says "started" but never finishes shows as Stalled after 6 hours.</p>
         </section>
       </div>

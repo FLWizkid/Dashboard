@@ -124,9 +124,9 @@ export function useSyncMail() {
 export function useUpdateMailAccount() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, identity }: { id: string; identity: Identity | null }) => {
-      check(await supabase.from('cc_mail_accounts').update({ identity }).eq('id', id));
-      await recordAudit('mail.identity', 'mail_account', id);
+    mutationFn: async ({ id, ...patch }: { id: string; identity?: Identity | null; open_in?: MailAccount['open_in'] }) => {
+      check(await supabase.from('cc_mail_accounts').update(patch).eq('id', id));
+      await recordAudit(patch.open_in ? 'mail.open_in' : 'mail.identity', 'mail_account', id);
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['mail-accounts'] }),
   });
