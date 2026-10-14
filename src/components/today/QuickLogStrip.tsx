@@ -51,7 +51,7 @@ export function QuickLogStrip() {
   const { start, end } = useMemo(() => weekRange(new Date()), []);
   const entries = useTimeEntries(start, end);
   const { data: companies = [] } = useCompanies();
-  const [open, setOpen] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<TimeEntry | null>(null);
   const rows = entries.data ?? [];
   const total = rows.reduce((s, e) => s + e.minutes, 0);
@@ -79,7 +79,7 @@ export function QuickLogStrip() {
       </Panel>
       <Panel
         title="Hours this week"
-        subtitle="Click a company to see, edit or delete entries"
+        subtitle="Click an entry to edit it, or the bin to delete it"
         icon={<BarChart3 />}
         demo={rows.some((r) => r.is_demo)}
         updatedAt={entries.dataUpdatedAt}
@@ -94,12 +94,19 @@ export function QuickLogStrip() {
       >
         <ul className="space-y-1.5">
           {byCompany.map((c) => {
-            const expanded = open === c.id;
+            const expanded = !collapsed.has(c.id);
             return (
               <li key={c.id} className="text-sm">
                 <button
                   type="button"
-                  onClick={() => setOpen(expanded ? null : c.id)}
+                  onClick={() =>
+                    setCollapsed((prev) => {
+                      const next = new Set(prev);
+                      if (expanded) next.add(c.id);
+                      else next.delete(c.id);
+                      return next;
+                    })
+                  }
                   aria-expanded={expanded}
                   className="w-full rounded-md text-left"
                 >
