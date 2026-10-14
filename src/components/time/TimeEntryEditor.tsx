@@ -73,18 +73,20 @@ export function TimeEntryEditor({ entry, onDone }: { entry: TimeEntry; onDone: (
         </Field>
         <Field label="Date"><input type="date" className="input" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} /></Field>
       </div>
-      <div className="flex items-center gap-2 border-t border-line pt-3">
+      <div className="flex flex-wrap items-center justify-center gap-4 border-t border-line pt-3">
         {confirm ? (
           <>
             <span className="text-sm text-muted">Delete this entry?</span>
             <Button size="sm" variant="danger" onClick={async () => { try { await del.mutateAsync(entry.id); toast('Entry deleted'); onDone(); } catch (e) { toast(errorMessage(e), 'error'); } }}>Delete</Button>
+            <Button size="sm" variant="ghost" onClick={() => setConfirm(false)}>Keep</Button>
           </>
         ) : (
-          <Button size="sm" variant="ghost" onClick={() => setConfirm(true)}><Trash2 /> Delete</Button>
+          <>
+            <Button className="min-w-24" variant="ghost" onClick={() => setConfirm(true)}><Trash2 /> Delete</Button>
+            <Button className="min-w-24" variant="secondary" onClick={onDone}>Cancel</Button>
+            <Button className="min-w-24" variant="primary" onClick={submit} disabled={save.isPending}>Save</Button>
+          </>
         )}
-        <div className="flex-1" />
-        <Button variant="ghost" onClick={onDone}>Cancel</Button>
-        <Button variant="primary" onClick={submit} disabled={save.isPending}>Save</Button>
       </div>
     </div>
   );
