@@ -370,15 +370,6 @@ async function syncAccount(admin: SupabaseClient, account: Account) {
   }
 }
 
-// Only called after admin.auth.getUser has validated the token, so the payload is trusted.
-function jwtAal(jwt: string): string | null {
-  try {
-    const part = jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    return JSON.parse(atob(part.padEnd(part.length + ((4 - (part.length % 4)) % 4), "="))).aal ?? null;
-  } catch {
-    return null;
-  }
-}
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
@@ -402,7 +393,6 @@ Deno.serve(async (req: Request) => {
     }
     if (action === "start") {
       if (body.provider !== "google" && body.provider !== "microsoft") return json({ error: "Unknown provider." }, 400);
-      if (jwtAal(jwt) !== "aal2") return json({ error: "Turn on two-step sign-in under Settings, Account, then try connecting again." }, 403);
       return json(await startConnect(admin, user.id, body.provider, req.headers.get("Origin")));
     }
     if (action === "add_calendar_link") {

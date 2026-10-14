@@ -18,7 +18,7 @@ The console is a static Vite + React site backed by one Supabase project.
 | VERCEL_TOKEN / VERCEL_TEAM_ID | dev-status | Optional |
 
 ## Auth
-- Email/password sign-in. Two-step sign-in (TOTP) must be enabled in Supabase Auth; it is required before connecting a mailbox.
+- Email/password sign-in. Two-step sign-in is not used yet; consider adding it once the build is finished.
 - Set the console web address under Settings, Email so emailed report links open the right site.
 
 ## Moving to a new host

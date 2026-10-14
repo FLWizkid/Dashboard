@@ -19,7 +19,6 @@ import { SHORTCUTS } from '@/components/shell/shortcuts';
 import { CompaniesSettings } from '@/components/settings/CompaniesSettings';
 import { AuditLogPanel, DemoDataSettings, ExportSettings } from '@/components/settings/DataSettings';
 import { PasskeySettings } from '@/components/settings/PasskeySettings';
-import { TwoStepSettings } from '@/components/settings/TwoStepSettings';
 import { EmailSettings } from '@/components/settings/EmailSettings';
 
 const INTEGRATIONS: { key: keyof typeof SETUP; title: string }[] = [
@@ -176,7 +175,6 @@ function AccountPanels() {
             <Button variant="secondary" onClick={signOut}><LogOut /> Sign out</Button>
           </div>
           <PasskeySettings />
-          <TwoStepSettings />
         </div>
       </Panel>
       <Panel title="Keyboard shortcuts" icon={<Keyboard />}>
