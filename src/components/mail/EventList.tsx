@@ -57,7 +57,14 @@ export function EventList({ events, accounts, compact }: { events: CalendarEvent
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="min-w-0 truncate text-sm font-medium">{e.title || '(no title)'}</p>
+                        {href ? (
+                          <a href={href} target="_blank" rel="noopener noreferrer" title="Open meeting"
+                            className="min-w-0 truncate text-sm font-medium text-primary-700 underline-offset-2 transition-colors hover:underline dark:text-primary-400">
+                            {e.title || '(no title)'}
+                          </a>
+                        ) : (
+                          <p className="min-w-0 truncate text-sm font-medium">{e.title || '(no title)'}</p>
+                        )}
                         {clash.has(e.id) && <StatusPill status="attention" label="Overlaps" />}
                       </div>
                       {!compact && (e.location || e.organizer) && (
@@ -69,10 +76,10 @@ export function EventList({ events, accounts, compact }: { events: CalendarEvent
                       )}
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <SourceBadge account={account} compact={compact} />
-                        {href && account && (
+                        {href && account && !compact && (
                           <a href={href} target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-xs text-primary-700 hover:underline dark:text-primary-400">
-                            <ExternalLink className="size-3" /> Open in {account.provider === 'google' ? 'Google Calendar' : 'Outlook'}
+                            <ExternalLink className="size-3" /> {account.provider === 'google' ? 'Open in Google Calendar' : account.provider === 'microsoft' ? 'Open in Outlook' : 'Open meeting link'}
                           </a>
                         )}
                       </div>

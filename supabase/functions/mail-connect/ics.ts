@@ -138,6 +138,30 @@ function occurrences(start: Local, rrule: string, windowEnd: number, w: When): L
   return out;
 }
 
+const URL_RE = /https:\/\/[^\s<>"'\\]+/gi;
+const MEETING_HOST = /(^|\.)(teams\.microsoft\.com|teams\.live\.com|zoom\.us|zoomgov\.com|meet\.google\.com|webex\.com|gotomeeting\.com|meet\.goto\.com|whereby\.com|chime\.aws)$/i;
+
+function httpsUrl(raw: string | undefined) {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw.replace(/[).,;]+$/, ""));
+    return u.protocol === "https:" ? u.toString().slice(0, 2000) : null;
+  } catch { return null; }
+}
+
+function urlsIn(text: string | undefined) {
+  return (text?.replace(/\\n/gi, " ").match(URL_RE) ?? []).map(httpsUrl).filter((u): u is string => !!u);
+}
+
+function meetingLink(one: (k: string) => Prop | undefined) {
+  for (const k of ["X-MICROSOFT-SKYPETEAMSMEETINGURL", "X-MICROSOFT-ONLINEMEETINGCONFLINK", "X-GOOGLE-CONFERENCE", "URL"]) {
+    const u = httpsUrl(one(k)?.value.trim());
+    if (u) return u;
+  }
+  const found = [...urlsIn(one("LOCATION")?.value), ...urlsIn(one("DESCRIPTION")?.value), ...urlsIn(one("X-ALT-DESC")?.value)];
+  return found.find((u) => MEETING_HOST.test(new URL(u).hostname)) ?? urlsIn(one("LOCATION")?.value)[0] ?? null;
+}
+
 function iso(ms: number) { return new Date(ms).toISOString(); }
 
 export function parseIcs(text: string, from: Date, to: Date): IcsEvent[] {
@@ -180,6 +204,7 @@ export function parseIcs(text: string, from: Date, to: Date): IcsEvent[] {
       ? occurrences(start.local, rrule, windowEnd, start).map((l) => toUtc(l, start))
       : [startMs];
     const organizer = one("ORGANIZER");
+    const link = meetingLink(one);
     for (const s of starts) {
       if (exdates.has(s)) continue;
       if (!isOverride && rrule && overrides.has(`${uid}|${s}`)) continue;
@@ -191,7 +216,7 @@ export function parseIcs(text: string, from: Date, to: Date): IcsEvent[] {
         starts_at: iso(s), ends_at: iso(e), all_day: start.date,
         location: clip(one("LOCATION")?.value, 300),
         organizer: clip(organizer?.params.CN ?? organizer?.value.replace(/^mailto:/i, ""), 200),
-        web_link: null,
+        web_link: link,
         is_cancelled: one("STATUS")?.value.toUpperCase() === "CANCELLED",
       });
     }
