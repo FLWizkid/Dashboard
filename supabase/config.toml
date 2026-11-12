@@ -12,3 +12,6 @@ verify_jwt = true
 
 [functions.dev-status]
 verify_jwt = true
+
+[functions.open-sign-in]
+verify_jwt = false
