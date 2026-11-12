@@ -14,7 +14,7 @@ function friendly(msg: string) {
   if (/invalid login/i.test(msg)) return 'That email and password do not match. Check them, or create an account first.';
   if (/already registered/i.test(msg)) return 'An account already exists for this email. Sign in instead.';
   if (/database error saving new user|signup_not_allowed/i.test(msg)) return 'This console is private. Only approved email addresses can create an account.';
-  if (/password/i.test(msg) && /6/.test(msg)) return 'Use a password of at least 8 characters.';
+  if (/password/i.test(msg) && /6/.test(msg)) return 'The sign-in service needs a password of at least 6 characters for new accounts.';
   if (/fetch/i.test(msg)) return 'Could not reach the server. Check your internet connection.';
   return msg;
 }
@@ -38,7 +38,6 @@ export function SignInPage() {
     e.preventDefault();
     setError(null);
     setNotice(null);
-    if (password.length < 8) return setError('Use a password of at least 8 characters.');
     setBusy(true);
     const res = mode === 'signin' ? await supabase.auth.signInWithPassword({ email, password }) : await supabase.auth.signUp({ email, password });
     setBusy(false);
@@ -92,7 +91,7 @@ export function SignInPage() {
             <Field label="Email">
               <input className="input" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </Field>
-            <Field label="Password" hint={mode === 'signup' ? 'At least 8 characters' : undefined}>
+            <Field label="Password">
               <div className="relative">
                 <input
                   className="input pr-20"
